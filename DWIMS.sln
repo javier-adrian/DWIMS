@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DWIMS.App", "DWIMS.App\DWIMS.App.csproj", "{FBC0FE50-A224-4AD1-874D-8333564CB9B8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DWIMS.Data", "DWIMS.Data\DWIMS.Data.csproj", "{05CB7A6F-452A-472D-8A25-47BD0D5512E0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DWIMS.Service", "DWIMS.Service\DWIMS.Service.csproj", "{554259A4-A942-4965-BC25-39F59ED9FA4C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FBC0FE50-A224-4AD1-874D-8333564CB9B8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FBC0FE50-A224-4AD1-874D-8333564CB9B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FBC0FE50-A224-4AD1-874D-8333564CB9B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FBC0FE50-A224-4AD1-874D-8333564CB9B8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{05CB7A6F-452A-472D-8A25-47BD0D5512E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{05CB7A6F-452A-472D-8A25-47BD0D5512E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{05CB7A6F-452A-472D-8A25-47BD0D5512E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{05CB7A6F-452A-472D-8A25-47BD0D5512E0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{554259A4-A942-4965-BC25-39F59ED9FA4C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{554259A4-A942-4965-BC25-39F59ED9FA4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{554259A4-A942-4965-BC25-39F59ED9FA4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{554259A4-A942-4965-BC25-39F59ED9FA4C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
