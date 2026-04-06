@@ -7,4 +7,6 @@ public class Step
     public string Title { get; set; }
     public string Description { get; set; }
     public Role Role { get; set; }
+    public Department Department { get; set; }
+    public Input Input { get; set; }
 }
