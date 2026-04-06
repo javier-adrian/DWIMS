@@ -10,9 +10,9 @@ public class User : ISoftDeletable
     public string MiddleName { get; set; }
     public string LastName { get; set; }
     
-    public int BirthDate { get; set; }
-    public int Email { get; set; }
-    public int ContactNumber { get; set; }
+    public DateTime BirthDate { get; set; }
+    public string Email { get; set; }
+    public string ContactNumber { get; set; }
     
     public GeneralRole GeneralRole { get; set; }
     public ICollection<Role> SpecificRoles { get; set; }
