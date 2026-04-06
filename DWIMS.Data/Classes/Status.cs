@@ -5,5 +5,6 @@ public enum Status
     Submit = 0,
     Review = 1,
     Approve = 2,
-    Reject = 3
+    Reject = 3,
+    Cancel = 4
 }
