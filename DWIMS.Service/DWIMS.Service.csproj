@@ -14,4 +14,22 @@
       <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Analytics\Queries\" />
+      <Folder Include="Auth\Commands\" />
+      <Folder Include="Auth\Queries\" />
+      <Folder Include="Common\Behavior\" />
+      <Folder Include="Common\Exception\" />
+      <Folder Include="Common\Interface\" />
+      <Folder Include="Common\Model\" />
+      <Folder Include="Department\Commands\" />
+      <Folder Include="Department\Queries\" />
+      <Folder Include="Process\Commands\" />
+      <Folder Include="Process\Queries\" />
+      <Folder Include="Submission\Commands\" />
+      <Folder Include="Submission\Queries\" />
+      <Folder Include="User\Commands\" />
+      <Folder Include="User\Queries\" />
+    </ItemGroup>
+
 </Project>
