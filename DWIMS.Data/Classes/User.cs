@@ -1,6 +1,8 @@
+using DWIMS.Data.Interfaces;
+
 namespace DWIMS.Data;
 
-public class User
+public class User : ISoftDeletable
 {
     public int Id { get; set; }
     
@@ -18,4 +20,7 @@ public class User
     
     public Signature Signature { get; set; }
     public ICollection<Submission> Submissions { get; set; }
+    
+    public bool IsDeleted { get; set; }
+    public DateTime? DeletedOn { get; set; }
 }

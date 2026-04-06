@@ -1,6 +1,8 @@
+using DWIMS.Data.Interfaces;
+
 namespace DWIMS.Data;
 
-public class Step
+public class Step : ISoftDeletable
 {
     public int Id { get; set; }
     public int Order { get; set; }
@@ -9,4 +11,7 @@ public class Step
     public Role Role { get; set; }
     public Department Department { get; set; }
     public Input Input { get; set; }
+    
+    public bool IsDeleted { get; set; }
+    public DateTime? DeletedOn { get; set; }
 }

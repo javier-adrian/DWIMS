@@ -1,6 +1,8 @@
+using DWIMS.Data.Interfaces;
+
 namespace DWIMS.Data;
 
-public class Response
+public class Response : ISoftDeletable
 {
     public int Id { get; set; }
     public Submission Submission { get; set; }
@@ -10,4 +12,7 @@ public class Response
     public string Remarks { get; set; }
     public DateTime SubmittedOn { get; set; }
     public DateTime CompletedOn { get; set; }
+    
+    public bool IsDeleted { get; set; }
+    public DateTime? DeletedOn { get; set; }
 }

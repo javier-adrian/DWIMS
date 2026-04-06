@@ -1,6 +1,8 @@
-﻿namespace DWIMS.Data;
+﻿using DWIMS.Data.Interfaces;
 
-public class Submission
+namespace DWIMS.Data;
+
+public class Submission : ISoftDeletable
 {
     public int Id { get; set; }
     public Process Process { get; set; }
@@ -11,4 +13,7 @@ public class Submission
     public User Submitter { get; set; }
     public ICollection<Input> Inputs { get; set; }
     public ICollection<Response> Responses { get; set; }
+    
+    public bool IsDeleted { get; set; }
+    public DateTime? DeletedOn { get; set; }
 }

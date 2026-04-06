@@ -1,3 +1,4 @@
+using DWIMS.Data.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -13,6 +14,25 @@ public class AppDbContext : DbContext
         optionsBuilder.UseMySql(Connection, ServerVersion.AutoDetect(Connection))
         .LogTo(Console.WriteLine, [DbLoggerCategory.Database.Command.Name], LogLevel.Information)
         .EnableSensitiveDataLogging();
+    }
+
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        ApplySoftDelete();
+        return await base.SaveChangesAsync(cancellationToken);
+    }
+
+    private void ApplySoftDelete()
+    {
+        var softDeletable = ChangeTracker.Entries<ISoftDeletable>()
+            .Where(x => x.State == EntityState.Deleted);
+
+        foreach (var entry in softDeletable)
+        {
+            entry.State = EntityState.Modified;
+            entry.Entity.IsDeleted = true;
+            entry.Entity.DeletedOn = DateTime.UtcNow;
+        }
     }
     
     public DbSet<User> Users { get; set; }
