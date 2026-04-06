@@ -2,6 +2,9 @@ namespace DWIMS.Data;
 
 public enum InputTypes
 {
-    text = 0,
-    number = 1,
+    Text = 0,
+    Number = 1,
+    Date = 2,
+    Boolean = 3,
+    Signature = 4
 }
