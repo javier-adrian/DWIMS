@@ -8,11 +8,18 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="Asp.Versioning.WebApi.ApiExplorer" Version="10.0.0-preview.2" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.14">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
       <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
+      <PackageReference Include="Scalar.AspNetCore" Version="2.13.20" />
+      <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.7" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Extensions\" />
     </ItemGroup>
 
 </Project>
