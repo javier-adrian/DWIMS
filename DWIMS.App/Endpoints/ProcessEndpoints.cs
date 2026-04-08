@@ -1,6 +1,6 @@
 namespace DWIMS.Controllers;
 
-public class ProcessController
+public static class ProcessEndpoints
 {
     
 }

@@ -1,6 +1,6 @@
 namespace DWIMS.Controllers;
 
-public class UserController
+public static class UserEndpoints
 {
     
 }
