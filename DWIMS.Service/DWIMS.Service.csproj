@@ -15,21 +15,19 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Analytics\Queries\" />
-      <Folder Include="Auth\Commands\" />
-      <Folder Include="Auth\Queries\" />
-      <Folder Include="Common\Behavior\" />
-      <Folder Include="Common\Exception\" />
-      <Folder Include="Common\Interface\" />
-      <Folder Include="Common\Model\" />
-      <Folder Include="Department\Commands\" />
-      <Folder Include="Department\Queries\" />
-      <Folder Include="Process\Commands\" />
-      <Folder Include="Process\Queries\" />
-      <Folder Include="Submission\Commands\" />
-      <Folder Include="Submission\Queries\" />
-      <Folder Include="User\Commands\" />
-      <Folder Include="User\Queries\" />
+      <Folder Include="Analytics\Dtos\" />
+      <Folder Include="Auth\Requests\" />
+      <Folder Include="Auth\Dtos\" />
+      <Folder Include="Common\Requests\" />
+      <Folder Include="Common\Dtos\" />
+      <Folder Include="Department\Requests\" />
+      <Folder Include="Department\Dtos\" />
+      <Folder Include="Process\Dtos\" />
+      <Folder Include="Process\Requests\" />
+      <Folder Include="Submission\Requests\" />
+      <Folder Include="Submission\Dtos\" />
+      <Folder Include="User\Requests\" />
+      <Folder Include="User\Dtos\" />
     </ItemGroup>
 
 </Project>
