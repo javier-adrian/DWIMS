@@ -1,3 +1,5 @@
+using DWIMS.Controllers;
+
 namespace DWIMS;
 
 using Scalar.AspNetCore;
@@ -20,7 +22,7 @@ public class Program
         app.MapSwagger("/openapi/{documentName}.json");
         app.MapScalarApiReference();
 
-        app.MapGet("/", () => "Hello World!");
+        app.MapAuthEndpoints();
 
         app.Run();
     }
