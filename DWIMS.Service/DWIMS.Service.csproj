@@ -16,8 +16,6 @@
 
     <ItemGroup>
       <Folder Include="Analytics\Dtos\" />
-      <Folder Include="Auth\Requests\" />
-      <Folder Include="Auth\Dtos\" />
       <Folder Include="Common\Requests\" />
       <Folder Include="Common\Dtos\" />
       <Folder Include="Department\Requests\" />
@@ -28,6 +26,10 @@
       <Folder Include="Submission\Dtos\" />
       <Folder Include="User\Requests\" />
       <Folder Include="User\Dtos\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\DWIMS.Data\DWIMS.Data.csproj" />
     </ItemGroup>
 
 </Project>
