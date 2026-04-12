@@ -2,7 +2,9 @@
 
 public sealed record UserInformationDto(
     Guid Id,
-    string FullName,
+    string FirstName,
+    string? MiddleName,
+    string LastName,
     string Email,
     string? ContactNumber,
     bool hasSignature);
