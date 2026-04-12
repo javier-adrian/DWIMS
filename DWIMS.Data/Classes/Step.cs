@@ -4,7 +4,7 @@ namespace DWIMS.Data;
 
 public class Step : ISoftDeletable
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
     public int Order { get; set; }
     public string Title { get; set; }
     public string Description { get; set; }

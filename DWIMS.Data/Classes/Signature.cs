@@ -2,6 +2,8 @@ namespace DWIMS.Data;
 
 public class Signature
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public User User { get; set; }
     public string Link { get; set; }
 }

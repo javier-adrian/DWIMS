@@ -4,7 +4,7 @@ namespace DWIMS.Data;
 
 public class Response : ISoftDeletable
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
     public Submission Submission { get; set; }
     public Step Step { get; set; }
     public User Reviewer { get; set; }

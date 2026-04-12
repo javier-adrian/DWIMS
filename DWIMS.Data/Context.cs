@@ -15,6 +15,12 @@ public class AppDbContext : DbContext
         .LogTo(Console.WriteLine, [DbLoggerCategory.Database.Command.Name], LogLevel.Information)
         .EnableSensitiveDataLogging();
     }
+    
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+        base.OnModelCreating(modelBuilder);
+    }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

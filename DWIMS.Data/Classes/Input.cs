@@ -4,7 +4,7 @@ namespace DWIMS.Data;
 
 public class Input : ISoftDeletable
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
     public string Value { get; set; }
     public Submission Submission { get; set; }
     public Field Field { get; set; }
