@@ -50,4 +50,5 @@ public class AppDbContext : DbContext
     public DbSet<Step> Steps { get; set; }
     public DbSet<Document> Documents { get; set; }
     public DbSet<Input> Inputs { get; set; }
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
 }
