@@ -38,6 +38,11 @@ public class AuthService(
     {
         throw new NotImplementedException();
     }
-    
-    
+
+    public Task<Result> ResetPasswordAsync(
+        ResetPasswordRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
+    } 
 }
