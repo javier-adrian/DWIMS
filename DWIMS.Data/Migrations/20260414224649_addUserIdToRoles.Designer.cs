@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DWIMS.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260412193500_Initial")]
-    partial class Initial
+    [Migration("20260414224649_addUserIdToRoles")]
+    partial class addUserIdToRoles
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -166,6 +166,35 @@ namespace DWIMS.Data.Migrations
                     b.ToTable("Processes");
                 });
 
+            modelBuilder.Entity("DWIMS.Data.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("Expires")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("Revoked")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshTokens");
+                });
+
             modelBuilder.Entity("DWIMS.Data.Response", b =>
                 {
                     b.Property<Guid>("Id")
@@ -220,6 +249,9 @@ namespace DWIMS.Data.Migrations
                     b.Property<DateTime?>("DeletedOn")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<Guid>("DepartmentId")
+                        .HasColumnType("char(36)");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -231,10 +263,12 @@ namespace DWIMS.Data.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<Guid?>("UserId")
+                    b.Property<Guid>("UserId")
                         .HasColumnType("char(36)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DepartmentId");
 
                     b.HasIndex("UserId");
 
@@ -389,6 +423,9 @@ namespace DWIMS.Data.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("Password")
+                        .HasColumnType("longtext");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
@@ -464,6 +501,17 @@ namespace DWIMS.Data.Migrations
                     b.Navigation("Document");
                 });
 
+            modelBuilder.Entity("DWIMS.Data.RefreshToken", b =>
+                {
+                    b.HasOne("DWIMS.Data.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("DWIMS.Data.Response", b =>
                 {
                     b.HasOne("DWIMS.Data.User", "Reviewer")
@@ -493,9 +541,21 @@ namespace DWIMS.Data.Migrations
 
             modelBuilder.Entity("DWIMS.Data.Role", b =>
                 {
-                    b.HasOne("DWIMS.Data.User", null)
+                    b.HasOne("DWIMS.Data.Department", "Department")
+                        .WithMany()
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DWIMS.Data.User", "User")
                         .WithMany("SpecificRoles")
-                        .HasForeignKey("UserId");
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Department");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("DWIMS.Data.Signature", b =>
