@@ -1,4 +1,7 @@
 using DWIMS.Controllers;
+using DWIMS.Data;
+using DWIMS.Service.Auth;
+using DWIMS.Service.Services;
 
 namespace DWIMS;
 
@@ -16,6 +19,10 @@ public class Program
                 x => 
                     x.SwaggerDoc("v1", new() { Title = "DWIMS API", Version = "v1" })
                 );
+
+        builder.Services.AddScoped<ITokenService, TokenService>();
+        builder.Services.AddScoped<IAuthService, AuthService>();
+        builder.Services.AddDbContext<AppDbContext>();
         
         var app = builder.Build();
         

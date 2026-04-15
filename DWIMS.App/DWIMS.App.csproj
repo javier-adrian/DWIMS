@@ -22,4 +22,8 @@
       <Folder Include="Extensions\" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\DWIMS.Service\DWIMS.Service.csproj" />
+    </ItemGroup>
+
 </Project>
