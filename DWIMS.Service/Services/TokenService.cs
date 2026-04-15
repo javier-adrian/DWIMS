@@ -95,10 +95,15 @@ public class TokenService(
                 );
     }
 
-    public Task RevokeRefreshTokenAsync(
-        Guid userId, 
+    public async Task RevokeRefreshTokenAsync(
+        Guid tokenId, 
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        var token = await context.RefreshTokens.FindAsync([tokenId], cancellationToken);
+        if (token is not null)
+        {
+            token.Revoked = true;
+            await context.SaveChangesAsync(cancellationToken);
+        }
     }
 }
