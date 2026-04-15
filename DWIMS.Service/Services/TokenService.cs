@@ -5,15 +5,19 @@ using System.Text;
 using DWIMS.Data;
 using DWIMS.Service.Auth;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using JwtRegisteredClaimNames = Microsoft.IdentityModel.JsonWebTokens.JwtRegisteredClaimNames;
 
 namespace DWIMS.Service.Services;
 
 public class TokenService(
-    AppDbContext context
+    AppDbContext context,
+    IOptions<JwtOptions> jwtOptions
     ) : ITokenService
 {
+    private readonly JwtOptions _jwtOptions = jwtOptions.Value;
+    
     public string GenerateAccessToken(User user, IEnumerable<Role> roles)
     {
         var claims = new List<Claim>
@@ -30,17 +34,17 @@ public class TokenService(
             ));
 
         var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes("pEnx8UiAcT12OUTz5kCWKlCrai7i1pE37MaYCogW5Bi"));
+            Encoding.UTF8.GetBytes(_jwtOptions.Secret));
         
         var credentials = new SigningCredentials(
             key, 
             SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
-            issuer: "https://localhost",
-            audience: "https://localhost",
+            issuer: _jwtOptions.Issuer,
+            audience: _jwtOptions.Audience,
             claims: claims,
-            expires: DateTime.Now.AddMinutes(30),
+            expires: DateTime.UtcNow.AddMinutes(_jwtOptions.AccessTokenExpiry),
             signingCredentials: credentials);
         
         return new JwtSecurityTokenHandler().WriteToken(token);

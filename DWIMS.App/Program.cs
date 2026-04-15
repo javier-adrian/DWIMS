@@ -20,8 +20,12 @@ public class Program
                     x.SwaggerDoc("v1", new() { Title = "DWIMS API", Version = "v1" })
                 );
 
+        builder.Services.AddOptions<JwtOptions>()
+            .Bind(builder.Configuration.GetSection(JwtOptions.SectionName));
+        
         builder.Services.AddScoped<ITokenService, TokenService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
+        
         builder.Services.AddDbContext<AppDbContext>();
         
         var app = builder.Build();
