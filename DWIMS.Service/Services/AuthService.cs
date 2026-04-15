@@ -26,8 +26,10 @@ public class AuthService(
             Id = Guid.NewGuid(),
             FirstName = request.FirstName,
             MiddleName = request.MiddleName ?? "",
+            LastName = request.LastName,
             GeneralRole = GeneralRole.Submitter,
             Email = request.Email,
+            ContactNumber = request.ContactNumber,
             Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
         };
         
