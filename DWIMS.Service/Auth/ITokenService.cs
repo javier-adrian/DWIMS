@@ -12,7 +12,7 @@ public interface ITokenService
         Guid userId,
         CancellationToken cancellationToken = default);
     
-    Task<string> ValidateRefreshTokenAsync(
+    Task<RefreshToken?> ValidateRefreshTokenAsync(
         Guid userId,
         string refreshToken,
         CancellationToken cancellationToken = default);
