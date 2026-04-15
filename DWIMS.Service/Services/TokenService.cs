@@ -68,7 +68,7 @@ public class TokenService(
         context.RefreshTokens.Add(new RefreshToken
         {
             Id = Guid.NewGuid(),
-            Token = BCrypt.Net.BCrypt.HashPassword(rawToken),
+            Token = Hash(rawToken),
             UserId = userId,
             Created = DateTime.UtcNow,
             Expires = DateTime.UtcNow.AddDays(7),
@@ -88,7 +88,7 @@ public class TokenService(
             .FirstOrDefaultAsync(
                 x =>
                     x.UserId == userId &&
-                    x.Token == BCrypt.Net.BCrypt.HashPassword(refreshToken) &&
+                    x.Token == Hash(refreshToken) &&
                     !x.Revoked &&
                     x.Expires > DateTime.UtcNow, 
                 cancellationToken
@@ -106,4 +106,11 @@ public class TokenService(
             await context.SaveChangesAsync(cancellationToken);
         }
     }
+    
+    private static string Hash(string input) =>
+    Convert.ToBase64String(
+        SHA256.HashData(
+            Encoding.UTF8.GetBytes(input)
+            )
+        );
 }
