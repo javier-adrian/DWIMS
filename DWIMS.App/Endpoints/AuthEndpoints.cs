@@ -1,4 +1,6 @@
-using Microsoft.AspNetCore.Identity.Data;
+using DWIMS.Service.Auth;
+using DWIMS.Service.Auth.Requests;
+using DWIMS.Service.Services;
 
 namespace DWIMS.Controllers;
 
@@ -38,10 +40,14 @@ public static class AuthEndpoints
         
         return app;
     }
-    
-    private static Task<IResult> Register(RegisterRequest request, CancellationToken cancellationToken) => throw new NotImplementedException();
+
+    private static async Task<IResult> Register(RegisterRequest request, IAuthService authService, CancellationToken cancellationToken)
+    {
+        var result = await authService.RegisterAsync(request, cancellationToken);
+        return result.ToCreatedResult("/auth/register");
+    }
     private static Task<IResult> Login(LoginRequest request, CancellationToken cancellationToken) => throw new NotImplementedException();
-    private static Task<IResult> Refresh(RefreshRequest request, CancellationToken cancellationToken) => throw new NotImplementedException();
+    private static Task<IResult> Refresh(RefreshTokenRequest request, CancellationToken cancellationToken) => throw new NotImplementedException();
     private static Task<IResult> ForgotPassword(ForgotPasswordRequest request, CancellationToken cancellationToken) => throw new NotImplementedException();
     private static Task<IResult> ResetPassword(ResetPasswordRequest request, CancellationToken cancellationToken) => throw new NotImplementedException();
 }
