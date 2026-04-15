@@ -84,7 +84,15 @@ public class TokenService(
         string refreshToken, 
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        return await context.RefreshTokens
+            .FirstOrDefaultAsync(
+                x =>
+                    x.UserId == userId &&
+                    x.Token == BCrypt.Net.BCrypt.HashPassword(refreshToken) &&
+                    !x.Revoked &&
+                    x.Expires > DateTime.UtcNow, 
+                cancellationToken
+                );
     }
 
     public Task RevokeRefreshTokenAsync(
