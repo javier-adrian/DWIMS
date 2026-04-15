@@ -44,7 +44,17 @@ public class AuthService(
         LoginRequest request,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        var user = await context.Users
+            .FirstOrDefaultAsync(
+                x => x.Email == request.Email, 
+                cancellationToken);
+        
+        if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
+            return Result<AuthResponse>.Failure(
+                "INVALID_CREDENTIALS", 
+                "Invalid email or password.");
+        
+        return Result<AuthResponse>.Success(await BuildAuthResponseAsync(user, cancellationToken));
     }
 
     public Task<Result<AuthResponse>> RefreshTokenAsync(

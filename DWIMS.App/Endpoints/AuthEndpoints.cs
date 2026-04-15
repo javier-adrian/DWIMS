@@ -46,7 +46,11 @@ public static class AuthEndpoints
         var result = await authService.RegisterAsync(request, cancellationToken);
         return result.ToCreatedResult("/auth/register");
     }
-    private static Task<IResult> Login(LoginRequest request, CancellationToken cancellationToken) => throw new NotImplementedException();
+
+    private static async Task<IResult> Login(LoginRequest request, CancellationToken cancellationToken)
+    {
+        var result = await AuthService.LoginAsync(request, cancellationToken);
+    }
     private static Task<IResult> Refresh(RefreshTokenRequest request, CancellationToken cancellationToken) => throw new NotImplementedException();
     private static Task<IResult> ForgotPassword(ForgotPasswordRequest request, CancellationToken cancellationToken) => throw new NotImplementedException();
     private static Task<IResult> ResetPassword(ResetPasswordRequest request, CancellationToken cancellationToken) => throw new NotImplementedException();
