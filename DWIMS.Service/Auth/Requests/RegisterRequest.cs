@@ -10,6 +10,4 @@ public sealed class RegisterRequest
     public string ContactNumber { get; set; }
     
     public required string Password { get; set; }
-    
-    public required Guid DepartmentId { get; set; }
 }
