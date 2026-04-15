@@ -18,7 +18,9 @@ public class TokenService(
 {
     private readonly JwtOptions _jwtOptions = jwtOptions.Value;
     
-    public string GenerateAccessToken(User user, IEnumerable<Role> roles)
+    public string GenerateAccessToken(
+        User user, 
+        IEnumerable<Role> roles)
     {
         var claims = new List<Claim>
         {
@@ -50,7 +52,9 @@ public class TokenService(
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    public async Task<string> GenerateRefreshTokenAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<string> GenerateRefreshTokenAsync(
+        Guid userId, 
+        CancellationToken cancellationToken = default)
     {
         var existing = await context.RefreshTokens
             .Where(x => x.UserId == userId && !x.Revoked)
@@ -75,12 +79,17 @@ public class TokenService(
         return rawToken;
     }
 
-    public Task<string> ValidateRefreshTokenAsync(Guid userId, string refreshToken, CancellationToken cancellationToken = default)
+    public async Task<RefreshToken?> ValidateRefreshTokenAsync(
+        Guid userId, 
+        string refreshToken, 
+        CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
     }
 
-    public Task RevokeRefreshTokenAsync(Guid userId, CancellationToken cancellationToken = default)
+    public Task RevokeRefreshTokenAsync(
+        Guid userId, 
+        CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
     }
