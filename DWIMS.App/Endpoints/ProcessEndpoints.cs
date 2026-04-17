@@ -1,4 +1,6 @@
 using DWIMS.Service.Auth;
+using DWIMS.Service.Process;
+using DWIMS.Service.Process.Requests;
 
 namespace DWIMS.Controllers;
 
@@ -40,77 +42,77 @@ public static class ProcessEndpoints
         return app;
     }
 
-    private static Task CreateProcess(HttpContext context)
+    private static async Task CreateProcess(HttpContext context)
     {
         throw new NotImplementedException();
     }
 
-    private static Task GetProcesses(HttpContext context)
+    private static async Task GetProcesses(HttpContext context)
     {
         throw new NotImplementedException();
     }
 
-    private static Task GetProcess(HttpContext context)
+    private static async Task GetProcess(HttpContext context)
     {
         throw new NotImplementedException();
     }
 
-    private static Task UpdateProcess(HttpContext context)
+    private static async Task UpdateProcess(HttpContext context)
     {
         throw new NotImplementedException();
     }
 
-    private static Task DeleteProcess(HttpContext context)
+    private static async Task DeleteProcess(HttpContext context)
     {
         throw new NotImplementedException();
     }
 
-    private static Task CreateStep(HttpContext context)
+    private static async Task CreateStep(HttpContext context)
     {
         throw new NotImplementedException();
     }
 
-    private static Task GetSteps(HttpContext context)
+    private static async Task GetSteps(HttpContext context)
     {
         throw new NotImplementedException();
     }
 
-    private static Task GetStep(HttpContext context)
+    private static async Task GetStep(HttpContext context)
     {
         throw new NotImplementedException();
     }
 
-    private static Task UpdateStep(HttpContext context)
+    private static async Task UpdateStep(HttpContext context)
     {
         throw new NotImplementedException();
     }
 
-    private static Task DeleteStep(HttpContext context)
+    private static async Task DeleteStep(HttpContext context)
     {
         throw new NotImplementedException();
     }
 
-    private static Task CreateField(HttpContext context)
+    private static async Task CreateField(HttpContext context)
     {
         throw new NotImplementedException();
     }
 
-    private static Task GetFields(HttpContext context)
+    private static async Task GetFields(HttpContext context)
     {
         throw new NotImplementedException();
     }
 
-    private static Task GetField(HttpContext context)
+    private static async Task GetField(HttpContext context)
     {
         throw new NotImplementedException();
     }
 
-    private static Task UpdateField(HttpContext context)
+    private static async Task UpdateField(HttpContext context)
     {
         throw new NotImplementedException();
     }
 
-    private static Task DeleteField(HttpContext context)
+    private static async Task DeleteField(HttpContext context)
     {
         throw new NotImplementedException();
     }
