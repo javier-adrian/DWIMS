@@ -1,6 +1,7 @@
 using DWIMS.Service.Auth;
 using DWIMS.Service.Process;
 using DWIMS.Service.Process.Requests;
+using DWIMS.Service.Services;
 
 namespace DWIMS.Controllers;
 
@@ -42,9 +43,13 @@ public static class ProcessEndpoints
         return app;
     }
 
-    private static async Task CreateProcess(HttpContext context)
+    private static async Task<IResult> CreateProcess(
+        CreateProcessRequest request,
+        IProcessService departmentService,
+        CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = await departmentService.CreateProcessAsync(request, cancellationToken);
+        return result.ToCreatedResult("/process/");
     }
 
     private static async Task GetProcesses(HttpContext context)
