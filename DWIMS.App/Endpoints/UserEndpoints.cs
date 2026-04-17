@@ -78,7 +78,7 @@ public static class UserEndpoints
                 ErrorDescription = "Use /roles/super-administrator to assign Super Administrator."
             });
 
-        var result = await departmentService.AssignRoleAsync(Guid.Empty, request, cancellationToken);
+        var result = await departmentService.AssignRoleAsync(request.DepartmentId, request, cancellationToken);
 
         return result.IsSuccess
             ? Results.Ok()

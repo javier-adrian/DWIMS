@@ -78,6 +78,9 @@ public class DepartmentService(AppDbContext context, ICurrentUserService current
         if (departmentId == Guid.Empty)
             return Result.Failure("DEPARTMENT_NOT_FOUND", "Department not found.");
 
+        if (!currentUserService.HasRoleInDepartment(departmentId, GeneralRole.Administrator))
+            return Result.Failure("FORBIDDEN", "You do not have administrator access to this department.");
+
         var department = await context.Departments
             .FirstOrDefaultAsync(x => x.Id == departmentId, cancellationToken);
 

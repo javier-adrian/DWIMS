@@ -6,4 +6,5 @@ public sealed class AssignRoleRequest
 {
     public required Guid UserId { get; set; }
     public required GeneralRole GeneralRole { get; set; }
+    public required Guid DepartmentId { get; set; }
 }
