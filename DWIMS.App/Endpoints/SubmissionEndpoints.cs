@@ -1,3 +1,7 @@
+using DWIMS.Service.Services;
+using DWIMS.Service.Submission;
+using DWIMS.Service.Submission.Requests;
+
 namespace DWIMS.Controllers;
 
 public static class SubmissionEndpoints
@@ -19,9 +23,13 @@ public static class SubmissionEndpoints
         return app;
     }
 
-    private static Task CreateSubmission(HttpContext context)
+    private static async Task<IResult> CreateSubmission(
+        CreateSubmissionRequest request,
+        ISubmissionService submissionService,
+        CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = await submissionService.CreateSubmissionAsync(request, cancellationToken);
+        return result.ToOkResult();
     }
 
     private static Task GetMySubmissions(HttpContext context)
