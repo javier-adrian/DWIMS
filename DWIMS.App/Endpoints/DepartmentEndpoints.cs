@@ -8,7 +8,7 @@ public static class DepartmentEndpoints
     {
         var group = app.MapGroup("department")
             .WithTags("Department")
-            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
+            .RequireAuthorization();
 
         group.MapGet("/", GetDepartment);
         
