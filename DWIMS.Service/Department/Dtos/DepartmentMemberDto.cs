@@ -2,7 +2,7 @@
 
 namespace DWIMS.Service.Department.Dtos;
 
-public sealed record OrganizationMemberDto(
+public sealed record DepartmentMemberDto(
     Guid Id,
     string FirstName,
     string? MiddleName,
