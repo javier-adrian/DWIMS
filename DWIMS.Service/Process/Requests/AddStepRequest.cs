@@ -6,6 +6,7 @@ public sealed class AddStepRequest
 {
     public required Guid ProcessId { get; set; }
     public required string Title { get; set; }
+    public required Guid DepartmentId { get; set; }
     public required int Order { get; set; }
     public required Role Role { get; set; }
 }
