@@ -15,9 +15,8 @@ public class User : ISoftDeletable
     public string ContactNumber { get; set; }
     
     public string? Password { get; set; }
-    
-    public GeneralRole GeneralRole { get; set; }
-    public ICollection<Role> SpecificRoles { get; set; }
+
+    public ICollection<Role> Roles { get; set; } = [];
     public ICollection<Department> Departments { get; set; }
     
     public Signature? Signature { get; set; }
