@@ -1,4 +1,8 @@
 using DWIMS.Service.Auth;
+using DWIMS.Service.Common;
+using DWIMS.Service.Department;
+using DWIMS.Service.Department.Requests;
+using DWIMS.Service.Services;
 
 namespace DWIMS.Controllers;
 
@@ -32,9 +36,13 @@ public static class DepartmentEndpoints
         throw new NotImplementedException();
     }
 
-    private static Task CreateDepartment(HttpContext context)
+    private static async Task<IResult> CreateDepartment(
+        CreateDepartmentRequest request,
+        IDepartmentService departmentService,
+        CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = await departmentService.CreateDepartmentAsync(request, cancellationToken);
+        return result.ToCreatedResult("/department/");
     }
 
     private static Task UpdateDepartment(HttpContext context)
