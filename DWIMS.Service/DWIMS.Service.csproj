@@ -26,8 +26,6 @@
       <Folder Include="Process\Requests\" />
       <Folder Include="Submission\Requests\" />
       <Folder Include="Submission\Dtos\" />
-      <Folder Include="User\Requests\" />
-      <Folder Include="User\Dtos\" />
     </ItemGroup>
 
     <ItemGroup>

@@ -4,8 +4,7 @@ namespace DWIMS.Service.Auth;
 
 public interface ITokenService
 {
-    string GenerateAccessToken(
-        User user,
+    string GenerateAccessToken(Data.User user,
         IEnumerable<Role> roles);
     
     Task<string> GenerateRefreshTokenAsync(

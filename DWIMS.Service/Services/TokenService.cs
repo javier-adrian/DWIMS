@@ -18,8 +18,7 @@ public class TokenService(
 {
     private readonly JwtOptions _jwtOptions = jwtOptions.Value;
     
-    public string GenerateAccessToken(
-        User user, 
+    public string GenerateAccessToken(Data.User user,
         IEnumerable<Role> roles)
     {
         var claims = new List<Claim>

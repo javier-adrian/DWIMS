@@ -21,7 +21,7 @@ public class AuthService(
                 "EMAIL_TAKEN", 
                 "An account with this email already exists.");
 
-        var user = new User
+        var user = new Data.User
         {
             Id = Guid.NewGuid(),
             FirstName = request.FirstName,
@@ -79,7 +79,7 @@ public class AuthService(
     }
 
     private async Task<AuthResponse> BuildAuthResponseAsync(
-        User user,
+        Data.User user,
         CancellationToken cancellationToken = default
         )
     {
