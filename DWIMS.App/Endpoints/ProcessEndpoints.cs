@@ -11,10 +11,8 @@ public static class ProcessEndpoints
 
         group.MapPost("/", CreateProcess)
             .RequireAuthorization(DwimsPolicies.Administrator);
-        group.MapGet("/", GetProcesses)
-            .RequireAuthorization(DwimsPolicies.Reviewer);
-        group.MapGet("/{id:guid}", GetProcess)
-            .RequireAuthorization(DwimsPolicies.Reviewer);
+        group.MapGet("/", GetProcesses);
+        group.MapGet("/{id:guid}", GetProcess);
         group.MapPut("/{id:guid}", UpdateProcess)
             .RequireAuthorization(DwimsPolicies.Administrator);
         group.MapDelete("/{id:guid}", DeleteProcess)
@@ -22,10 +20,8 @@ public static class ProcessEndpoints
 
         group.MapPost("/{id:guid}/step", CreateStep)
             .RequireAuthorization(DwimsPolicies.Administrator);
-        group.MapGet("/{id:guid}/step", GetSteps)
-            .RequireAuthorization(DwimsPolicies.Reviewer);
-        group.MapGet("/{id:guid}/step/{id:guid}", GetStep)
-            .RequireAuthorization(DwimsPolicies.Reviewer);
+        group.MapGet("/{id:guid}/step", GetSteps);
+        group.MapGet("/{id:guid}/step/{id:guid}", GetStep);
         group.MapPut("/{id:guid}/step/{id:guid}", UpdateStep)
             .RequireAuthorization(DwimsPolicies.Administrator);
         group.MapDelete("/{id:guid/step/{id:guid", DeleteStep)
@@ -33,10 +29,8 @@ public static class ProcessEndpoints
         
         group.MapPost("/{id:guid}/field", CreateField)
             .RequireAuthorization(DwimsPolicies.Administrator);
-        group.MapGet("/{id:guid}/field", GetFields)
-            .RequireAuthorization(DwimsPolicies.Reviewer);
-        group.MapGet("/{id:guid}/field/{id:guid}", GetField)
-            .RequireAuthorization(DwimsPolicies.Reviewer);
+        group.MapGet("/{id:guid}/field", GetFields);
+        group.MapGet("/{id:guid}/field/{id:guid}", GetField);
         group.MapPut("/{id:guid}/field/{id:guid}", UpdateField)
             .RequireAuthorization(DwimsPolicies.Administrator);
         group.MapDelete("/{id:guid/field/{id:guid", DeleteField)
