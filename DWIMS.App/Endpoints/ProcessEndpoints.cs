@@ -7,7 +7,8 @@ public static class ProcessEndpoints
     public static IEndpointRouteBuilder MapProcessEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("process")
-            .WithTags("Process");
+            .WithTags("Process")
+            .RequireAuthorization();
 
         group.MapPost("/", CreateProcess)
             .RequireAuthorization(DwimsPolicies.Administrator);
