@@ -1,3 +1,6 @@
+using DWIMS.Service.CurrentUser;
+using DWIMS.Service.Services;
+
 namespace DWIMS.Controllers;
 
 public static class UserEndpoints
@@ -33,8 +36,16 @@ public static class UserEndpoints
         throw new NotImplementedException();
     }
 
-    private static Task GetCurrentuser(HttpContext context)
+    private static async Task<IResult> GetCurrentuser(IUserService userService, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = await userService.GetCurrentUserAsync(cancellationToken);
+        
+        return result.IsSuccess
+            ? Results.Ok(result.Data)
+            : Results.UnprocessableEntity(new
+            {
+                result.Error,
+                result.ErrorDescription
+            });
     }
 }

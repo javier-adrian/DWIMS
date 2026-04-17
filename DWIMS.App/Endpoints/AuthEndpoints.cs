@@ -44,7 +44,7 @@ public static class AuthEndpoints
     private static async Task<IResult> Register(RegisterRequest request, IAuthService authService, CancellationToken cancellationToken)
     {
         var result = await authService.RegisterAsync(request, cancellationToken);
-        return result.ToCreatedResult("/auth/register");
+        return result.ToCreatedResult("/users/me");
     }
 
     private static async Task<IResult> Login(LoginRequest request, IAuthService authService, CancellationToken cancellationToken)
