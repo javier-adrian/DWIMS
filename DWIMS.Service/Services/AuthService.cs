@@ -27,7 +27,6 @@ public class AuthService(
             FirstName = request.FirstName,
             MiddleName = request.MiddleName ?? "",
             LastName = request.LastName,
-            GeneralRole = GeneralRole.Submitter,
             Email = request.Email,
             ContactNumber = request.ContactNumber,
             Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
@@ -84,6 +83,7 @@ public class AuthService(
         )
     {
         var roles = await context.Roles
+            .Include(role => role.Department)
             .Where(role => role.UserId == user.Id)
             .ToListAsync(cancellationToken);
 
