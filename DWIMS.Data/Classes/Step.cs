@@ -8,8 +8,8 @@ public class Step : ISoftDeletable
     public int Order { get; set; }
     public string Title { get; set; }
     public string Description { get; set; }
-    
-    public Role Role { get; set; }
+
+    public GeneralRole Role { get; set; } = GeneralRole.Reviewer;
     public Department Department { get; set; }
     public Field Field { get; set; }
     public Process Process { get; set; }
