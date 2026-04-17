@@ -8,5 +8,5 @@ public sealed record DepartmentMemberDto(
     string? MiddleName,
     string LastName,
     string Email,
-    Role Role
+    GeneralRole Role
     );

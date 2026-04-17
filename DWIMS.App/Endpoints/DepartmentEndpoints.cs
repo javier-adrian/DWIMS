@@ -55,8 +55,12 @@ public static class DepartmentEndpoints
         throw new NotImplementedException();
     }
 
-    private static Task GetMembers(HttpContext context)
+    private static async Task<IResult> GetMembers(
+        Guid departmentId,
+        IDepartmentService departmentService,
+        CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = await departmentService.GetMembersAsync(departmentId, cancellationToken);
+        return result.ToOkResult();
     }
 }

@@ -109,4 +109,26 @@ public class DepartmentService(AppDbContext context, ICurrentUserService current
         await context.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
+
+    public async Task<Result<IReadOnlyList<DepartmentMemberDto>>> GetMembersAsync(Guid departmentId, CancellationToken cancellationToken = default)
+    {
+        var departmentExists = await context.Departments
+            .AnyAsync(x => x.Id == departmentId, cancellationToken);
+
+        if (!departmentExists)
+            return Result<IReadOnlyList<DepartmentMemberDto>>.Failure("DEPARTMENT_NOT_FOUND", "Department not found.");
+
+        var members = await context.Roles
+            .Where(r => r.DepartmentId == departmentId)
+            .Select(r => new DepartmentMemberDto(
+                r.User.Id,
+                r.User.FirstName,
+                r.User.MiddleName,
+                r.User.LastName,
+                r.User.Email,
+                r.GeneralRole))
+            .ToListAsync(cancellationToken);
+
+        return Result<IReadOnlyList<DepartmentMemberDto>>.Success(members);
+    }
 }
