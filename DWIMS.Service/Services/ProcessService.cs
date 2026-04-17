@@ -123,4 +123,36 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
         
         throw new NotImplementedException();
     }
+
+    public async Task<Result<Guid>> AddFieldAsync(Guid processId, AddFieldRequest request, CancellationToken cancellationToken = default)
+    {
+        var department = await context.Processes
+            .Where(x => x.Id == processId)
+            .Select(x => x.DepartmentId)
+            .FirstOrDefaultAsync(cancellationToken);
+        
+        if (!currentUserService.HasRoleInDepartment(department, GeneralRole.Administrator))
+            return Result<Guid>.Failure("FORBIDDEN", "You do not have administrator access to this department.");
+
+        var process = await context.Processes
+            .FirstOrDefaultAsync(x => x.Id == processId, cancellationToken);
+        
+        if (process is null)
+            return Result<Guid>.Failure("PROCESS_NOT_FOUND", "Process not found.");
+
+        var field = new Field
+        {
+            Id = Guid.NewGuid(),
+            ProcessId = processId,
+            Title = request.Title,
+            Type = request.InputType,
+            Required = request.Required,
+        };
+        
+        context.Fields.Add(field);
+        
+        await context.SaveChangesAsync(cancellationToken);
+        
+        return Result<Guid>.Success(field.Id);
+    }
 }

@@ -102,9 +102,14 @@ public static class ProcessEndpoints
         throw new NotImplementedException();
     }
 
-    private static async Task CreateField(HttpContext context)
+    private static async Task<IResult> CreateField(
+        Guid processId,
+        AddFieldRequest request, 
+        IProcessService processService,
+        CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = await processService.AddFieldAsync(processId, request, cancellationToken);
+        return result.ToCreatedResult("/process/field/");
     }
 
     private static async Task GetFields(HttpContext context)

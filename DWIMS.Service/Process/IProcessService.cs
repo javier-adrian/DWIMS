@@ -41,4 +41,9 @@ public interface IProcessService
         Guid processId,
         Guid stepId,
         CancellationToken cancellationToken = default);
+    
+    Task<Result<Guid>> AddFieldAsync(
+        Guid processId,
+        AddFieldRequest request,
+        CancellationToken cancellationToken = default);
 }
