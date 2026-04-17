@@ -20,8 +20,6 @@
       <Folder Include="Analytics\Dtos\" />
       <Folder Include="Common\Requests\" />
       <Folder Include="Common\Dtos\" />
-      <Folder Include="Process\Dtos\" />
-      <Folder Include="Process\Requests\" />
       <Folder Include="Submission\Requests\" />
       <Folder Include="Submission\Dtos\" />
     </ItemGroup>
