@@ -22,6 +22,9 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
 
     public async Task<Result<Guid>> CreateProcessAsync(CreateProcessRequest request, CancellationToken cancellationToken = default)
     {
+        if (!currentUserService.HasRoleInDepartment(request.DepartmentId, GeneralRole.Administrator))
+            return Result<Guid>.Failure("FORBIDDEN", "You do not have administrator access to this department.");
+        
         var department = await context.Departments
             .FirstOrDefaultAsync(x => x.Id == request.DepartmentId, cancellationToken);
 
