@@ -4,6 +4,7 @@ using DWIMS.Data;
 using DWIMS.Service;
 using DWIMS.Service.Auth;
 using DWIMS.Service.CurrentUser;
+using DWIMS.Service.Department;
 using DWIMS.Service.Services;
 using DWIMS.Service.User;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -100,6 +101,7 @@ namespace DWIMS
             builder.Services.AddHttpContextAccessor();
             builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
             builder.Services.AddScoped<IAuthorizationHandler, RoleHandler>();
+            builder.Services.AddScoped<IDepartmentService, DepartmentService>();
         
             var app = builder.Build();
         
@@ -111,6 +113,7 @@ namespace DWIMS
 
             app.MapAuthEndpoints();
             app.MapUserEndpoints();
+            app.MapDepartmentEndpoints();
             
             // app.Use(async (context, next) =>
             // {

@@ -1,4 +1,8 @@
+using DWIMS.Data;
+using DWIMS.Service.Auth;
 using DWIMS.Service.CurrentUser;
+using DWIMS.Service.Department;
+using DWIMS.Service.Department.Requests;
 using DWIMS.Service.Services;
 
 namespace DWIMS.Controllers;
@@ -22,7 +26,20 @@ public static class UserEndpoints
         group.MapPut("/me/signature", UploadSignature)
             .WithDisplayName("Upload Signature")
             .WithSummary("Upload a signature for the current user");
-        
+
+        var roleGroup = app.MapGroup("roles")
+            .WithTags("Roles")
+            .RequireAuthorization(DwimsPolicies.Administrator);
+
+        roleGroup.MapPost("/", AssignRole)
+            .WithDisplayName("Assign Role")
+            .WithSummary("Assign a role to a user");
+
+        roleGroup.MapPost("/super-administrator", AssignSuperAdmin)
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator)
+            .WithDisplayName("Assign Super Administrator")
+            .WithSummary("Assign a Super Administrator role to a user");
+
         return app;
     }
 
@@ -39,9 +56,49 @@ public static class UserEndpoints
     private static async Task<IResult> GetCurrentuser(IUserService userService, CancellationToken cancellationToken)
     {
         var result = await userService.GetCurrentUserAsync(cancellationToken);
-        
+
         return result.IsSuccess
             ? Results.Ok(result.Data)
+            : Results.UnprocessableEntity(new
+            {
+                result.Error,
+                result.ErrorDescription
+            });
+    }
+
+    private static async Task<IResult> AssignRole(
+        AssignRoleRequest request,
+        IDepartmentService departmentService,
+        CancellationToken cancellationToken)
+    {
+        if (request.GeneralRole == GeneralRole.SuperAdministrator)
+            return Results.UnprocessableEntity(new
+            {
+                Error = "INVALID_ROLE",
+                ErrorDescription = "Use /roles/super-administrator to assign Super Administrator."
+            });
+
+        var result = await departmentService.AssignRoleAsync(Guid.Empty, request, cancellationToken);
+
+        return result.IsSuccess
+            ? Results.Ok()
+            : Results.UnprocessableEntity(new
+            {
+                result.Error,
+                result.ErrorDescription
+            });
+    }
+
+    private static async Task<IResult> AssignSuperAdmin(
+        AssignRoleRequest request,
+        IDepartmentService departmentService,
+        CancellationToken cancellationToken)
+    {
+        request.GeneralRole = GeneralRole.SuperAdministrator;
+        var result = await departmentService.AssignRoleAsync(Guid.Empty, request, cancellationToken);
+
+        return result.IsSuccess
+            ? Results.Ok()
             : Results.UnprocessableEntity(new
             {
                 result.Error,

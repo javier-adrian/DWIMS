@@ -24,11 +24,6 @@ public static class DepartmentEndpoints
         group.MapGet("/{id:guid}/members", GetMembers)
             .RequireAuthorization(DwimsPolicies.Administrator);
         
-        group.MapPost("/{id:guid}/members", AssignRole)
-            .RequireAuthorization(DwimsPolicies.Administrator);
-
-        
-
         return app;
     }
 
@@ -53,11 +48,6 @@ public static class DepartmentEndpoints
     }
 
     private static Task GetMembers(HttpContext context)
-    {
-        throw new NotImplementedException();
-    }
-
-    private static Task AssignRole(HttpContext context)
     {
         throw new NotImplementedException();
     }

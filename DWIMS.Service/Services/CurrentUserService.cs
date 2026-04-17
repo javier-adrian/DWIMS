@@ -25,11 +25,17 @@ public sealed class CurrentUserService (IHttpContextAccessor httpContextAccessor
         {
             var claims = _principal?
                 .FindAll(DwimsClaims.Role) ?? [];
-            
+
             var result = new Dictionary<Guid, GeneralRole>();
 
             foreach (var claim in claims)
             {
+                if (Enum.TryParse<GeneralRole>(claim.Value, out var globalRole))
+                {
+                    result[Guid.Empty] = globalRole;
+                    continue;
+                }
+
                 var parts = claim.Value.Split(':', 2);
                 if (parts.Length == 2 &&
                     Guid.TryParse(parts[0], out var department) &&
@@ -40,10 +46,10 @@ public sealed class CurrentUserService (IHttpContextAccessor httpContextAccessor
                         result[department] = role;
                 }
             }
-            
+
             return result;
         }
-        
+
     }
     
     public bool HasRoleInDepartment(Guid departmentId, GeneralRole role) =>
