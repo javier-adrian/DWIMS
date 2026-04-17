@@ -73,15 +73,28 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
 
     public async Task<Result<Guid>> AddStepAsync(Guid processId, AddStepRequest request, CancellationToken cancellationToken = default)
     {
-        var department = await context.Processes
-            .Where(x => x.Id == processId)
-            .Select(x => x.DepartmentId)
-            .FirstOrDefaultAsync(cancellationToken);
+        // var department = await context.Processes
+        //     .Where(x => x.Id == processId)
+        //     .Select(x => x.DepartmentId)
+        //     .FirstOrDefaultAsync(cancellationToken);
+        //
+        // if (!currentUserService.HasRoleInDepartment(department, GeneralRole.Administrator))
+        //     return Result<Guid>.Failure("FORBIDDEN", "You do not have administrator access to this department.");
+
+        var step = new Step
+        {
+            Id = Guid.NewGuid(),
+            Order = context.Steps.Count(x => x.Id == processId) + 1,
+            Title = request.Title,
+            DepartmentId = request.DepartmentId,
+            Role = request.Role
+        };
         
-        if (!currentUserService.HasRoleInDepartment(department, GeneralRole.Administrator))
-            return Result<Guid>.Failure("FORBIDDEN", "You do not have administrator access to this department.");
+        context.Steps.Add(step);
         
-        throw new NotImplementedException();
+        await context.SaveChangesAsync(cancellationToken);
+        
+        return Result<Guid>.Success(step.Id);
     }
 
     public async Task<Result> UpdateStepAsync(Guid processId, Guid stepId, UpdateStepRequest request,

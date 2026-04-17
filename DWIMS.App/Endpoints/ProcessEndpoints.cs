@@ -72,9 +72,14 @@ public static class ProcessEndpoints
         throw new NotImplementedException();
     }
 
-    private static async Task CreateStep(HttpContext context)
+    private static async Task<IResult> CreateStep(
+        Guid processId,
+        AddStepRequest request,
+        IProcessService departmentService,
+        CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = await departmentService.AddStepAsync(processId, request, cancellationToken);
+        return result.ToCreatedResult("/process/step/");
     }
 
     private static async Task GetSteps(HttpContext context)
