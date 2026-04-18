@@ -9,6 +9,7 @@ public class Process : ISoftDeletable
     public string Title { get; set; }
     public ICollection<Step> Steps { get; set; }
     public ICollection<Field> Fields { get; set; }
+    public Guid DocumentId { get; set; }
     public Document Document { get; set; }
     public Department Department { get; set; }
     
