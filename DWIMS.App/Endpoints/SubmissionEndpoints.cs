@@ -34,9 +34,9 @@ public static class SubmissionEndpoints
             .WithDisplayName("Respond to Step")
             .WithSummary("Approve or reject a submission at a specific step")
             .RequireAuthorization(DwimsPolicies.Reviewer);
-        group.MapDelete("/{id:guid}", DeleteSubmission)
-            .WithDisplayName("Delete Submission")
-            .WithSummary("Delete a submission");
+        group.MapPost("/{id:guid}/cancel", CancelSubmission)
+            .WithDisplayName("Cancel Submission")
+            .WithSummary("Cancel a submission");
         
         
         return app;
@@ -115,12 +115,12 @@ public static class SubmissionEndpoints
             });
     }
 
-    private static async Task<IResult> DeleteSubmission(
-        Guid id, 
-        ISubmissionService submissionService, 
+    private static async Task<IResult> CancelSubmission(
+        Guid id,
+        ISubmissionService submissionService,
         CancellationToken cancellationToken)
     {
-        var result = await submissionService.DeleteSubmissionAsync(id, cancellationToken);
+        var result = await submissionService.CancelSubmissionAsync(id, cancellationToken);
         return result.IsSuccess
             ? Results.Ok()
             : Results.UnprocessableEntity(new

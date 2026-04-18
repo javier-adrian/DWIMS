@@ -291,7 +291,7 @@ public class SubmissionService(AppDbContext context, ICurrentUserService current
         return Result.Success();
     }
 
-    public async Task<Result> DeleteSubmissionAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<Result> CancelSubmissionAsync(Guid id, CancellationToken cancellationToken = default)
     {
         if (currentUser.UserId is null)
             return Result.Failure("UNAUTHORIZED", "User is not authenticated.");
@@ -303,9 +303,13 @@ public class SubmissionService(AppDbContext context, ICurrentUserService current
             return Result.Failure("SUBMISSION_NOT_FOUND", "Submission not found.");
 
         if (submission.SubmitterId != currentUser.UserId.Value)
-            return Result.Failure("FORBIDDEN", "You can only delete your own submissions.");
+            return Result.Failure("FORBIDDEN", "You can only cancel your own submissions.");
 
-        context.Submissions.Remove(submission);
+        if (submission.Status == Status.Approve || submission.Status == Status.Reject || submission.Status == Status.Cancel)
+            return Result.Failure("INVALID_STATUS", "Cannot cancel a submission that is already completed.");
+
+        submission.Status = Status.Cancel;
+        submission.CompletedOn = DateTime.UtcNow;
         await context.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }

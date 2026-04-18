@@ -34,7 +34,7 @@ public interface ISubmissionService
         RespondToStepRequest request,
         CancellationToken cancellationToken = default);
 
-    Task<Result> DeleteSubmissionAsync(
+    Task<Result> CancelSubmissionAsync(
         Guid id,
         CancellationToken cancellationToken = default);
 }
