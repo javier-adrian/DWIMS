@@ -23,8 +23,12 @@ public interface IDepartmentService
         CancellationToken cancellationToken = default);
     
     Task<Result> AssignRoleAsync(
-        Guid departmentId, 
+        Guid departmentId,
         AssignRoleRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<Result> RemoveRoleAsync(
+        Guid roleId,
         CancellationToken cancellationToken = default);
 
     Task<Result<IReadOnlyList<DepartmentMemberDto>>> GetMembersAsync(
