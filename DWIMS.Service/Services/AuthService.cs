@@ -79,11 +79,22 @@ public class AuthService(
         throw new NotImplementedException();
     }
 
-    public Task<Result> ResetPasswordAsync(
+    public async Task<Result> ResetPasswordAsync(
         ResetPasswordRequest request,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        var resetToken = await context.PasswordResetTokens
+            .Include(t => t.User)
+            .FirstOrDefaultAsync(t => t.Token == request.Token && !t.Used && t.Expires > DateTime.UtcNow, cancellationToken);
+
+        if (resetToken is null)
+            return Result.Failure("INVALID_TOKEN", "Reset token is invalid or expired.");
+
+        resetToken.User.Password = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        resetToken.Used = true;
+        await context.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
     }
 
     private async Task<AuthResponse> BuildAuthResponseAsync(
