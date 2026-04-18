@@ -61,9 +61,13 @@ public static class ProcessEndpoints
         return result.ToOkResult();
     }
 
-    private static async Task GetProcess(HttpContext context)
+    private static async Task<IResult> GetProcess(
+        Guid id,
+        IProcessService processService,
+        CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = await processService.GetProcessAsync(id, cancellationToken);
+        return result.ToOkResult();
     }
 
     private static async Task UpdateProcess(HttpContext context)

@@ -30,7 +30,37 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
 
     public async Task<Result<ProcessDetailDto>> GetProcessAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        var process = await context.Processes
+            .Include(p => p.Department)
+            .Include(p => p.Steps.OrderBy(s => s.Order))
+            .ThenInclude(s => s.Department)
+            .Include(p => p.Fields)
+            .Where(p => p.Id == id)
+            .Select(p => new ProcessDetailDto(
+                p.Id,
+                p.Title,
+                null,
+                p.DepartmentId,
+                p.Department.Title,
+                p.Steps.Select(s => new StepDto(
+                    s.Id,
+                    s.Order,
+                    s.Title,
+                    s.Role,
+                    s.DepartmentId,
+                    s.Department.Title)).ToList(),
+                p.Fields.Select(f => new FieldDto(
+                    f.Id,
+                    f.Title,
+                    f.Type,
+                    f.Required)).ToList()
+            ))
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (process is null)
+            return Result<ProcessDetailDto>.Failure("PROCESS_NOT_FOUND", "Process not found.");
+
+        return Result<ProcessDetailDto>.Success(process);
     }
 
     public async Task<Result<Guid>> CreateProcessAsync(CreateProcessRequest request, CancellationToken cancellationToken = default)
