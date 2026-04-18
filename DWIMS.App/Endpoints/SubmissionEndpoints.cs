@@ -17,6 +17,8 @@ public static class SubmissionEndpoints
         group.MapGet("/own", GetMySubmissions);
         group.MapGet("/review", GetSubmissionsToReview)
             .RequireAuthorization(DwimsPolicies.Reviewer);
+        group.MapGet("/review/{id:guid}", GetSubmissionToReview)
+            .RequireAuthorization(DwimsPolicies.Reviewer);
         group.MapGet("/{id:guid}", GetSubmission);
         group.MapPost("/{id:guid}/steps/{stepId}", RespondSubmission)
             .RequireAuthorization(DwimsPolicies.Reviewer);
@@ -51,6 +53,11 @@ public static class SubmissionEndpoints
     }
 
     private static Task GetSubmissionsToReview(HttpContext context)
+    {
+        throw new NotImplementedException();
+    }
+
+    private static Task GetSubmissionToReview(HttpContext context)
     {
         throw new NotImplementedException();
     }
