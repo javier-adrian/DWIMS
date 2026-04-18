@@ -78,9 +78,49 @@ public class SubmissionService(AppDbContext context, ICurrentUserService current
         return Result<IReadOnlyList<PendingReviewDto>>.Success(pending);
     }
 
-    public Task<Result<SubmissionDetailDto>> GetPendingReviewAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<Result<SubmissionDetailDto>> GetPendingReviewAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        if (currentUser.UserId is null)
+            return Result<SubmissionDetailDto>.Failure("UNAUTHORIZED", "User is not authenticated.");
+
+        var submission = await context.Submissions
+            .Include(s => s.Process)
+            .Include(s => s.Step)
+            .Include(s => s.Submitter)
+            .Include(s => s.Inputs).ThenInclude(i => i.Field)
+            .Include(s => s.Responses).ThenInclude(r => r.Reviewer)
+            .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
+
+        if (submission is null)
+            return Result<SubmissionDetailDto>.Failure("SUBMISSION_NOT_FOUND", "Submission not found.");
+
+        var stepResponses = submission.Responses.Select(r => new SubmissionStepResponseDto(
+            r.Id,
+            r.Step.Title,
+            r.Result.ToString(),
+            r.Remarks,
+            $"{r.Reviewer.FirstName} {r.Reviewer.LastName}",
+            r.SubmittedOn,
+            r.CompletedOn
+        )).ToList();
+
+        var fieldValues = submission.Inputs.Select(i => new SubmissionFieldValueDto(
+            i.Field.Title,
+            i.Field.Type.ToString(),
+            i.Value
+        )).ToList();
+
+        return Result<SubmissionDetailDto>.Success(new SubmissionDetailDto(
+            submission.Id,
+            submission.ProcessId,
+            submission.Process.Title,
+            submission.Status,
+            submission.SubmittedOn,
+            submission.CompletedOn,
+            submission.Step.Title,
+            stepResponses,
+            fieldValues
+        ));
     }
 
     public async Task<Result<Guid>> CreateSubmissionAsync(CreateSubmissionRequest request, CancellationToken cancellationToken = default)

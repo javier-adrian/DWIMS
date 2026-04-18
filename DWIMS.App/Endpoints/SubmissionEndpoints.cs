@@ -61,9 +61,13 @@ public static class SubmissionEndpoints
         return result.ToOkResult();
     }
 
-    private static Task GetSubmissionToReview(HttpContext context)
+    private static async Task<IResult> GetSubmissionToReview(
+        Guid id, 
+        ISubmissionService submissionService, 
+        CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = await submissionService.GetPendingReviewAsync(id, cancellationToken);
+        return result.ToOkResult();
     }
 
     private static Task GetSubmission(HttpContext context)
