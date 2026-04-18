@@ -58,14 +58,27 @@ public static class DepartmentEndpoints
         return result.ToCreatedResult("/department/");
     }
 
-    private static Task UpdateDepartment(HttpContext context)
+    private static async Task<IResult> UpdateDepartment(
+        Guid id,
+        UpdateDepartmentRequest request,
+        IDepartmentService departmentService,
+        CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = await departmentService.UpdateDepartmentAsync(id, request, cancellationToken);
+        return result.IsSuccess
+            ? Results.Ok()
+            : Results.UnprocessableEntity(new { result.Error, result.ErrorDescription });
     }
 
-    private static Task DeleteDepartment(HttpContext context)
+    private static async Task<IResult> DeleteDepartment(
+        Guid id,
+        IDepartmentService departmentService,
+        CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = await departmentService.DeleteDepartmentAsync(id, cancellationToken);
+        return result.IsSuccess
+            ? Results.Ok()
+            : Results.UnprocessableEntity(new { result.Error, result.ErrorDescription });
     }
 
     private static async Task<IResult> GetMembers(

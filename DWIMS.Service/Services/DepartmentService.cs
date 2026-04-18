@@ -45,14 +45,39 @@ public class DepartmentService(AppDbContext context, ICurrentUserService current
         return Result<Guid>.Success(department.Id);
     }
 
-    public Task<Result> UpdateDepartmentAsync(Guid id, UpdateDepartmentRequest request, CancellationToken cancellationToken = default)
+    public async Task<Result> UpdateDepartmentAsync(Guid id, UpdateDepartmentRequest request, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        var department = await context.Departments
+            .FirstOrDefaultAsync(d => d.Id == id && !d.IsDeleted, cancellationToken);
+
+        if (department is null)
+            return Result.Failure("DEPARTMENT_NOT_FOUND", "Department not found.");
+
+        department.Title = request.Name;
+        await context.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
     }
 
-    public Task<Result> DeleteDepartmentAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<Result> DeleteDepartmentAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        var department = await context.Departments
+            .FirstOrDefaultAsync(d => d.Id == id && !d.IsDeleted, cancellationToken);
+
+        if (department is null)
+            return Result.Failure("DEPARTMENT_NOT_FOUND", "Department not found.");
+
+        var hasRelations = await context.Processes.AnyAsync(p => p.DepartmentId == id && !p.IsDeleted, cancellationToken) ||
+                           await context.Roles.AnyAsync(r => r.DepartmentId == id && !r.IsDeleted, cancellationToken) ||
+                           await context.Steps.AnyAsync(s => s.DepartmentId == id && !s.IsDeleted, cancellationToken);
+
+        if (hasRelations)
+            return Result.Failure("DEPARTMENT_IN_USE", "Cannot delete department that has related processes, roles, or users.");
+
+        context.Departments.Remove(department);
+        await context.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
     }
 
     public async Task<Result> AssignRoleAsync(
