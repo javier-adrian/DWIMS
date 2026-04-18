@@ -70,6 +70,17 @@ namespace DWIMS
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<IUserService, UserService>();
         
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("Frontend", policy =>
+                {
+                    policy.WithOrigins("http://localhost:5173")
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials();
+                });
+            });
+
             builder.Services.AddDbContext<AppDbContext>();
 
             builder.Services.AddAuthorization(options =>
@@ -107,6 +118,7 @@ namespace DWIMS
         
             var app = builder.Build();
         
+            app.UseCors("Frontend");
             app.UseAuthentication();
             app.UseAuthorization();
         
