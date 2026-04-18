@@ -35,9 +35,19 @@ public static class SubmissionEndpoints
         return result.ToOkResult();
     }
 
-    private static Task GetMySubmissions(HttpContext context)
+    private static async Task<IResult> GetMySubmissions(
+        [AsParameters] GetMySubmissionsQuery query,
+        ISubmissionService submissionService,
+        CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = await submissionService.GetMySubmissionsAsync(query.Status, query.Page, query.PageSize, cancellationToken);
+        return result.IsSuccess
+            ? Results.Ok(result.Data)
+            : Results.UnprocessableEntity(new
+            {
+                result.Error,
+                result.ErrorDescription
+            });
     }
 
     private static Task GetSubmissionsToReview(HttpContext context)

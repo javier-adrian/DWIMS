@@ -10,9 +10,32 @@ namespace DWIMS.Service.Services;
 
 public class SubmissionService(AppDbContext context, ICurrentUserService currentUser) : ISubmissionService
 {
-    public Task<Result<IReadOnlyList<SubmissionSummaryDto>>> GetMySubmissionsAsync(Status? statusFilter, int page, int pageSize, CancellationToken cancellationToken = default)
+    public async Task<Result<IReadOnlyList<SubmissionSummaryDto>>> GetMySubmissionsAsync(Status? statusFilter, int page, int pageSize, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        if (currentUser.UserId is null)
+            return Result<IReadOnlyList<SubmissionSummaryDto>>.Failure("UNAUTHORIZED", "User is not authenticated.");
+
+        var query = context.Submissions
+            .Include(s => s.Step)
+            .Where(s => s.SubmitterId == currentUser.UserId.Value);
+
+        if (statusFilter.HasValue)
+            query = query.Where(s => s.Status == statusFilter.Value);
+
+        var submissions = await query
+            .OrderByDescending(s => s.SubmittedOn)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(s => new SubmissionSummaryDto(
+                s.Id,
+                s.Process.Title,
+                s.Status,
+                s.SubmittedOn,
+                s.Step.Title
+            ))
+            .ToListAsync(cancellationToken);
+
+        return Result<IReadOnlyList<SubmissionSummaryDto>>.Success(submissions);
     }
 
     public Task<Result<IReadOnlyList<PendingReviewDto>>> GetPendingReviewAsync(CancellationToken cancellationToken = default)
