@@ -10,9 +10,24 @@ namespace DWIMS.Service.Services;
 
 public class DepartmentService(AppDbContext context, ICurrentUserService currentUserService) : IDepartmentService
 {
-    public Task<Result<IReadOnlyList<DepartmentDto>>> GetDepartmentAsync(CancellationToken cancellationToken = default)
+    public async Task<Result<IReadOnlyList<DepartmentDto>>> GetDepartmentAsync(CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        var departmentIds = currentUserService.Roles.Keys
+            .Where(id => id != Guid.Empty)
+            .ToList();
+
+        if (departmentIds.Count == 0 && !currentUserService.isSuperAdministrator)
+            return Result<IReadOnlyList<DepartmentDto>>.Success([]);
+
+        var query = currentUserService.isSuperAdministrator
+            ? context.Departments
+            : context.Departments.Where(d => departmentIds.Contains(d.Id));
+
+        var departments = await query
+            .Select(d => new DepartmentDto(d.Id, d.Title, null))
+            .ToListAsync(cancellationToken);
+
+        return Result<IReadOnlyList<DepartmentDto>>.Success(departments);
     }
 
     public async Task<Result<Guid>> CreateDepartmentAsync(CreateDepartmentRequest request, CancellationToken cancellationToken = default)
