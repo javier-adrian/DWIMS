@@ -31,9 +31,12 @@ public static class DepartmentEndpoints
         return app;
     }
 
-    private static Task GetDepartment(HttpContext context)
+    private static async Task<IResult> GetDepartment(
+        IDepartmentService departmentService, 
+        CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = await departmentService.GetDepartmentAsync(cancellationToken);
+        return result.ToOkResult();
     }
 
     private static async Task<IResult> CreateDepartment(
