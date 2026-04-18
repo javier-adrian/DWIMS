@@ -1,3 +1,4 @@
+using DWIMS.Service.Auth;
 using DWIMS.Service.Services;
 using DWIMS.Service.Submission;
 using DWIMS.Service.Submission.Requests;
@@ -14,9 +15,11 @@ public static class SubmissionEndpoints
 
         group.MapPost("/", CreateSubmission);
         group.MapGet("/own", GetMySubmissions);
-        group.MapGet("/review", GetSubmissionsToReview);
+        group.MapGet("/review", GetSubmissionsToReview)
+            .RequireAuthorization(DwimsPolicies.Reviewer);
         group.MapGet("/{id:guid}", GetSubmission);
-        group.MapPost("/{id:guid}/steps/{stepId}", RespondSubmission);
+        group.MapPost("/{id:guid}/steps/{stepId}", RespondSubmission)
+            .RequireAuthorization(DwimsPolicies.Reviewer);
         group.MapDelete("/{id:guid}", DeleteSubmission);
         
         
