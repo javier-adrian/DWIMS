@@ -19,4 +19,6 @@ public interface ITokenService
     Task RevokeRefreshTokenAsync(
         Guid userId,
         CancellationToken cancellationToken = default);
+
+    string HashToken(string input);
 }

@@ -56,11 +56,20 @@ public class AuthService(
         return Result<AuthResponse>.Success(await BuildAuthResponseAsync(user, cancellationToken));
     }
 
-    public Task<Result<AuthResponse>> RefreshTokenAsync(
-        RefreshTokenRequest request, 
+    public async Task<Result<AuthResponse>> RefreshTokenAsync(
+        RefreshTokenRequest request,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        var hashedToken = tokenService.HashToken(request.RefreshToken);
+
+        var refreshToken = await context.RefreshTokens
+            .Include(rt => rt.User)
+            .FirstOrDefaultAsync(rt => rt.Token == hashedToken && !rt.Revoked && rt.Expires > DateTime.UtcNow, cancellationToken);
+
+        if (refreshToken is null)
+            return Result<AuthResponse>.Failure("INVALID_REFRESH_TOKEN", "Refresh token is invalid or expired.");
+
+        return Result<AuthResponse>.Success(await BuildAuthResponseAsync(refreshToken.User, cancellationToken));
     }
 
     public Task ForgotPasswordAsync(

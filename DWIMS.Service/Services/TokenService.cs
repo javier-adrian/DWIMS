@@ -108,6 +108,8 @@ public class TokenService(
         }
     }
     
+    public string HashToken(string input) => Hash(input);
+
     private static string Hash(string input) =>
     Convert.ToBase64String(
         SHA256.HashData(

@@ -52,7 +52,11 @@ public static class AuthEndpoints
         var result = await authService.LoginAsync(request, cancellationToken);
         return result.ToOkResult();
     }
-    private static Task<IResult> Refresh(RefreshTokenRequest request, CancellationToken cancellationToken) => throw new NotImplementedException();
+    private static async Task<IResult> Refresh(RefreshTokenRequest request, IAuthService authService, CancellationToken cancellationToken)
+    {
+        var result = await authService.RefreshTokenAsync(request, cancellationToken);
+        return result.ToOkResult();
+    }
     private static Task<IResult> ForgotPassword(ForgotPasswordRequest request, CancellationToken cancellationToken) => throw new NotImplementedException();
     private static Task<IResult> ResetPassword(ResetPasswordRequest request, CancellationToken cancellationToken) => throw new NotImplementedException();
 }
