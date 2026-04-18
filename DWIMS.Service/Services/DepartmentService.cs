@@ -146,4 +146,21 @@ public class DepartmentService(AppDbContext context, ICurrentUserService current
 
         return Result<IReadOnlyList<DepartmentMemberDto>>.Success(members);
     }
+
+    public async Task<Result> RemoveRoleAsync(Guid roleId, CancellationToken cancellationToken = default)
+    {
+        var role = await context.Roles
+            .FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
+
+        if (role is null)
+            return Result.Failure("ROLE_NOT_FOUND", "Role not found.");
+
+        if (!currentUserService.isSuperAdministrator &&
+            !currentUserService.HasRoleInDepartment(role.DepartmentId ?? Guid.Empty, GeneralRole.Administrator))
+            return Result.Failure("FORBIDDEN", "You do not have administrator access to this role's department.");
+
+        context.Roles.Remove(role);
+        await context.SaveChangesAsync(cancellationToken);
+        return Result.Success();
+    }
 }
