@@ -111,8 +111,18 @@ public static class SubmissionEndpoints
             });
     }
 
-    private static Task DeleteSubmission(HttpContext context)
+    private static async Task<IResult> DeleteSubmission(
+        Guid id, 
+        ISubmissionService submissionService, 
+        CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = await submissionService.DeleteSubmissionAsync(id, cancellationToken);
+        return result.IsSuccess
+            ? Results.Ok()
+            : Results.UnprocessableEntity(new
+            {
+                result.Error,
+                result.ErrorDescription
+            });
     }
 }
