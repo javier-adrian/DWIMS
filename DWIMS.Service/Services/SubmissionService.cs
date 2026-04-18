@@ -61,7 +61,7 @@ public class SubmissionService(AppDbContext context, ICurrentUserService current
         if (!currentUser.isSuperAdministrator)
             query = query.Where(s => departmentIds.Contains(s.Step.DepartmentId));
 
-        query = query.Where(s => !s.Responses.Any(r => r.ReviewerId == currentUser.UserId.Value));
+        query = query.Where(s => !s.Responses.Any(r => r.ReviewerId == currentUser.UserId.Value && r.CompletedOn != null));
 
         var pending = await query
             .Select(s => new PendingReviewDto(
@@ -88,7 +88,8 @@ public class SubmissionService(AppDbContext context, ICurrentUserService current
             .Include(s => s.Step)
             .Include(s => s.Submitter)
             .Include(s => s.Inputs).ThenInclude(i => i.Field)
-            .Include(s => s.Responses).ThenInclude(r => r.Reviewer)
+            .Include(s => s.Responses).ThenInclude(r => r.Reviewer).Include(submission => submission.Responses)
+            .ThenInclude(response => response.Step)
             .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
 
         if (submission is null)
@@ -97,10 +98,10 @@ public class SubmissionService(AppDbContext context, ICurrentUserService current
         var stepResponses = submission.Responses.Select(r => new SubmissionStepResponseDto(
             r.Id,
             r.Step.Title,
-            r.Result.ToString(),
+            r.Result?.ToString(),
             r.Remarks,
             $"{r.Reviewer.FirstName} {r.Reviewer.LastName}",
-            r.SubmittedOn,
+            r.ActivatedOn,
             r.CompletedOn
         )).ToList();
 
@@ -121,6 +122,11 @@ public class SubmissionService(AppDbContext context, ICurrentUserService current
             stepResponses,
             fieldValues
         ));
+    }
+
+    public Task<Result<SubmissionDetailDto>> GetSubmissionAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
     }
 
     public async Task<Result<Guid>> CreateSubmissionAsync(CreateSubmissionRequest request, CancellationToken cancellationToken = default)
@@ -151,6 +157,14 @@ public class SubmissionService(AppDbContext context, ICurrentUserService current
         };
 
         context.Submissions.Add(submission);
+
+        context.Responses.Add(new Response
+        {
+            Id = Guid.NewGuid(),
+            SubmissionId = submission.Id,
+            StepId = firstStep.Id,
+            ActivatedOn = DateTime.UtcNow,
+        });
 
         foreach (var fieldInput in request.Fields)
         {
@@ -183,6 +197,7 @@ public class SubmissionService(AppDbContext context, ICurrentUserService current
         var submission = await context.Submissions
             .Include(s => s.Process)
             .ThenInclude(p => p.Steps.OrderBy(st => st.Order))
+            .Include(s => s.Responses)
             .FirstOrDefaultAsync(s => s.Id == submissionId, cancellationToken);
 
         if (submission is null)
@@ -195,17 +210,14 @@ public class SubmissionService(AppDbContext context, ICurrentUserService current
         if (currentStep is null)
             return Result.Failure("STEP_NOT_FOUND", "Step not found.");
 
-        context.Responses.Add(new Response
-        {
-            Id = Guid.NewGuid(),
-            SubmissionId = submissionId,
-            StepId = stepId,
-            ReviewerId = currentUser.UserId.Value,
-            Result = request.Outcome,
-            Remarks = request.Remarks ?? "",
-            SubmittedOn = DateTime.UtcNow,
-            CompletedOn = DateTime.UtcNow,
-        });
+        var response = submission.Responses.FirstOrDefault(r => r.StepId == stepId && r.CompletedOn == null);
+        if (response is null)
+            return Result.Failure("RESPONSE_NOT_FOUND", "No active response found for this step.");
+
+        response.ReviewerId = currentUser.UserId.Value;
+        response.Result = request.Outcome;
+        response.Remarks = request.Remarks ?? "";
+        response.CompletedOn = DateTime.UtcNow;
 
         if (request.Outcome == Status.Reject)
         {
@@ -220,6 +232,14 @@ public class SubmissionService(AppDbContext context, ICurrentUserService current
             {
                 submission.StepId = nextStep.Id;
                 submission.Status = Status.Review;
+
+                context.Responses.Add(new Response
+                {
+                    Id = Guid.NewGuid(),
+                    SubmissionId = submissionId,
+                    StepId = nextStep.Id,
+                    ActivatedOn = DateTime.UtcNow,
+                });
             }
             else
             {

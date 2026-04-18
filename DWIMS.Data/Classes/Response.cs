@@ -11,10 +11,10 @@ public class Response : ISoftDeletable
     public Step Step { get; set; }
     public Guid? ReviewerId { get; set; }
     public User Reviewer { get; set; }
-    public Status Result { get; set; }
-    public string Remarks { get; set; }
+    public Status? Result { get; set; }
+    public string Remarks { get; set; } = "";
     public DateTime ActivatedOn { get; set; }
-    public DateTime CompletedOn { get; set; }
+    public DateTime? CompletedOn { get; set; }
     
     public bool IsDeleted { get; set; }
     public DateTime? DeletedOn { get; set; }

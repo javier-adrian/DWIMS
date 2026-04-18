@@ -52,9 +52,6 @@ namespace DWIMS.Data.Migrations
                     b.Property<DateTime?>("DeletedOn")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<Guid?>("DepartmentId")
-                        .HasColumnType("char(36)");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("tinyint(1)");
 
@@ -62,14 +59,12 @@ namespace DWIMS.Data.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<Guid?>("RoleId")
+                    b.Property<Guid>("ProcessId")
                         .HasColumnType("char(36)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DepartmentId");
-
-                    b.HasIndex("RoleId");
+                    b.HasIndex("ProcessId");
 
                     b.ToTable("Documents");
                 });
@@ -149,9 +144,6 @@ namespace DWIMS.Data.Migrations
                     b.Property<Guid>("DepartmentId")
                         .HasColumnType("char(36)");
 
-                    b.Property<Guid>("DocumentId")
-                        .HasColumnType("char(36)");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("tinyint(1)");
 
@@ -162,8 +154,6 @@ namespace DWIMS.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DepartmentId");
-
-                    b.HasIndex("DocumentId");
 
                     b.ToTable("Processes");
                 });
@@ -203,7 +193,10 @@ namespace DWIMS.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<DateTime>("CompletedOn")
+                    b.Property<DateTime>("ActivatedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("CompletedOn")
                         .HasColumnType("datetime(6)");
 
                     b.Property<DateTime?>("DeletedOn")
@@ -216,7 +209,7 @@ namespace DWIMS.Data.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<int>("Result")
+                    b.Property<int?>("Result")
                         .HasColumnType("int");
 
                     b.Property<Guid?>("ReviewerId")
@@ -227,9 +220,6 @@ namespace DWIMS.Data.Migrations
 
                     b.Property<Guid>("SubmissionId")
                         .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("SubmittedOn")
-                        .HasColumnType("datetime(6)");
 
                     b.HasKey("Id");
 
@@ -446,13 +436,13 @@ namespace DWIMS.Data.Migrations
 
             modelBuilder.Entity("DWIMS.Data.Document", b =>
                 {
-                    b.HasOne("DWIMS.Data.Department", null)
-                        .WithMany("Documents")
-                        .HasForeignKey("DepartmentId");
+                    b.HasOne("DWIMS.Data.Process", "Process")
+                        .WithMany()
+                        .HasForeignKey("ProcessId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
-                    b.HasOne("DWIMS.Data.Role", null)
-                        .WithMany("Documents")
-                        .HasForeignKey("RoleId");
+                    b.Navigation("Process");
                 });
 
             modelBuilder.Entity("DWIMS.Data.Field", b =>
@@ -493,15 +483,7 @@ namespace DWIMS.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("DWIMS.Data.Document", "Document")
-                        .WithMany()
-                        .HasForeignKey("DocumentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("Department");
-
-                    b.Navigation("Document");
                 });
 
             modelBuilder.Entity("DWIMS.Data.RefreshToken", b =>
@@ -633,21 +615,11 @@ namespace DWIMS.Data.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("DWIMS.Data.Department", b =>
-                {
-                    b.Navigation("Documents");
-                });
-
             modelBuilder.Entity("DWIMS.Data.Process", b =>
                 {
                     b.Navigation("Fields");
 
                     b.Navigation("Steps");
-                });
-
-            modelBuilder.Entity("DWIMS.Data.Role", b =>
-                {
-                    b.Navigation("Documents");
                 });
 
             modelBuilder.Entity("DWIMS.Data.Submission", b =>
