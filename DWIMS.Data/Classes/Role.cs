@@ -10,7 +10,6 @@ public class Role : ISoftDeletable
     public GeneralRole GeneralRole { get; set; }
     public Guid? DepartmentId { get; set; }
     public Department? Department { get; set; }
-    public ICollection<Document> Documents { get; set; }
     public Guid UserId { get; set; }
     public User User { get; set; }
     

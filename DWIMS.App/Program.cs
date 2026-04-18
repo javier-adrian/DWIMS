@@ -7,6 +7,7 @@ using DWIMS.Service.CurrentUser;
 using DWIMS.Service.Department;
 using DWIMS.Service.Process;
 using DWIMS.Service.Services;
+using DWIMS.Service.Submission;
 using DWIMS.Service.User;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -115,6 +116,7 @@ namespace DWIMS
             builder.Services.AddScoped<IAuthorizationHandler, RoleHandler>();
             builder.Services.AddScoped<IDepartmentService, DepartmentService>();
             builder.Services.AddScoped<IProcessService, ProcessService>();
+            builder.Services.AddScoped<ISubmissionService, SubmissionService>();
         
             var app = builder.Build();
         
@@ -129,6 +131,7 @@ namespace DWIMS
             app.MapUserEndpoints();
             app.MapDepartmentEndpoints();
             app.MapProcessEndpoints();
+            app.MapSubmissionEndpoints();
             
             // app.Use(async (context, next) =>
             // {

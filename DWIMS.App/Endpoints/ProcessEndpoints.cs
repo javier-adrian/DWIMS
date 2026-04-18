@@ -108,9 +108,13 @@ public static class ProcessEndpoints
         return result.ToCreatedResult("/process/step/");
     }
 
-    private static async Task GetSteps(HttpContext context)
+    private static async Task<IResult> GetSteps(
+        Guid id,
+        IProcessService processService,
+        CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = await processService.GetStepsAsync(id, cancellationToken);
+        return result.ToOkResult();
     }
 
     private static async Task GetStep(HttpContext context)

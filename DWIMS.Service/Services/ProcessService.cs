@@ -21,7 +21,7 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
                 p.Title,
                 null,
                 p.Steps.Count,
-                p.DocumentId != Guid.Empty
+                context.Documents.Any(d => d.ProcessId == p.Id && !d.IsDeleted)
             ))
             .ToListAsync(cancellationToken);
 
@@ -75,21 +75,21 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
         if (department is null)
             return Result<Guid>.Failure("DEPARTMENT_NOT_FOUND", "Department not found.");
 
-        var document = new Document
-        {
-            Id = Guid.NewGuid(),
-            Link = ""
-        };
-
-        context.Documents.Add(document);
-
         var process = new Data.Process
         {
             Id = Guid.NewGuid(),
             Title = request.Title,
             DepartmentId = request.DepartmentId,
-            DocumentId = document.Id
         };
+
+        var document = new Document
+        {
+            Id = Guid.NewGuid(),
+            Link = "",
+            ProcessId = process.Id
+        };
+
+        context.Documents.Add(document);
         
         context.Processes.Add(process);
         
@@ -142,7 +142,8 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
             Order = context.Steps.Count(x => x.Id == processId) + 1,
             Title = request.Title,
             DepartmentId = request.DepartmentId,
-            Role = request.Role
+            Role = request.Role,
+            ProcessId = processId
         };
         
         context.Steps.Add(step);
@@ -212,5 +213,23 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
         await context.SaveChangesAsync(cancellationToken);
         
         return Result<Guid>.Success(field.Id);
+    }
+
+    public async Task<Result<IReadOnlyList<StepDto>>> GetStepsAsync(Guid processId, CancellationToken cancellationToken = default)
+    {
+        var steps = await context.Steps
+            .Include(s => s.Department)
+            .Where(s => s.ProcessId == processId)
+            .OrderBy(s => s.Order)
+            .Select(s => new StepDto(
+                s.Id,
+                s.Order,
+                s.Title,
+                s.Role,
+                s.DepartmentId,
+                s.Department.Title))
+            .ToListAsync(cancellationToken);
+
+        return Result<IReadOnlyList<StepDto>>.Success(steps);
     }
 }

@@ -20,6 +20,10 @@ public interface ISubmissionService
         Guid id,
         CancellationToken cancellationToken = default);
 
+    Task<Result<SubmissionDetailDto>> GetSubmissionAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
     Task<Result<Guid>> CreateSubmissionAsync(
         CreateSubmissionRequest request,
         CancellationToken cancellationToken = default);
