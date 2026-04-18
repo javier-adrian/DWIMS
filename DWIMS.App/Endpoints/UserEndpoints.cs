@@ -35,6 +35,10 @@ public static class UserEndpoints
             .WithDisplayName("Assign Role")
             .WithSummary("Assign a role to a user");
 
+        roleGroup.MapDelete("/{id:guid}", RemoveRole)
+            .WithDisplayName("Remove Role")
+            .WithSummary("Remove a role from a user");
+
         roleGroup.MapPost("/super-administrator", AssignSuperAdmin)
             .RequireAuthorization(DwimsPolicies.SuperAdministrator)
             .WithDisplayName("Assign Super Administrator")
@@ -96,6 +100,22 @@ public static class UserEndpoints
     {
         request.GeneralRole = GeneralRole.SuperAdministrator;
         var result = await departmentService.AssignRoleAsync(Guid.Empty, request, cancellationToken);
+
+        return result.IsSuccess
+            ? Results.Ok()
+            : Results.UnprocessableEntity(new
+            {
+                result.Error,
+                result.ErrorDescription
+            });
+    }
+
+    private static async Task<IResult> RemoveRole(
+        Guid id,
+        IDepartmentService departmentService,
+        CancellationToken cancellationToken)
+    {
+        var result = await departmentService.RemoveRoleAsync(id, cancellationToken);
 
         return result.IsSuccess
             ? Results.Ok()
