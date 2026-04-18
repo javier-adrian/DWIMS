@@ -14,17 +14,31 @@ public static class ProcessEndpoints
             .RequireAuthorization();
 
         group.MapPost("/", CreateProcess)
+            .WithDisplayName("Create Process")
+            .WithSummary("Create a new process in a department")
             .RequireAuthorization(DwimsPolicies.Administrator);
-        group.MapGet("/", GetProcesses);
-        group.MapGet("/{id:guid}", GetProcess);
+        group.MapGet("/", GetProcesses)
+            .WithDisplayName("Get Processes")
+            .WithSummary("Get all processes");
+        group.MapGet("/{id:guid}", GetProcess)
+            .WithDisplayName("Get Process")
+            .WithSummary("Get a process by ID with steps and fields");
         group.MapPut("/{id:guid}", UpdateProcess)
+            .WithDisplayName("Update Process")
+            .WithSummary("Update an existing process")
             .RequireAuthorization(DwimsPolicies.Administrator);
         group.MapDelete("/{id:guid}", DeleteProcess)
+            .WithDisplayName("Delete Process")
+            .WithSummary("Delete a process")
             .RequireAuthorization(DwimsPolicies.Administrator);
 
         group.MapPost("/{id:guid}/step", CreateStep)
+            .WithDisplayName("Add Step")
+            .WithSummary("Add a step to a process")
             .RequireAuthorization(DwimsPolicies.Administrator);
-        group.MapGet("/{id:guid}/step", GetSteps);
+        group.MapGet("/{id:guid}/step", GetSteps)
+            .WithDisplayName("Get Steps")
+            .WithSummary("Get all steps of a process");
         // group.MapGet("/{id:guid}/step/{id:guid}", GetStep);
         // group.MapPut("/{id:guid}/step/{id:guid}", UpdateStep)
         //     .RequireAuthorization(DwimsPolicies.Administrator);
@@ -32,8 +46,12 @@ public static class ProcessEndpoints
         //     .RequireAuthorization(DwimsPolicies.Administrator);
         
         group.MapPost("/{id:guid}/field", CreateField)
+            .WithDisplayName("Add Field")
+            .WithSummary("Add a field to a process")
             .RequireAuthorization(DwimsPolicies.Administrator);
-        group.MapGet("/{id:guid}/field", GetFields);
+        group.MapGet("/{id:guid}/field", GetFields)
+            .WithDisplayName("Get Fields")
+            .WithSummary("Get all fields of a process");
         // group.MapGet("/{id:guid}/field/{id:guid}", GetField);
         // group.MapPut("/{id:guid}/field/{id:guid}", UpdateField)
         //     .RequireAuthorization(DwimsPolicies.Administrator);

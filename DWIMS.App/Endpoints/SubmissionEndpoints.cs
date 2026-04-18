@@ -13,16 +13,30 @@ public static class SubmissionEndpoints
             .WithTags("Submission")
             .RequireAuthorization();
 
-        group.MapPost("/", CreateSubmission);
-        group.MapGet("/own", GetMySubmissions);
+        group.MapPost("/", CreateSubmission)
+            .WithDisplayName("Create Submission")
+            .WithSummary("Submit a new document for review");
+        group.MapGet("/own", GetMySubmissions)
+            .WithDisplayName("Get My Submissions")
+            .WithSummary("Get the current user's submissions");
         group.MapGet("/review", GetSubmissionsToReview)
+            .WithDisplayName("Get Pending Reviews")
+            .WithSummary("Get all submissions pending review")
             .RequireAuthorization(DwimsPolicies.Reviewer);
         group.MapGet("/review/{id:guid}", GetSubmissionToReview)
+            .WithDisplayName("Get Submission to Review")
+            .WithSummary("Get a submission's full details for review")
             .RequireAuthorization(DwimsPolicies.Reviewer);
-        group.MapGet("/{id:guid}", GetSubmission);
+        group.MapGet("/{id:guid}", GetSubmission)
+            .WithDisplayName("Get Submission")
+            .WithSummary("Get a submission by ID");
         group.MapPost("/{id:guid}/steps/{stepId}", RespondSubmission)
+            .WithDisplayName("Respond to Step")
+            .WithSummary("Approve or reject a submission at a specific step")
             .RequireAuthorization(DwimsPolicies.Reviewer);
-        group.MapDelete("/{id:guid}", DeleteSubmission);
+        group.MapDelete("/{id:guid}", DeleteSubmission)
+            .WithDisplayName("Delete Submission")
+            .WithSummary("Delete a submission");
         
         
         return app;

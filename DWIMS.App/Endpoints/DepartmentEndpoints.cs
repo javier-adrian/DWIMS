@@ -14,18 +14,28 @@ public static class DepartmentEndpoints
             .WithTags("Department")
             .RequireAuthorization();
 
-        group.MapGet("/", GetDepartment);
-        
+        group.MapGet("/", GetDepartment)
+            .WithDisplayName("Get Departments")
+            .WithSummary("Get all departments the current user has access to");
+
         group.MapPost("/", CreateDepartment)
+            .WithDisplayName("Create Department")
+            .WithSummary("Create a new department")
             .RequireAuthorization(DwimsPolicies.SuperAdministrator);
-        
+
         group.MapPut("/{id:guid}", UpdateDepartment)
+            .WithDisplayName("Update Department")
+            .WithSummary("Update an existing department")
             .RequireAuthorization(DwimsPolicies.SuperAdministrator);
-        
+
         group.MapDelete("/{id:guid}", DeleteDepartment)
+            .WithDisplayName("Delete Department")
+            .WithSummary("Delete a department")
             .RequireAuthorization(DwimsPolicies.SuperAdministrator);
-        
+
         group.MapGet("/{id:guid}/members", GetMembers)
+            .WithDisplayName("Get Department Members")
+            .WithSummary("Get all members of a department")
             .RequireAuthorization(DwimsPolicies.Administrator);
         
         return app;
