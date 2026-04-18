@@ -84,9 +84,13 @@ public static class SubmissionEndpoints
         return result.ToOkResult();
     }
 
-    private static Task GetSubmission(HttpContext context)
+    private static async Task<IResult> GetSubmission(
+        Guid id,
+        ISubmissionService submissionService,
+        CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = await submissionService.GetSubmissionAsync(id, cancellationToken);
+        return result.ToOkResult();
     }
 
     private static async Task<IResult> RespondSubmission(

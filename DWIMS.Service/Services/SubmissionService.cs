@@ -124,9 +124,47 @@ public class SubmissionService(AppDbContext context, ICurrentUserService current
         ));
     }
 
-    public Task<Result<SubmissionDetailDto>> GetSubmissionAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<Result<SubmissionDetailDto>> GetSubmissionAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        var submission = await context.Submissions
+            .Include(s => s.Process)
+            .Include(s => s.Step)
+            .Include(s => s.Submitter)
+            .Include(s => s.Inputs).ThenInclude(i => i.Field)
+            .Include(s => s.Responses).ThenInclude(r => r.Reviewer)
+            .Include(s => s.Responses).ThenInclude(r => r.Step)
+            .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
+
+        if (submission is null)
+            return Result<SubmissionDetailDto>.Failure("SUBMISSION_NOT_FOUND", "Submission not found.");
+
+        var stepResponses = submission.Responses.Select(r => new SubmissionStepResponseDto(
+            r.Id,
+            r.Step.Title,
+            r.Result?.ToString(),
+            r.Remarks,
+            r.Reviewer is not null ? $"{r.Reviewer.FirstName} {r.Reviewer.LastName}" : null,
+            r.ActivatedOn,
+            r.CompletedOn
+        )).ToList();
+
+        var fieldValues = submission.Inputs.Select(i => new SubmissionFieldValueDto(
+            i.Field.Title,
+            i.Field.Type.ToString(),
+            i.Value
+        )).ToList();
+
+        return Result<SubmissionDetailDto>.Success(new SubmissionDetailDto(
+            submission.Id,
+            submission.ProcessId,
+            submission.Process.Title,
+            submission.Status,
+            submission.SubmittedOn,
+            submission.CompletedOn,
+            submission.Step.Title,
+            stepResponses,
+            fieldValues
+        ));
     }
 
     public async Task<Result<Guid>> CreateSubmissionAsync(CreateSubmissionRequest request, CancellationToken cancellationToken = default)
