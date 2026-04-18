@@ -4,6 +4,7 @@ using DWIMS.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DWIMS.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260418085606_AddPasswordResetTokens")]
+    partial class AddPasswordResetTokens
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -130,35 +133,6 @@ namespace DWIMS.Data.Migrations
                     b.HasIndex("SubmissionId");
 
                     b.ToTable("Inputs");
-                });
-
-            modelBuilder.Entity("DWIMS.Data.PasswordResetToken", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("Created")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime>("Expires")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<bool>("Used")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("PasswordResetTokens");
                 });
 
             modelBuilder.Entity("DWIMS.Data.Process", b =>
@@ -502,17 +476,6 @@ namespace DWIMS.Data.Migrations
                     b.Navigation("Field");
 
                     b.Navigation("Submission");
-                });
-
-            modelBuilder.Entity("DWIMS.Data.PasswordResetToken", b =>
-                {
-                    b.HasOne("DWIMS.Data.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("DWIMS.Data.Process", b =>

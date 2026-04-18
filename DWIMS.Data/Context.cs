@@ -53,4 +53,5 @@ public class AppDbContext : DbContext
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<Response> Responses { get; set; }
     public DbSet<Field> Fields { get; set; }
+    public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
 }
