@@ -47,9 +47,26 @@ public static class SubmissionEndpoints
         throw new NotImplementedException();
     }
 
-    private static Task RespondSubmission(HttpContext context)
+    private static async Task<IResult> RespondSubmission(
+        Guid submissionId,
+        Guid stepId,
+        RespondToStepRequest request,
+        ISubmissionService submissionService,
+        CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = await submissionService.RespondToStepAsync(
+            submissionId, 
+            stepId, 
+            request, 
+            cancellationToken);
+
+        return result.IsSuccess
+            ? Results.Ok()
+            : Results.UnprocessableEntity(new
+            {
+                result.Error,
+                result.ErrorDescription
+            });
     }
 
     private static Task DeleteSubmission(HttpContext context)

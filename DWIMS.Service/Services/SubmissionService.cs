@@ -73,10 +73,66 @@ public class SubmissionService(AppDbContext context, ICurrentUserService current
         return Result<Guid>.Success(submission.Id);
     }
 
-    public Task<Result> RespondToStepAsync(Guid submissionId, Guid stepId, RespondToStepRequest request,
+    public async Task<Result> RespondToStepAsync(Guid submissionId, Guid stepId, RespondToStepRequest request,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        if (currentUser.UserId is null)
+            return Result.Failure("UNAUTHORIZED", "User is not authenticated.");
+
+        if (request.Outcome is not Status.Approve and not Status.Reject)
+            return Result.Failure("INVALID_OUTCOME", "Outcome must be Approve or Reject.");
+
+        var submission = await context.Submissions
+            .Include(s => s.Process)
+            .ThenInclude(p => p.Steps.OrderBy(st => st.Order))
+            .FirstOrDefaultAsync(s => s.Id == submissionId, cancellationToken);
+
+        if (submission is null)
+            return Result.Failure("SUBMISSION_NOT_FOUND", "Submission not found.");
+
+        if (submission.StepId != stepId)
+            return Result.Failure("WRONG_STEP", "This submission is not on the specified step.");
+
+        var currentStep = submission.Process.Steps.FirstOrDefault(s => s.Id == stepId);
+        if (currentStep is null)
+            return Result.Failure("STEP_NOT_FOUND", "Step not found.");
+
+        context.Responses.Add(new Response
+        {
+            Id = Guid.NewGuid(),
+            SubmissionId = submissionId,
+            StepId = stepId,
+            ReviewerId = currentUser.UserId.Value,
+            Result = request.Outcome,
+            Remarks = request.Remarks ?? "",
+            SubmittedOn = DateTime.UtcNow,
+            CompletedOn = DateTime.UtcNow,
+        });
+
+        if (request.Outcome == Status.Reject)
+        {
+            submission.Status = Status.Reject;
+        }
+        else
+        {
+            var nextStep = submission.Process.Steps
+                .FirstOrDefault(s => s.Order > currentStep.Order);
+
+            if (nextStep is not null)
+            {
+                submission.StepId = nextStep.Id;
+                submission.Status = Status.Review;
+            }
+            else
+            {
+                submission.Status = Status.Approve;
+            }
+        }
+
+        submission.CompletedOn = DateTime.UtcNow;
+
+        await context.SaveChangesAsync(cancellationToken);
+        return Result.Success();
     }
 
     public Task<Result> DeleteSubmissionAsync(Guid id, CancellationToken cancellationToken = default)
