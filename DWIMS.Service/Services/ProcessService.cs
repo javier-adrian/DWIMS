@@ -75,11 +75,20 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
         if (department is null)
             return Result<Guid>.Failure("DEPARTMENT_NOT_FOUND", "Department not found.");
 
+        var document = new Document
+        {
+            Id = Guid.NewGuid(),
+            Link = ""
+        };
+
+        context.Documents.Add(document);
+
         var process = new Data.Process
         {
             Id = Guid.NewGuid(),
             Title = request.Title,
-            DepartmentId = request.DepartmentId
+            DepartmentId = request.DepartmentId,
+            DocumentId = document.Id
         };
         
         context.Processes.Add(process);

@@ -10,7 +10,6 @@ public class Step : ISoftDeletable
     public Guid DepartmentId { get; set; }
     public int Order { get; set; }
     public string Title { get; set; }
-    public string Description { get; set; }
 
     public GeneralRole Role { get; set; } = GeneralRole.Reviewer;
     public Department Department { get; set; }
