@@ -1,9 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc.ViewFeatures;
+﻿using DWIMS.Data;
 
 namespace DWIMS.Service.Process.Dtos;
 
 public sealed record FieldDto(
     Guid Id,
     string Name,
-    InputType Type,
+    InputTypes Type,
     bool Required);
