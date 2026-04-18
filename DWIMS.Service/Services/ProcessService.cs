@@ -65,7 +65,8 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
 
     public async Task<Result<Guid>> CreateProcessAsync(CreateProcessRequest request, CancellationToken cancellationToken = default)
     {
-        if (!currentUserService.HasRoleInDepartment(request.DepartmentId, GeneralRole.Administrator))
+        if (!currentUserService.HasRoleInDepartment(request.DepartmentId, GeneralRole.Administrator) &&
+            !currentUserService.isSuperAdministrator)
             return Result<Guid>.Failure("FORBIDDEN", "You do not have administrator access to this department.");
         
         var department = await context.Departments
@@ -95,7 +96,8 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
             .Select(x => x.DepartmentId)
             .FirstOrDefaultAsync(cancellationToken);
         
-        if (!currentUserService.HasRoleInDepartment(department, GeneralRole.Administrator))
+        if (!currentUserService.HasRoleInDepartment(department, GeneralRole.Administrator) &&
+            !currentUserService.isSuperAdministrator)
             return Result.Failure("FORBIDDEN", "You do not have administrator access to this department.");
         
         throw new NotImplementedException();
@@ -108,7 +110,8 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
             .Select(x => x.DepartmentId)
             .FirstOrDefaultAsync(cancellationToken);
         
-        if (!currentUserService.HasRoleInDepartment(department, GeneralRole.Administrator))
+        if (!currentUserService.HasRoleInDepartment(department, GeneralRole.Administrator) &&
+            !currentUserService.isSuperAdministrator)
             return Result.Failure("FORBIDDEN", "You do not have administrator access to this department.");
         
         throw new NotImplementedException();
@@ -148,7 +151,8 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
             .Select(x => x.DepartmentId)
             .FirstOrDefaultAsync(cancellationToken);
         
-        if (!currentUserService.HasRoleInDepartment(department, GeneralRole.Administrator))
+        if (!currentUserService.HasRoleInDepartment(department, GeneralRole.Administrator) &&
+            !currentUserService.isSuperAdministrator)
             return Result.Failure("FORBIDDEN", "You do not have administrator access to this department.");
         
         throw new NotImplementedException();
@@ -161,7 +165,8 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
             .Select(x => x.DepartmentId)
             .FirstOrDefaultAsync(cancellationToken);
         
-        if (!currentUserService.HasRoleInDepartment(department, GeneralRole.Administrator))
+        if (!currentUserService.HasRoleInDepartment(department, GeneralRole.Administrator) &&
+            !currentUserService.isSuperAdministrator)
             return Result.Failure("FORBIDDEN", "You do not have administrator access to this department.");
         
         throw new NotImplementedException();
@@ -174,7 +179,8 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
             .Select(x => x.DepartmentId)
             .FirstOrDefaultAsync(cancellationToken);
         
-        if (!currentUserService.HasRoleInDepartment(department, GeneralRole.Administrator))
+        if (!currentUserService.HasRoleInDepartment(department, GeneralRole.Administrator) &&
+            !currentUserService.isSuperAdministrator)
             return Result<Guid>.Failure("FORBIDDEN", "You do not have administrator access to this department.");
 
         var process = await context.Processes
