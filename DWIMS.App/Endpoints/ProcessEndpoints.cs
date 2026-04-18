@@ -25,20 +25,20 @@ public static class ProcessEndpoints
         group.MapPost("/{id:guid}/step", CreateStep)
             .RequireAuthorization(DwimsPolicies.Administrator);
         group.MapGet("/{id:guid}/step", GetSteps);
-        group.MapGet("/{id:guid}/step/{id:guid}", GetStep);
-        group.MapPut("/{id:guid}/step/{id:guid}", UpdateStep)
-            .RequireAuthorization(DwimsPolicies.Administrator);
-        group.MapDelete("/{id:guid/step/{id:guid", DeleteStep)
-            .RequireAuthorization(DwimsPolicies.Administrator);
+        // group.MapGet("/{id:guid}/step/{id:guid}", GetStep);
+        // group.MapPut("/{id:guid}/step/{id:guid}", UpdateStep)
+        //     .RequireAuthorization(DwimsPolicies.Administrator);
+        // group.MapDelete("/{id:guid/step/{id:guid}", DeleteStep)
+        //     .RequireAuthorization(DwimsPolicies.Administrator);
         
         group.MapPost("/{id:guid}/field", CreateField)
             .RequireAuthorization(DwimsPolicies.Administrator);
         group.MapGet("/{id:guid}/field", GetFields);
-        group.MapGet("/{id:guid}/field/{id:guid}", GetField);
-        group.MapPut("/{id:guid}/field/{id:guid}", UpdateField)
-            .RequireAuthorization(DwimsPolicies.Administrator);
-        group.MapDelete("/{id:guid/field/{id:guid", DeleteField)
-            .RequireAuthorization(DwimsPolicies.Administrator);
+        // group.MapGet("/{id:guid}/field/{id:guid}", GetField);
+        // group.MapPut("/{id:guid}/field/{id:guid}", UpdateField)
+        //     .RequireAuthorization(DwimsPolicies.Administrator);
+        // group.MapDelete("/{id:guid/field/{id:guid", DeleteField)
+        //     .RequireAuthorization(DwimsPolicies.Administrator);
         
         return app;
     }
@@ -52,9 +52,13 @@ public static class ProcessEndpoints
         return result.ToCreatedResult("/process/");
     }
 
-    private static async Task GetProcesses(HttpContext context)
+    private static async Task<IResult> GetProcesses(
+        IProcessService processService,
+        CancellationToken cancellationToken
+        )
     {
-        throw new NotImplementedException();
+        var result = await processService.GetProcessesAsync(cancellationToken);
+        return result.ToOkResult();
     }
 
     private static async Task GetProcess(HttpContext context)

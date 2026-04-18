@@ -12,7 +12,20 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
 {
     public async Task<Result<IReadOnlyList<ProcessSummaryDto>>> GetProcessesAsync(CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        var processes = await context.Processes
+            .Include(p => p.Department)
+            .Select(p => new ProcessSummaryDto(
+                p.Id,
+                p.DepartmentId,
+                p.Department.Title,
+                p.Title,
+                null,
+                p.Steps.Count,
+                p.DocumentId != Guid.Empty
+            ))
+            .ToListAsync(cancellationToken);
+
+        return Result<IReadOnlyList<ProcessSummaryDto>>.Success(processes);
     }
 
     public async Task<Result<ProcessDetailDto>> GetProcessAsync(Guid id, CancellationToken cancellationToken = default)
