@@ -38,9 +38,44 @@ public class SubmissionService(AppDbContext context, ICurrentUserService current
         return Result<IReadOnlyList<SubmissionSummaryDto>>.Success(submissions);
     }
 
-    public Task<Result<IReadOnlyList<PendingReviewDto>>> GetPendingReviewAsync(CancellationToken cancellationToken = default)
+    public async Task<Result<IReadOnlyList<PendingReviewDto>>> GetPendingReviewAsync(CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        if (currentUser.UserId is null)
+            return Result<IReadOnlyList<PendingReviewDto>>.Failure("UNAUTHORIZED", "User is not authenticated.");
+
+        var departmentIds = currentUser.Roles
+            .Where(r => r.Value >= GeneralRole.Reviewer && r.Key != Guid.Empty)
+            .Select(r => r.Key)
+            .ToList();
+
+        if (departmentIds.Count == 0 && !currentUser.isSuperAdministrator)
+            return Result<IReadOnlyList<PendingReviewDto>>.Success([]);
+
+        var query = context.Submissions
+            .Include(s => s.Step)
+            .Include(s => s.Submitter)
+            .Include(s => s.Process)
+            .Include(s => s.Responses)
+            .Where(s => s.Status == Status.Review);
+
+        if (!currentUser.isSuperAdministrator)
+            query = query.Where(s => departmentIds.Contains(s.Step.DepartmentId));
+
+        query = query.Where(s => !s.Responses.Any(r => r.ReviewerId == currentUser.UserId.Value));
+
+        var pending = await query
+            .Select(s => new PendingReviewDto(
+                s.Id,
+                s.Process.Id,
+                s.Process.Title,
+                s.Step.Title,
+                $"{s.Submitter.FirstName} {s.Submitter.LastName}",
+                s.SubmittedOn,
+                s.CompletedOn
+            ))
+            .ToListAsync(cancellationToken);
+
+        return Result<IReadOnlyList<PendingReviewDto>>.Success(pending);
     }
 
     public Task<Result<SubmissionDetailDto>> GetPendingReviewAsync(Guid id, CancellationToken cancellationToken = default)
