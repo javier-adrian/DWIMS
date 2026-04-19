@@ -48,23 +48,27 @@ public class UserService(
             return Result.Failure("INVALID_SIGNATURE", "A valid SVG signature is required.");
 
         var existing = await context.Signatures
-            .Where(x => x.UserId == userId && x.isCurrent)
+            .Where(x => x.UserId == userId)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (existing is not null)
         {
-            existing.isCurrent = false;
+            existing.MimeType = "image/svg+xml";
+            existing.EncryptedBlob = System.Text.Encoding.UTF8.GetBytes(request.SvgContent);
+            existing.Created = DateTime.UtcNow;
         }
-
-        context.Signatures.Add(new Signature
+        else
         {
-            Id = Guid.NewGuid(),
-            UserId = userId,
-            MimeType = "image/svg+xml",
-            EncryptedBlob = System.Text.Encoding.UTF8.GetBytes(request.SvgContent),
-            Created = DateTime.UtcNow,
-            isCurrent = true
-        });
+            context.Signatures.Add(new Signature
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                MimeType = "image/svg+xml",
+                EncryptedBlob = System.Text.Encoding.UTF8.GetBytes(request.SvgContent),
+                Created = DateTime.UtcNow,
+                isCurrent = true
+            });
+        }
 
         await context.SaveChangesAsync(cancellationToken);
         return Result.Success();
