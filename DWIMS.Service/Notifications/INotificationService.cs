@@ -10,6 +10,10 @@ public interface INotificationService
         Guid submissionId,
         CancellationToken cancellationToken = default);
 
+    Task SendSubmissionCompletedAsync(
+        Guid submissionId,
+        CancellationToken cancellationToken = default);
+
     Task SendSubmissionReturnedAsync(
         Guid submissionId,
         CancellationToken cancellationToken = default);
