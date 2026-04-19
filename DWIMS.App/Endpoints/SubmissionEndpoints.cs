@@ -1,4 +1,5 @@
 using DWIMS.Service.Auth;
+using DWIMS.Service.Common;
 using DWIMS.Service.Services;
 using DWIMS.Service.Submission;
 using DWIMS.Service.Submission.Requests;
@@ -37,9 +38,21 @@ public static class SubmissionEndpoints
         group.MapPost("/{id:guid}/cancel", CancelSubmission)
             .WithDisplayName("Cancel Submission")
             .WithSummary("Cancel a submission");
+        group.MapGet("/{id:guid}/pdf", GetDocument)
+            .WithDisplayName("Get Result Document")
+            .WithSummary("Get the result document of a submission");
         
         
         return app;
+    }
+
+    private static async Task<IResult> GetDocument(
+        Guid id,
+        IPdfGenerationService pdfGenerationService,
+        CancellationToken cancellationToken)
+    {
+        var stream = await pdfGenerationService.GenerateAsync(id, cancellationToken);
+        return Results.File(stream, "application/pdf");
     }
 
     private static async Task<IResult> CreateSubmission(

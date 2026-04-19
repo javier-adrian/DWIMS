@@ -4,6 +4,7 @@ using DWIMS.Controllers;
 using DWIMS.Data;
 using DWIMS.Service;
 using DWIMS.Service.Auth;
+using DWIMS.Service.Common;
 using DWIMS.Service.CurrentUser;
 using DWIMS.Service.Department;
 using DWIMS.Service.Process;
@@ -135,6 +136,7 @@ namespace DWIMS
             builder.Services.AddScoped<IProcessService, ProcessService>();
             builder.Services.AddScoped<ISubmissionService, SubmissionService>();
             builder.Services.AddScoped<IStorageService, StorageService>();
+            builder.Services.AddScoped<IPdfGenerationService, PdfGenerationService>();
         
             var app = builder.Build();
         
