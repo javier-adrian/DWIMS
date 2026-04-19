@@ -61,7 +61,7 @@ public class SubmissionService(AppDbContext context, ICurrentUserService current
         if (!currentUser.isSuperAdministrator)
             query = query.Where(s => departmentIds.Contains(s.Step.DepartmentId));
 
-        query = query.Where(s => !s.Responses.Any(r => r.ReviewerId == currentUser.UserId.Value && r.CompletedOn != null));
+        query = query.Where(s => !s.Responses.Any(r => r.StepId == s.StepId && r.ReviewerId == currentUser.UserId.Value && r.CompletedOn != null));
 
         var pending = await query
             .Select(s => new PendingReviewDto(
@@ -188,7 +188,7 @@ public class SubmissionService(AppDbContext context, ICurrentUserService current
             Id = Guid.NewGuid(),
             ProcessId = process.Id,
             StepId = firstStep.Id,
-            Status = Status.Submit,
+            Status = Status.Review,
             SubmittedOn = DateTime.UtcNow,
             CompletedOn = DateTime.UtcNow,
             SubmitterId = currentUser.UserId.Value,
