@@ -1,6 +1,7 @@
 using DWIMS.Data;
 using DWIMS.Service.Auth;
 using DWIMS.Service.CurrentUser;
+using DWIMS.Service.CurrentUser.Requests;
 using DWIMS.Service.Department;
 using DWIMS.Service.Department.Requests;
 using DWIMS.Service.Services;
@@ -47,9 +48,13 @@ public static class UserEndpoints
         return app;
     }
 
-    private static Task UploadSignature(HttpContext context)
+    private static async Task<IResult> UploadSignature(RegisterSignatureRequest request, IUserService userService, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = await userService.RegisterSignatureAsync(request, cancellationToken);
+
+        return result.IsSuccess
+            ? Results.Ok()
+            : Results.UnprocessableEntity(new { result.Error, result.ErrorDescription });
     }
 
     private static Task UpdateCurrentuser(HttpContext context)

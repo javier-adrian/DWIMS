@@ -38,4 +38,35 @@ public class UserService(
     {
         throw new NotImplementedException();
     }
+
+    public async Task<Result> RegisterSignatureAsync(RegisterSignatureRequest request, CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is not { } userId)
+            return Result.Failure("UNAUTHORIZED", "User is not authenticated.");
+
+        if (string.IsNullOrWhiteSpace(request.SvgContent) || !request.SvgContent.TrimStart().StartsWith("<svg", StringComparison.OrdinalIgnoreCase))
+            return Result.Failure("INVALID_SIGNATURE", "A valid SVG signature is required.");
+
+        var existing = await context.Signatures
+            .Where(x => x.UserId == userId && x.isCurrent)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (existing is not null)
+        {
+            existing.isCurrent = false;
+        }
+
+        context.Signatures.Add(new Signature
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            MimeType = "image/svg+xml",
+            EncryptedBlob = System.Text.Encoding.UTF8.GetBytes(request.SvgContent),
+            Created = DateTime.UtcNow,
+            isCurrent = true
+        });
+
+        await context.SaveChangesAsync(cancellationToken);
+        return Result.Success();
+    }
 }

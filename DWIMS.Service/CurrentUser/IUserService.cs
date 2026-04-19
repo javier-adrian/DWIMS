@@ -9,4 +9,8 @@ public interface IUserService
     Task<Result<UserProfileDto>> GetCurrentUserAsync(CancellationToken cancellationToken = default);
     
     Task<Result> UpdateProfileAsync(UpdateProfileRequest request, CancellationToken cancellationToken = default);
+    
+    Task<Result> RegisterSignatureAsync(
+        RegisterSignatureRequest request, 
+        CancellationToken cancellationToken = default);
 }
