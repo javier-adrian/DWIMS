@@ -9,7 +9,6 @@ public class Document : ISoftDeletable
     public string Link { get; set; }
     public Guid ProcessId { get; set; }
     public Process Process { get; set; }
-    public ICollection<Field> Fields { get; set; }
     
     public bool IsDeleted { get; set; }
     public DateTime? DeletedOn { get; set; }
