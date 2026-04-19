@@ -3,12 +3,13 @@ using DWIMS.Service.Common;
 using DWIMS.Service.Process;
 using DWIMS.Service.Process.Dtos;
 using DWIMS.Service.Process.Requests;
+using DWIMS.Service.Storage;
 using DWIMS.Service.User;
 using Microsoft.EntityFrameworkCore;
 
 namespace DWIMS.Service.Services;
 
-public class ProcessService(AppDbContext context, ICurrentUserService currentUserService) : IProcessService
+public class ProcessService(AppDbContext context, ICurrentUserService currentUserService, IStorageService storageService) : IProcessService
 {
     public async Task<Result<IReadOnlyList<ProcessSummaryDto>>> GetProcessesAsync(CancellationToken cancellationToken = default)
     {
@@ -231,5 +232,51 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
             .ToListAsync(cancellationToken);
 
         return Result<IReadOnlyList<StepDto>>.Success(steps);
+    }
+
+    public async Task<Result<Guid>> UploadDocumentAsync(Guid processId, UploadDocumentRequest request, CancellationToken cancellationToken = default)
+    {
+        var process = await context.Processes
+            .Include(p => p.Documents)
+            .FirstOrDefaultAsync(p => p.Id == processId, cancellationToken);
+
+        if (process is null)
+            return Result<Guid>.Failure("PROCESS_NOT_FOUND", "Process not found.");
+
+        var document = process.Documents.FirstOrDefault();
+
+        if (document is null)
+        {
+            document = new Document
+            {
+                Id = Guid.NewGuid(),
+                Link = "",
+                ProcessId = processId
+            };
+            context.Documents.Add(document);
+        }
+
+        var storageKey = await storageService.UploadAsync(
+            request.File,
+            request.FileName,
+            "application/octet-stream",
+            cancellationToken);
+
+        document.Link = storageKey;
+
+        if (request.Fields.Count > 0)
+        {
+            var fields = await context.Fields
+                .Where(f => f.ProcessId == processId && request.Fields.Contains(f.Id))
+                .ToListAsync(cancellationToken);
+
+            foreach (var field in fields)
+            {
+                field.DocumentId = document.Id;
+            }
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+        return Result<Guid>.Success(document.Id);
     }
 }

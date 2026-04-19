@@ -9,6 +9,7 @@ public class Process : ISoftDeletable
     public string Title { get; set; }
     public ICollection<Step> Steps { get; set; }
     public ICollection<Field> Fields { get; set; }
+    public ICollection<Document> Documents { get; set; }
     public Department Department { get; set; }
     
     public bool IsDeleted { get; set; }

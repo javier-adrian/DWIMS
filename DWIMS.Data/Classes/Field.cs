@@ -10,7 +10,9 @@ public class Field : ISoftDeletable
     public Process Process { get; set; }
     public InputTypes Type { get; set; }
     public bool Required { get; set; } = true;
-    
+    public Guid? DocumentId { get; set; }
+    public Document Document { get; set; }
+
     public bool IsDeleted { get; set; }
     public DateTime? DeletedOn { get; set; }
 }

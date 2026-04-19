@@ -31,6 +31,11 @@ public static class ProcessEndpoints
             .WithDisplayName("Delete Process")
             .WithSummary("Delete a process")
             .RequireAuthorization(DwimsPolicies.Administrator);
+        
+        group.MapPost("/{id:guid}/document", CreateDocument)
+            .WithDisplayName("Add Document")
+            .WithSummary("Add a document to a process")
+            .RequireAuthorization(DwimsPolicies.Administrator);
 
         group.MapPost("/{id:guid}/step", CreateStep)
             .WithDisplayName("Add Step")
@@ -59,6 +64,41 @@ public static class ProcessEndpoints
         //     .RequireAuthorization(DwimsPolicies.Administrator);
         
         return app;
+    }
+
+    private static async Task<IResult> CreateDocument(
+        Guid id,
+        HttpRequest request,
+        IProcessService processService,
+        CancellationToken cancellationToken)
+    {
+        if (!request.HasFormContentType)
+            return Results.BadRequest(new { Error = "INVALID_CONTENT_TYPE", ErrorDescription = "Expected multipart/form-data." });
+
+        var form = await request.ReadFormAsync(cancellationToken);
+        var file = form.Files.FirstOrDefault();
+
+        if (file is null || file.Length == 0)
+            return Results.BadRequest(new { Error = "NO_FILE", ErrorDescription = "A document file is required." });
+
+        if (!file.ContentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase))
+            return Results.BadRequest(new { Error = "INVALID_FILE_TYPE", ErrorDescription = "Only PDF files are allowed." });
+
+        var fieldIds = form["fields"].ToString().Split(',', StringSplitOptions.RemoveEmptyEntries);
+        var fieldGuids = fieldIds.Select(f => Guid.TryParse(f, out var g) ? g : Guid.Empty).Where(g => g != Guid.Empty).ToList();
+
+        var uploadRequest = new UploadDocumentRequest
+        {
+            File = file.OpenReadStream(),
+            FileName = file.FileName,
+            Fields = fieldGuids
+        };
+
+        var result = await processService.UploadDocumentAsync(id, uploadRequest, cancellationToken);
+
+        return result.IsSuccess
+            ? Results.Ok(result.Data)
+            : Results.UnprocessableEntity(new { result.Error, result.ErrorDescription });
     }
 
     private static async Task<IResult> CreateProcess(

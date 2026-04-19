@@ -50,4 +50,9 @@ public interface IProcessService
     Task<Result<IReadOnlyList<StepDto>>> GetStepsAsync(
         Guid processId,
         CancellationToken cancellationToken = default);
+
+    Task<Result<Guid>> UploadDocumentAsync(
+        Guid processId,
+        UploadDocumentRequest request,
+        CancellationToken cancellationToken = default);
 }
