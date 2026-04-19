@@ -139,7 +139,7 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
         var step = new Step
         {
             Id = Guid.NewGuid(),
-            Order = context.Steps.Count(x => x.Id == processId) + 1,
+            Order = context.Steps.Count(x => x.ProcessId == processId) + 1,
             Title = request.Title,
             DepartmentId = request.DepartmentId,
             Role = request.Role,
