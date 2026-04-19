@@ -100,7 +100,7 @@ public class SubmissionService(AppDbContext context, ICurrentUserService current
             r.Step.Title,
             r.Result?.ToString(),
             r.Remarks,
-            $"{r.Reviewer.FirstName} {r.Reviewer.LastName}",
+            r.Reviewer is not null ? $"{r.Reviewer.FirstName} {r.Reviewer.LastName}" : null,
             r.ActivatedOn,
             r.CompletedOn
         )).ToList();

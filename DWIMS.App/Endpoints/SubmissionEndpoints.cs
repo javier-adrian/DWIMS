@@ -94,14 +94,14 @@ public static class SubmissionEndpoints
     }
 
     private static async Task<IResult> RespondSubmission(
-        Guid submissionId,
+        Guid id,
         Guid stepId,
         RespondToStepRequest request,
         ISubmissionService submissionService,
         CancellationToken cancellationToken)
     {
         var result = await submissionService.RespondToStepAsync(
-            submissionId, 
+            id,
             stepId, 
             request, 
             cancellationToken);
