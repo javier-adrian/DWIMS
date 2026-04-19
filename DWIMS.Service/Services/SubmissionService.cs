@@ -8,7 +8,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DWIMS.Service.Services;
 
-public class SubmissionService(AppDbContext context, ICurrentUserService currentUser) : ISubmissionService
+public class SubmissionService(
+    AppDbContext context, 
+    ICurrentUserService currentUser,
+    INotificationService notificationService) 
+    : ISubmissionService
 {
     public async Task<Result<IReadOnlyList<SubmissionSummaryDto>>> GetMySubmissionsAsync(Status? statusFilter, int page, int pageSize, CancellationToken cancellationToken = default)
     {
@@ -220,6 +224,9 @@ public class SubmissionService(AppDbContext context, ICurrentUserService current
         }
 
         await context.SaveChangesAsync(cancellationToken);
+        
+        await notificationService.SendSubmissionReceivedAsync(submission.Id, cancellationToken);
+        
         return Result<Guid>.Success(submission.Id);
     }
 

@@ -119,6 +119,10 @@ namespace DWIMS
                 .AddOptions<StorageOptions>()
                 .Bind(builder.Configuration.GetSection(StorageOptions.SectionName));
             
+            builder.Services
+                .AddOptions<EmailOptions>()
+                .Bind(builder.Configuration.GetSection(EmailOptions.SectionName));
+            
             builder.Services.AddSingleton<IAmazonS3>(sp =>
             {
                 var opts = sp.GetRequiredService<IOptions<StorageOptions>>().Value;
@@ -137,6 +141,8 @@ namespace DWIMS
             builder.Services.AddScoped<ISubmissionService, SubmissionService>();
             builder.Services.AddScoped<IStorageService, StorageService>();
             builder.Services.AddScoped<IPdfGenerationService, PdfGenerationService>();
+            builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+            builder.Services.AddScoped<INotificationService, NotificationService>();
         
             var app = builder.Build();
         
