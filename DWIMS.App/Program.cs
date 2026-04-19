@@ -1,4 +1,5 @@
 using System.Text;
+using Amazon.S3;
 using DWIMS.Controllers;
 using DWIMS.Data;
 using DWIMS.Service;
@@ -7,10 +8,12 @@ using DWIMS.Service.CurrentUser;
 using DWIMS.Service.Department;
 using DWIMS.Service.Process;
 using DWIMS.Service.Services;
+using DWIMS.Service.Storage;
 using DWIMS.Service.Submission;
 using DWIMS.Service.User;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -44,7 +47,7 @@ namespace DWIMS
 
             builder.Services.AddOptions<JwtOptions>()
                 .Bind(builder.Configuration.GetSection(JwtOptions.SectionName));
-        
+            
             var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>();
 
             builder.Services
@@ -110,6 +113,20 @@ namespace DWIMS
                         x.AddRequirements(new Requirement(GeneralRole.SuperAdministrator))
                 );
             });
+            
+            builder.Services
+                .AddOptions<StorageOptions>()
+                .Bind(builder.Configuration.GetSection(StorageOptions.SectionName));
+            
+            builder.Services.AddSingleton<IAmazonS3>(sp =>
+            {
+                var opts = sp.GetRequiredService<IOptions<StorageOptions>>().Value;
+
+                return new AmazonS3Client(
+                    opts.AccessKey,
+                    opts.SecretKey,
+                    new AmazonS3Config { ServiceURL = opts.ServiceUrl});
+            });
 
             builder.Services.AddHttpContextAccessor();
             builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
@@ -117,6 +134,7 @@ namespace DWIMS
             builder.Services.AddScoped<IDepartmentService, DepartmentService>();
             builder.Services.AddScoped<IProcessService, ProcessService>();
             builder.Services.AddScoped<ISubmissionService, SubmissionService>();
+            builder.Services.AddScoped<IStorageService, StorageService>();
         
             var app = builder.Build();
         

@@ -3,7 +3,7 @@
 public interface IStorageService
 {
     Task<string> UploadAsync(
-        Stream stream, 
+        Stream content, 
         string fileName, 
         string contentType, 
         CancellationToken cancellationToken = default);
