@@ -86,7 +86,7 @@ public class DepartmentService(AppDbContext context, ICurrentUserService current
         CancellationToken cancellationToken = default)
     {
         var user = await context.Users
-            .FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken);
+            .FirstOrDefaultAsync(x => x.Email == request.Email, cancellationToken);
 
         if (user is null)
             return Result.Failure("USER_NOT_FOUND", "User not found.");
@@ -95,7 +95,7 @@ public class DepartmentService(AppDbContext context, ICurrentUserService current
         {
             var existingRole = await context.Roles
                 .FirstOrDefaultAsync(x =>
-                    x.UserId == request.UserId &&
+                    x.UserId == user.Id &&
                     x.GeneralRole == GeneralRole.SuperAdministrator,
                     cancellationToken);
 
@@ -105,7 +105,7 @@ public class DepartmentService(AppDbContext context, ICurrentUserService current
             context.Roles.Add(new Role
             {
                 Id = Guid.NewGuid(),
-                UserId = request.UserId,
+                UserId = user.Id,
                 GeneralRole = GeneralRole.SuperAdministrator,
                 Title = "Super Administrator",
                 Description = "Top level administrator."
@@ -130,17 +130,21 @@ public class DepartmentService(AppDbContext context, ICurrentUserService current
 
         var existingDeptRole = await context.Roles
             .FirstOrDefaultAsync(x =>
-                x.UserId == request.UserId &&
+                x.UserId == user.Id &&
                 x.DepartmentId == departmentId,
                 cancellationToken);
 
         if (existingDeptRole is not null)
+        {
             existingDeptRole.GeneralRole = request.GeneralRole;
+            existingDeptRole.IsDeleted = false;
+            existingDeptRole.DeletedOn = null;
+        }
         else
             context.Roles.Add(new Role
             {
                 Id = Guid.NewGuid(),
-                UserId = request.UserId,
+                UserId = user.Id,
                 DepartmentId = departmentId,
                 GeneralRole = request.GeneralRole,
                 Title = request.GeneralRole.ToString(),
@@ -160,9 +164,10 @@ public class DepartmentService(AppDbContext context, ICurrentUserService current
             return Result<IReadOnlyList<DepartmentMemberDto>>.Failure("DEPARTMENT_NOT_FOUND", "Department not found.");
 
         var members = await context.Roles
-            .Where(r => r.DepartmentId == departmentId)
+            .Where(r => r.DepartmentId == departmentId && !r.IsDeleted)
             .Select(r => new DepartmentMemberDto(
                 r.User.Id,
+                r.Id,
                 r.User.FirstName,
                 r.User.MiddleName,
                 r.User.LastName,
