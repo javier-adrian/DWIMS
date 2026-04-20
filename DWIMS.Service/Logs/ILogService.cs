@@ -9,4 +9,11 @@ public interface ILogService
     Task<PagedResult<LogDto>> GetLogsAsync(
         LogFilterRequest request,
         CancellationToken cancellationToken = default);
+
+    Task LogAsync(
+        string action,
+        string? entityType = null,
+        Guid? entityId = null,
+        string? metadata = null,
+        CancellationToken cancellationToken = default);
 }

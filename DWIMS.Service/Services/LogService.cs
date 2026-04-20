@@ -3,11 +3,13 @@ using DWIMS.Service.Common;
 using DWIMS.Service.Logs;
 using DWIMS.Service.Logs.Dtos;
 using DWIMS.Service.Logs.Requests;
+using DWIMS.Service.User;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace DWIMS.Service.Services;
 
-public class LogService(AppDbContext context) : ILogService
+public class LogService(AppDbContext context, ICurrentUserService currentUserService, IHttpContextAccessor httpContextAccessor) : ILogService
 {
     public async Task<PagedResult<LogDto>> GetLogsAsync(LogFilterRequest request, CancellationToken cancellationToken = default)
     {
@@ -45,5 +47,28 @@ public class LogService(AppDbContext context) : ILogService
             .ToListAsync(cancellationToken);
 
         return new PagedResult<LogDto>(logs, totalCount, request.Page, request.PageSize);
+    }
+
+    public async Task LogAsync(
+        string action,
+        string? entityType = null,
+        Guid? entityId = null,
+        string? metadata = null,
+        CancellationToken cancellationToken = default)
+    {
+        var log = new Log
+        {
+            Id = Guid.NewGuid(),
+            UserId = currentUserService.UserId,
+            Action = action,
+            EntityType = entityType,
+            EntityId = entityId,
+            Timestamp = DateTime.UtcNow,
+            Metadata = metadata,
+            IpAddress = httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString()
+        };
+
+        context.Logs.Add(log);
+        await context.SaveChangesAsync(cancellationToken);
     }
 }
