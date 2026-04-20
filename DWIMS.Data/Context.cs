@@ -54,4 +54,5 @@ public class AppDbContext : DbContext
     public DbSet<Response> Responses { get; set; }
     public DbSet<Field> Fields { get; set; }
     public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
+    public DbSet<Log> Logs { get; set; }
 }
