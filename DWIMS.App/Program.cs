@@ -10,6 +10,7 @@ using DWIMS.Service.Department;
 using DWIMS.Service.Process;
 using DWIMS.Service.Services;
 using DWIMS.Service.Storage;
+using DWIMS.Service.Logs;
 using DWIMS.Service.Submission;
 using DWIMS.Service.User;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -143,6 +144,7 @@ namespace DWIMS
             builder.Services.AddScoped<IPdfGenerationService, PdfGenerationService>();
             builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
             builder.Services.AddScoped<INotificationService, NotificationService>();
+            builder.Services.AddScoped<ILogService, LogService>();
         
             var app = builder.Build();
         
@@ -158,6 +160,7 @@ namespace DWIMS
             app.MapDepartmentEndpoints();
             app.MapProcessEndpoints();
             app.MapSubmissionEndpoints();
+            app.MapLogEndpoints();
             
             // app.Use(async (context, next) =>
             // {
