@@ -1,5 +1,6 @@
 ﻿using DWIMS.Data;
 using DWIMS.Service.Common;
+using DWIMS.Service.Logs;
 using DWIMS.Service.Submission;
 using DWIMS.Service.Submission.Dtos;
 using DWIMS.Service.Submission.Requests;
@@ -11,7 +12,8 @@ namespace DWIMS.Service.Services;
 public class SubmissionService(
     AppDbContext context, 
     ICurrentUserService currentUser,
-    INotificationService notificationService) 
+    INotificationService notificationService,
+    ILogService logService) 
     : ISubmissionService
 {
     public async Task<Result<IReadOnlyList<SubmissionSummaryDto>>> GetMySubmissionsAsync(Status? statusFilter, int page, int pageSize, CancellationToken cancellationToken = default)
@@ -224,6 +226,8 @@ public class SubmissionService(
         }
 
         await context.SaveChangesAsync(cancellationToken);
+
+        await logService.LogAsync("Submission Created", "Submission", submission.Id);
         
         await notificationService.SendSubmissionReceivedAsync(submission.Id, cancellationToken);
         
@@ -295,6 +299,9 @@ public class SubmissionService(
         submission.CompletedOn = DateTime.UtcNow;
 
         await context.SaveChangesAsync(cancellationToken);
+        
+        await logService.LogAsync("Submission Responded", "Submission", submissionId, cancellationToken: cancellationToken);
+        
         return Result.Success();
     }
 
@@ -318,6 +325,9 @@ public class SubmissionService(
         submission.Status = Status.Cancel;
         submission.CompletedOn = DateTime.UtcNow;
         await context.SaveChangesAsync(cancellationToken);
+        
+        await logService.LogAsync("Submission Cancelled", "Submission", id, cancellationToken: cancellationToken);
+        
         return Result.Success();
     }
 }
