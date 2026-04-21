@@ -30,6 +30,7 @@ public static class AuthEndpoints
 
         group.MapPost("/forgot-password", ForgotPassword)
             .ProducesValidationProblem()
+            .Produces(StatusCodes.Status204NoContent)
             .WithDisplayName("Forgot Password")
             .WithSummary("Reset a user's password");
         
@@ -57,7 +58,12 @@ public static class AuthEndpoints
         var result = await authService.RefreshTokenAsync(request, cancellationToken);
         return result.ToOkResult();
     }
-    private static Task<IResult> ForgotPassword(ForgotPasswordRequest request, CancellationToken cancellationToken) => throw new NotImplementedException();
+
+    private static async Task<IResult> ForgotPassword(ForgotPasswordRequest request, IAuthService authService, CancellationToken cancellationToken)
+    {
+        await authService.ForgotPasswordAsync(request, cancellationToken);
+        return Results.NoContent();
+    }
     private static async Task<IResult> ResetPassword(ResetPasswordRequest request, IAuthService authService, CancellationToken cancellationToken)
     {
         var result = await authService.ResetPasswordAsync(request, cancellationToken);

@@ -1,4 +1,5 @@
-﻿using DWIMS.Data;
+﻿using System.Security.Cryptography;
+using DWIMS.Data;
 using DWIMS.Service.Auth;
 using DWIMS.Service.Auth.Dtos;
 using DWIMS.Service.Auth.Requests;
@@ -9,8 +10,9 @@ namespace DWIMS.Service.Services;
 
 public class AuthService(
     AppDbContext context,
-    ITokenService tokenService
-    ) : IAuthService
+    ITokenService tokenService,
+    INotificationService notificationService
+) : IAuthService
 {
     public async Task<Result<AuthResponse>> RegisterAsync(
         RegisterRequest request,
@@ -18,7 +20,7 @@ public class AuthService(
     {
         if (await context.Users.AnyAsync(u => u.Email == request.Email, cancellationToken))
             return Result<AuthResponse>.Failure(
-                "EMAIL_TAKEN", 
+                "EMAIL_TAKEN",
                 "An account with this email already exists.");
 
         var user = new Data.User
@@ -31,7 +33,7 @@ public class AuthService(
             ContactNumber = request.ContactNumber,
             Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
         };
-        
+
         context.Users.Add(user);
 
         await context.SaveChangesAsync(cancellationToken);
@@ -45,14 +47,14 @@ public class AuthService(
     {
         var user = await context.Users
             .FirstOrDefaultAsync(
-                x => x.Email == request.Email, 
+                x => x.Email == request.Email,
                 cancellationToken);
-        
+
         if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
             return Result<AuthResponse>.Failure(
-                "INVALID_CREDENTIALS", 
+                "INVALID_CREDENTIALS",
                 "Invalid email or password.");
-        
+
         return Result<AuthResponse>.Success(await BuildAuthResponseAsync(user, cancellationToken));
     }
 
@@ -64,7 +66,8 @@ public class AuthService(
 
         var refreshToken = await context.RefreshTokens
             .Include(rt => rt.User)
-            .FirstOrDefaultAsync(rt => rt.Token == hashedToken && !rt.Revoked && rt.Expires > DateTime.UtcNow, cancellationToken);
+            .FirstOrDefaultAsync(rt => rt.Token == hashedToken && !rt.Revoked && rt.Expires > DateTime.UtcNow,
+                cancellationToken);
 
         if (refreshToken is null)
             return Result<AuthResponse>.Failure("INVALID_REFRESH_TOKEN", "Refresh token is invalid or expired.");
@@ -72,11 +75,37 @@ public class AuthService(
         return Result<AuthResponse>.Success(await BuildAuthResponseAsync(refreshToken.User, cancellationToken));
     }
 
-    public Task ForgotPasswordAsync(
+    public async Task ForgotPasswordAsync(
         ForgotPasswordRequest request,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        var email = request.Email;
+        var user = await context.Users
+            .FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
+
+        if (user is null || user.Password is null) return;
+        
+        var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+        
+        context.PasswordResetTokens.Add(new PasswordResetToken
+        {
+            Id = Guid.NewGuid(),
+            Token = token,
+            UserId = user.Id,
+            Created = DateTime.UtcNow,
+            Expires = DateTime.UtcNow.AddHours(1),
+        });
+
+        await context.SaveChangesAsync(cancellationToken);
+        try
+        { 
+            await notificationService.SendPasswordResetAsync(user.Id, token, cancellationToken);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
     }
 
     public async Task<Result> ResetPasswordAsync(

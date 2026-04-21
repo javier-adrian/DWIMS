@@ -14,6 +14,8 @@ public class NotificationService(
     ) 
     : INotificationService
 {
+    private readonly string _appBaseUrl = configuration["App:BaseUrl"] ?? "http://localhost:5244";
+    
     public async Task SendSubmissionReceivedAsync(
         Guid submissionId, 
         CancellationToken cancellationToken = default)
@@ -62,11 +64,30 @@ public class NotificationService(
         throw new NotImplementedException();
     }
 
-    public Task SendPasswordResetAsync(
+    public async Task SendPasswordResetAsync(
         Guid userId, 
         string resetToken, 
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        var user = await context.Users
+            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        
+        if (user is null) return;
+
+        var resetUrl = $"{_appBaseUrl}/#/reset-password?token={Uri.EscapeDataString(resetToken)}&userId={userId}";
+
+        var model = new PasswordResetEmailModel
+        {
+            ResetUrl = resetUrl,
+            Recipient = user.FirstName + " " + user.LastName,
+            ExpiresIn = "1 hour"
+        };
+        
+        await emailSender.SendAsync(
+            user.Email,
+            model.Recipient,
+            $"DWIMS: Password Reset",
+            $"{model.ResetUrl}{Environment.NewLine}{model.ExpiresIn}",
+            cancellationToken);
     }
 }
