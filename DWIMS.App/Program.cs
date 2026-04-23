@@ -139,6 +139,7 @@ namespace DWIMS
             builder.Services.AddScoped<IAuthorizationHandler, RoleHandler>();
             builder.Services.AddScoped<IDepartmentService, DepartmentService>();
             builder.Services.AddScoped<IProcessService, ProcessService>();
+            builder.Services.AddScoped<IAcroFormService, AcroFormService>();
             builder.Services.AddScoped<ISubmissionService, SubmissionService>();
             builder.Services.AddScoped<IStorageService, StorageService>();
             builder.Services.AddScoped<IPdfGenerationService, PdfGenerationService>();

@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DWIMS.Service.Services;
 
-public class ProcessService(AppDbContext context, ICurrentUserService currentUserService, IStorageService storageService) : IProcessService
+public class ProcessService(AppDbContext context, ICurrentUserService currentUserService, IStorageService storageService, IAcroFormService acroFormService) : IProcessService
 {
     public async Task<Result<IReadOnlyList<ProcessSummaryDto>>> GetProcessesAsync(CancellationToken cancellationToken = default)
     {
@@ -49,10 +49,11 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
                     s.Title,
                     s.Role,
                     s.DepartmentId,
-                    s.Department.Title)).ToList(),
+                    s.Department != null ? s.Department.Title : null)).ToList(),
                 p.Fields.Select(f => new FieldDto(
                     f.Id,
                     f.Title,
+                    f.AcroFormKey,
                     f.Type,
                     f.Required)).ToList()
             ))
@@ -228,7 +229,7 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
                 s.Title,
                 s.Role,
                 s.DepartmentId,
-                s.Department.Title))
+                s.Department != null ? s.Department.Title : null))
             .ToListAsync(cancellationToken);
 
         return Result<IReadOnlyList<StepDto>>.Success(steps);
@@ -242,6 +243,17 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
 
         if (process is null)
             return Result<Guid>.Failure("PROCESS_NOT_FOUND", "Process not found.");
+
+        using var ms = new MemoryStream();
+        await request.File.CopyToAsync(ms, cancellationToken);
+        ms.Position = 0;
+
+        var extractionResult = await acroFormService.ExtractFieldsAsync(ms, cancellationToken);
+
+        if (!extractionResult.IsSuccess)
+            return Result<Guid>.Failure(extractionResult.Error!, extractionResult.ErrorDescription!);
+
+        ms.Position = 0;
 
         var document = process.Documents.FirstOrDefault();
 
@@ -257,22 +269,45 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
         }
 
         var storageKey = await storageService.UploadAsync(
-            request.File,
+            ms,
             request.FileName,
             "application/octet-stream",
             cancellationToken);
 
         document.Link = storageKey;
 
-        if (request.Fields.Count > 0)
+        foreach (var acroField in extractionResult.Data!)
         {
-            var fields = await context.Fields
-                .Where(f => f.ProcessId == processId && request.Fields.Contains(f.Id))
-                .ToListAsync(cancellationToken);
-
-            foreach (var field in fields)
+            var field = new Field
             {
-                field.DocumentId = document.Id;
+                Id = Guid.NewGuid(),
+                ProcessId = processId,
+                Title = acroField.Title,
+                AcroFormKey = acroField.Name,
+                Type = acroField.IsSignature ? InputTypes.Signature : InputTypes.Text,
+                Required = true,
+                DocumentId = document.Id,
+            };
+
+            context.Fields.Add(field);
+
+            if (acroField.IsSignature && int.TryParse(acroField.Name.Split(':')[0], out var stepNum) && stepNum > 0)
+            {
+                var stepName = acroField.Name.Contains(':')
+                    ? acroField.Name[(acroField.Name.IndexOf(':') + 1)..].Trim()
+                    : $"Step {stepNum}";
+
+                var step = new Step
+                {
+                    Id = Guid.NewGuid(),
+                    ProcessId = processId,
+                    Order = stepNum,
+                    Title = stepName,
+                    Role = GeneralRole.Reviewer,
+                    FieldId = field.Id,
+                };
+
+                context.Steps.Add(step);
             }
         }
 
