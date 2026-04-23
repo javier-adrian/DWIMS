@@ -6,6 +6,7 @@ public class Field : ISoftDeletable
 {
     public Guid Id { get; set; }
     public string Title { get; set; }
+    public string AcroFormKey { get; set; }
     public Guid ProcessId { get; set; }
     public Process Process { get; set; }
     public InputTypes Type { get; set; }
