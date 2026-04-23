@@ -49,7 +49,7 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
                     s.Title,
                     s.Role,
                     s.DepartmentId,
-                    s.Department != null ? s.Department.Title : null)).ToList(),
+                    s.Department.Title)).ToList(),
                 p.Fields.Select(f => new FieldDto(
                     f.Id,
                     f.Title,
@@ -229,7 +229,7 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
                 s.Title,
                 s.Role,
                 s.DepartmentId,
-                s.Department != null ? s.Department.Title : null))
+                s.Department.Title))
             .ToListAsync(cancellationToken);
 
         return Result<IReadOnlyList<StepDto>>.Success(steps);
@@ -293,6 +293,7 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
                         Order = stepNum,
                         Title = stepName,
                         Role = GeneralRole.Reviewer,
+                        DepartmentId = process.DepartmentId,
                     };
 
                     context.Steps.Add(step);

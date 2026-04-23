@@ -7,5 +7,5 @@ public sealed record StepDto(
     int Order,
     string Name,
     GeneralRole Role,
-    Guid? DepartmentId,
-    string? DepartmentName);
+    Guid DepartmentId,
+    string DepartmentName);
