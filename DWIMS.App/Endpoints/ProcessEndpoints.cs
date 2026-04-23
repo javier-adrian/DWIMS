@@ -84,14 +84,10 @@ public static class ProcessEndpoints
         if (!file.ContentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase))
             return Results.BadRequest(new { Error = "INVALID_FILE_TYPE", ErrorDescription = "Only PDF files are allowed." });
 
-        var fieldIds = form["fields"].ToString().Split(',', StringSplitOptions.RemoveEmptyEntries);
-        var fieldGuids = fieldIds.Select(f => Guid.TryParse(f, out var g) ? g : Guid.Empty).Where(g => g != Guid.Empty).ToList();
-
         var uploadRequest = new UploadDocumentRequest
         {
             File = file.OpenReadStream(),
             FileName = file.FileName,
-            Fields = fieldGuids
         };
 
         var result = await processService.UploadDocumentAsync(id, uploadRequest, cancellationToken);
