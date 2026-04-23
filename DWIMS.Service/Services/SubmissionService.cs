@@ -65,7 +65,7 @@ public class SubmissionService(
             .Where(s => s.Status == Status.Review);
 
         if (!currentUser.isSuperAdministrator)
-            query = query.Where(s => departmentIds.Contains(s.Step.DepartmentId));
+            query = query.Where(s => s.Step.DepartmentId != null && departmentIds.Contains(s.Step.DepartmentId.Value));
 
         query = query.Where(s => !s.Responses.Any(r => r.StepId == s.StepId && r.ReviewerId == currentUser.UserId.Value && r.CompletedOn != null));
 
