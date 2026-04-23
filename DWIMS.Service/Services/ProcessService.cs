@@ -278,37 +278,40 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
 
         foreach (var acroField in extractionResult.Data!)
         {
+            if (acroField.IsSignature)
+            {
+                if (int.TryParse(acroField.Name.Split(':')[0], out var stepNum) && stepNum > 0)
+                {
+                    var stepName = acroField.Name.Contains(':')
+                        ? acroField.Name[(acroField.Name.IndexOf(':') + 1)..].Trim()
+                        : $"Step {stepNum}";
+
+                    var step = new Step
+                    {
+                        Id = Guid.NewGuid(),
+                        ProcessId = processId,
+                        Order = stepNum,
+                        Title = stepName,
+                        Role = GeneralRole.Reviewer,
+                    };
+
+                    context.Steps.Add(step);
+                }
+                continue;
+            }
+
             var field = new Field
             {
                 Id = Guid.NewGuid(),
                 ProcessId = processId,
                 Title = acroField.Title,
                 AcroFormKey = acroField.Name,
-                Type = acroField.IsSignature ? InputTypes.Signature : InputTypes.Text,
+                Type = InputTypes.Text,
                 Required = true,
                 DocumentId = document.Id,
             };
 
             context.Fields.Add(field);
-
-            if (acroField.IsSignature && int.TryParse(acroField.Name.Split(':')[0], out var stepNum) && stepNum > 0)
-            {
-                var stepName = acroField.Name.Contains(':')
-                    ? acroField.Name[(acroField.Name.IndexOf(':') + 1)..].Trim()
-                    : $"Step {stepNum}";
-
-                var step = new Step
-                {
-                    Id = Guid.NewGuid(),
-                    ProcessId = processId,
-                    Order = stepNum,
-                    Title = stepName,
-                    Role = GeneralRole.Reviewer,
-                    FieldId = field.Id,
-                };
-
-                context.Steps.Add(step);
-            }
         }
 
         await context.SaveChangesAsync(cancellationToken);

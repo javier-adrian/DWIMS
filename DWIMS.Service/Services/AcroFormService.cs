@@ -31,7 +31,7 @@ public sealed class AcroFormService : IAcroFormService
             {
                 var fieldName = formField.GetFieldName()?.ToUnicodeString() ?? key;
                 var formType = formField.GetFormType();
-                var isSignature = formType != null && formType.ToString() == "Sig";
+                var isSignature = formType != null && formField is PdfSignatureFormField;
 
                 var title = fieldName;
                 if (fieldName.Contains(':', StringComparison.Ordinal))
