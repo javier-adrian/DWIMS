@@ -2,5 +2,5 @@
 
 public sealed class GoogleOAuthRequest
 {
-    public required Guid Token { get; set; }
+    public required string Token { get; set; }
 }
