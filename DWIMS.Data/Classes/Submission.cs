@@ -11,7 +11,7 @@ public class Submission : ISoftDeletable
     public Step Step { get; set; }
     public Status Status { get; set; }
     public DateTime SubmittedOn { get; set; }
-    public DateTime CompletedOn { get; set; }
+    public DateTime? CompletedOn { get; set; }
     public Guid SubmitterId { get; set; }
     public User Submitter { get; set; }
     public ICollection<Input> Inputs { get; set; }

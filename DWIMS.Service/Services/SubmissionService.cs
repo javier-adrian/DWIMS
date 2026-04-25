@@ -296,10 +296,11 @@ public class SubmissionService(
             }
         }
 
-        submission.CompletedOn = DateTime.UtcNow;
+        if (submission.Status != Status.Review)
+            submission.CompletedOn = DateTime.UtcNow;
 
         await context.SaveChangesAsync(cancellationToken);
-        
+
         await logService.LogAsync("Submission Responded", "Submission", submissionId, cancellationToken: cancellationToken);
         
         return Result.Success();
