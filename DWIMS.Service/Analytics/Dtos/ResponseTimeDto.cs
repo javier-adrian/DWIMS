@@ -2,6 +2,7 @@
 
 public sealed record ResponseTimeDto
 {
+    public string Title { get; init; }
     public double AverageResponseTime { get; init; }
     public double MinResponseTime { get; init; }
     public double MaxResponseTime { get; init; }
