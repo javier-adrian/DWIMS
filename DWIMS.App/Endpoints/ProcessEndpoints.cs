@@ -45,8 +45,8 @@ public static class ProcessEndpoints
             .WithDisplayName("Get Steps")
             .WithSummary("Get all steps of a process");
         // group.MapGet("/{id:guid}/step/{id:guid}", GetStep);
-        // group.MapPut("/{id:guid}/step/{id:guid}", UpdateStep)
-        //     .RequireAuthorization(DwimsPolicies.Administrator);
+        group.MapPut("/{processId:guid}/step/{stepId:guid}", UpdateStep)
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
         // group.MapDelete("/{id:guid/step/{id:guid}", DeleteStep)
         //     .RequireAuthorization(DwimsPolicies.Administrator);
         
@@ -158,9 +158,17 @@ public static class ProcessEndpoints
         throw new NotImplementedException();
     }
 
-    private static async Task UpdateStep(HttpContext context)
+    private static async Task<IResult> UpdateStep(
+        Guid processId,
+        Guid stepId,
+        UpdateStepRequest request,
+        IProcessService processService,
+        CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = await processService.UpdateStepAsync(processId, stepId, request, cancellationToken);
+        return result.IsSuccess
+            ? Results.NoContent()
+            : Results.UnprocessableEntity(new { result.Error, result.ErrorDescription });
     }
 
     private static async Task DeleteStep(HttpContext context)

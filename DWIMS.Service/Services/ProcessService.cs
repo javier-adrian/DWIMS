@@ -158,16 +158,16 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
     public async Task<Result> UpdateStepAsync(Guid processId, Guid stepId, UpdateStepRequest request,
         CancellationToken cancellationToken = default)
     {
-        var department = await context.Processes
-            .Where(x => x.Id == processId)
-            .Select(x => x.DepartmentId)
-            .FirstOrDefaultAsync(cancellationToken);
-        
-        if (!currentUserService.HasRoleInDepartment(department, GeneralRole.Administrator) &&
-            !currentUserService.isSuperAdministrator)
-            return Result.Failure("FORBIDDEN", "You do not have administrator access to this department.");
-        
-        throw new NotImplementedException();
+        var step = await context.Steps
+            .FirstOrDefaultAsync(s => s.Id == stepId && s.ProcessId == processId, cancellationToken);
+
+        if (step is null)
+            return Result.Failure("STEP_NOT_FOUND", "Step not found.");
+
+        step.DepartmentId = request.DepartmentId;
+
+        await context.SaveChangesAsync(cancellationToken);
+        return Result.Success();
     }
 
     public async Task<Result> DeleteStepAsync(Guid processId, Guid stepId, CancellationToken cancellationToken = default)
