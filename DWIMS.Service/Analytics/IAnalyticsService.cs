@@ -5,7 +5,7 @@ namespace DWIMS.Service.Analytics;
 
 public interface IAnalyticsService
 {
-    Task<Result<AnalyticsSummaryDto>> GetSummaryAsync(
-        AnalyticsFilterDto filter,
-        CancellationToken cancellationToken = default);
+        Task<Result<AnalyticsSummaryDto>> GetSummaryAsync(
+                AnalyticsFilterDto filter, 
+                CancellationToken cancellationToken = default);
 }
