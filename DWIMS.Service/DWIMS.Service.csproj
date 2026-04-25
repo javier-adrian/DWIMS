@@ -21,7 +21,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Analytics\Dtos\" />
       <Folder Include="Common\Requests\" />
       <Folder Include="Common\Dtos\" />
     </ItemGroup>
