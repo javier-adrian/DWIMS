@@ -5,5 +5,5 @@ public sealed class GoogleOptions
     public const string SectionName = "Google";
     public required string ClientId { get; init; }
     public required string ClientSecret { get; init; }
-    public string CallbackPath { get; init; } = "localhost:5173";
+    public string? HostedDomain { get; init; }
 }
