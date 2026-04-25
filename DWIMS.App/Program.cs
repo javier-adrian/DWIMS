@@ -125,6 +125,10 @@ namespace DWIMS
                 .AddOptions<EmailOptions>()
                 .Bind(builder.Configuration.GetSection(EmailOptions.SectionName));
             
+            builder.Services
+                .AddOptions<GoogleOptions>()
+                .Bind(builder.Configuration.GetSection(GoogleOptions.SectionName));
+            
             builder.Services.AddSingleton<IAmazonS3>(sp =>
             {
                 var opts = sp.GetRequiredService<IOptions<StorageOptions>>().Value;

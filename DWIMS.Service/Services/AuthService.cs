@@ -4,16 +4,21 @@ using DWIMS.Service.Auth;
 using DWIMS.Service.Auth.Dtos;
 using DWIMS.Service.Auth.Requests;
 using DWIMS.Service.Common;
+using Google.Apis.Auth;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace DWIMS.Service.Services;
 
 public class AuthService(
     AppDbContext context,
     ITokenService tokenService,
-    INotificationService notificationService
+    INotificationService notificationService,
+    IOptions<GoogleOptions> googleOptions
 ) : IAuthService
 {
+    private readonly GoogleOptions _googleOptions = googleOptions.Value;
+    
     public async Task<Result<AuthResponse>> RegisterAsync(
         RegisterRequest request,
         CancellationToken cancellationToken = default)
@@ -126,6 +131,82 @@ public class AuthService(
         return Result.Success();
     }
 
+    public async Task<Result<AuthResponse>> GoogleOAuthAsync(GoogleOAuthRequest request, CancellationToken cancellationToken = default)
+    {
+        GoogleJsonWebSignature.Payload payload;
+
+        try
+        {
+            var settings = new GoogleJsonWebSignature.ValidationSettings
+            {
+                Audience = [_googleOptions.ClientId],
+                HostedDomain = _googleOptions.HostedDomain
+            };
+            
+            payload = await GoogleJsonWebSignature
+                .ValidateAsync(request.Token);
+        }
+        catch (InvalidJwtException e)
+        {
+            return Result<AuthResponse>.Failure(
+                "INVALID_GOOGLE_TOKEN",
+                "The Google ID token is invalid or expired.");
+        }
+
+        if (_googleOptions.HostedDomain is not null &&
+            payload.Email.EndsWith($"{_googleOptions.HostedDomain}",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return Result<AuthResponse>.Failure(
+                "UNAUTHORIZED_DOMAIN",
+                $"Only users from @{_googleOptions.HostedDomain} are allowed to login.");
+        }
+
+        var externalLogin = await context.ExternalLogins
+            .Include(login => login.User)
+            .FirstOrDefaultAsync(login =>
+                    login.Provider == ExternalLoginProvider.Google &&
+                    login.ProviderSubject == payload.Subject,
+                cancellationToken);
+
+        Data.User user;
+
+        if (externalLogin is not null)
+        {
+            user = externalLogin.User;
+        }
+        else
+        {
+            user = await context.Users
+                       .FirstOrDefaultAsync(user =>
+                               user.Email == payload.Email,
+                           cancellationToken)
+                   ?? await CreateOAuthUserAsync(
+                       payload,
+                       payload.Email,
+                       cancellationToken);
+
+            context.ExternalLogins.Add(new ExternalLogin
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                Provider = ExternalLoginProvider.Google,
+                ProviderSubject = payload.Subject,
+                Created = DateTime.UtcNow
+            });
+
+            await context.SaveChangesAsync(cancellationToken);
+        }
+
+        if (user.IsDeleted)
+            return Result<AuthResponse>.Failure(
+                "ACCOUNT_DELETEd",
+                "The account has been deleted.");
+
+        return Result<AuthResponse>.Success(
+            await BuildAuthResponseAsync(user, cancellationToken));
+    }
+
     private async Task<AuthResponse> BuildAuthResponseAsync(
         Data.User user,
         CancellationToken cancellationToken = default
@@ -140,5 +221,23 @@ public class AuthService(
         var refreshToken = await tokenService.GenerateRefreshTokenAsync(user.Id, cancellationToken);
         
         return new AuthResponse(accessToken, refreshToken);
-    } 
+    }
+
+    private async Task<Data.User> CreateOAuthUserAsync(
+        GoogleJsonWebSignature.Payload payload,
+        string Email,
+        CancellationToken cancellationToken = default)
+    {
+        var user = new Data.User
+        {
+            Id = Guid.NewGuid(),
+            FirstName = payload.GivenName,
+            LastName = payload.FamilyName,
+            Email = Email
+        };
+        
+        context.Users.Add(user);
+
+        return user;
+    }
 }
