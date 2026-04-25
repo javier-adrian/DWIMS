@@ -39,7 +39,20 @@ public static class AuthEndpoints
             .WithDisplayName("Reset Password")
             .WithSummary("Reset a user's password");
         
+        group.MapPost("oauth/google", GoogleOAuth)
+            .WithDisplayName("Google OAuth")
+            .WithSummary("Authenticate with Google");
+        
         return app;
+    }
+
+    private static async Task<IResult> GoogleOAuth(
+        GoogleOAuthRequest request,
+        IAuthService authService,
+        CancellationToken cancellationToken)
+    {
+        var result = await authService.GoogleOAuthAsync(request, cancellationToken);
+        return result.ToOkResult();
     }
 
     private static async Task<IResult> Register(RegisterRequest request, IAuthService authService, CancellationToken cancellationToken)

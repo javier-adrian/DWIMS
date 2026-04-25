@@ -4,6 +4,7 @@ using DWIMS.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DWIMS.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260425170608_MakeCompletedOnNullable")]
+    partial class MakeCompletedOnNullable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -67,32 +70,6 @@ namespace DWIMS.Data.Migrations
                     b.HasIndex("ProcessId");
 
                     b.ToTable("Documents");
-                });
-
-            modelBuilder.Entity("DWIMS.Data.ExternalLogin", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("Created")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int>("Provider")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ProviderSubject")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("ExternalLogins");
                 });
 
             modelBuilder.Entity("DWIMS.Data.Field", b =>
@@ -554,17 +531,6 @@ namespace DWIMS.Data.Migrations
                     b.Navigation("Process");
                 });
 
-            modelBuilder.Entity("DWIMS.Data.ExternalLogin", b =>
-                {
-                    b.HasOne("DWIMS.Data.User", "User")
-                        .WithMany("Logins")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("DWIMS.Data.Field", b =>
                 {
                     b.HasOne("DWIMS.Data.Document", "Document")
@@ -779,8 +745,6 @@ namespace DWIMS.Data.Migrations
 
             modelBuilder.Entity("DWIMS.Data.User", b =>
                 {
-                    b.Navigation("Logins");
-
                     b.Navigation("Roles");
 
                     b.Navigation("Signature");
