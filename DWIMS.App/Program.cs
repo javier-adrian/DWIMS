@@ -3,6 +3,7 @@ using Amazon.S3;
 using DWIMS.Controllers;
 using DWIMS.Data;
 using DWIMS.Service;
+using DWIMS.Service.Analytics;
 using DWIMS.Service.Auth;
 using DWIMS.Service.Common;
 using DWIMS.Service.CurrentUser;
@@ -146,6 +147,7 @@ namespace DWIMS
             builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
             builder.Services.AddScoped<INotificationService, NotificationService>();
             builder.Services.AddScoped<ILogService, LogService>();
+            builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
         
             var app = builder.Build();
         
@@ -162,6 +164,7 @@ namespace DWIMS
             app.MapProcessEndpoints();
             app.MapSubmissionEndpoints();
             app.MapLogEndpoints();
+            app.MapAnalyticsEndpoints();
             
             // app.Use(async (context, next) =>
             // {
