@@ -20,13 +20,9 @@ public class AnalyticsService(
         var submissions = BuildSubmissionsBase(resolvedFilter);
         var responses = BuildResponsesBase(resolvedFilter);
 
-        var responseTimeTask = GetResponseTimeAsync(responses, cancellationToken);
-        var cycleTimeTask = GetCycleTimeAsync(submissions, cancellationToken);
-        var volumeTask = GetVolumeAsync(submissions, cancellationToken);
-
-        await Task.WhenAll(responseTimeTask, cycleTimeTask, volumeTask);
-
-        var (responseTime, cycleTime, volume) = (responseTimeTask.Result, cycleTimeTask.Result, volumeTask.Result);
+        var responseTime = await GetResponseTimeAsync(responses, cancellationToken);
+        var cycleTime = await GetCycleTimeAsync(submissions, cancellationToken);
+        var volume = await GetVolumeAsync(submissions, cancellationToken);
         
         return Result<AnalyticsSummaryDto>.Success(new AnalyticsSummaryDto
         {
@@ -272,27 +268,27 @@ public class AnalyticsService(
             })
             .ToListAsync(cancellationToken);
 
-        var byProcess = await submissions
-            .GroupBy(submission => new
-            {
-                submission.ProcessId,
-                submission.Process.Title
-            })
-            .Select(x => new ProcessVolumeDto(
-                x.Key.ProcessId,
-                x.Key.Title,
-                Total: x.Count(),
-                Approved: x.Count(y => y.Status == Status.Approve),
-                Rejected: x.Count(y => y.Status == Status.Reject)
+        var byProcess = (await submissions
+            .Select(submission => new { submission.ProcessId, submission.Process.Title, submission.Status })
+            .ToListAsync(cancellationToken))
+            .GroupBy(x => new { x.ProcessId, x.Title })
+            .Select(g => new ProcessVolumeDto(
+                g.Key.ProcessId,
+                g.Key.Title,
+                Total: g.Count(),
+                Approved: g.Count(y => y.Status == Status.Approve),
+                Rejected: g.Count(y => y.Status == Status.Reject)
             ))
             .OrderByDescending(z => z.Total)
-            .ToListAsync(cancellationToken);
+            .ToList();
 
-        var daily = await submissions
-            .GroupBy(submission => DateOnly.FromDateTime(submission.SubmittedOn))
-            .Select(x => new DailyCountDto(x.Key, x.Count()))
+        var daily = (await submissions
+            .Select(submission => submission.SubmittedOn)
+            .ToListAsync(cancellationToken))
+            .GroupBy(d => DateOnly.FromDateTime(d))
+            .Select(g => new DailyCountDto(g.Key, g.Count()))
             .OrderBy(date => date.Date)
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         int Count(Status status) => statusCounts.FirstOrDefault(submission =>
             submission.Status == status)?.Count ?? 0;
