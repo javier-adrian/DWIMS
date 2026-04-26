@@ -12,6 +12,7 @@
       <PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />
       <PackageReference Include="Google.Apis.Auth" Version="1.73.0" />
       <PackageReference Include="itext" Version="9.6.0" />
+      <PackageReference Include="itext.bouncy-castle-adapter" Version="9.6.0" />
       <PackageReference Include="MailKit" Version="4.16.0" />
       <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.6" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.14">
@@ -19,6 +20,8 @@
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
       <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
+      <PackageReference Include="SkiaSharp" Version="3.119.4-preview.1.1" />
+      <PackageReference Include="Svg.Skia" Version="4.5.0" />
     </ItemGroup>
 
     <ItemGroup>
