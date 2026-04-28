@@ -299,7 +299,9 @@ sudo certbot --nginx -d <api-domain>
 
 ---
 
-## Phase 4: CI/CD (Azure DevOps)
+## Phase 4: CI/CD
+
+### Option A: Azure DevOps
 
 ### 4.1 Backend Pipeline
 
@@ -329,7 +331,70 @@ steps:
 
 Setup SSH key as a secret variable in Azure DevOps pipeline settings.
 
-### 4.2 Frontend Pipeline
+#### Frontend Pipeline
+
+Automatic via Static Web Apps — push to main and it builds/deploy.
+
+### Option B: GitHub Actions
+
+#### Backend Pipeline
+
+Create `.github/workflows/deploy.yml` in the API repo:
+
+```yaml
+name: Deploy API
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - run: dotnet publish DWIMS.App/DWIMS.App.csproj -c Release -o ./publish
+
+      - name: Deploy to VM
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: sudo systemctl stop dwims
+
+      - name: Copy files to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "publish/*"
+          target: "/var/www/dwims"
+
+      - name: Start service
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: sudo systemctl start dwims
+```
+
+Add the following secrets in GitHub repo settings (Settings > Secrets and variables > Actions):
+
+| Secret | Value |
+|---|---|
+| `VM_HOST` | VM public IP address |
+| `VM_USER` | `dwims-admin` |
+| `SSH_PRIVATE_KEY` | Contents of `~/.ssh/id_rsa` (the private key that pairs with the VM's `~/.ssh/authorized_keys`) |
+
+#### Frontend Pipeline
 
 Automatic via Static Web Apps — push to main and it builds/deploy.
 
