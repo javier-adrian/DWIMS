@@ -1,5 +1,6 @@
 using System.Text;
 using Amazon.S3;
+using Azure.Storage.Blobs;
 using DWIMS.Controllers;
 using DWIMS.Data;
 using DWIMS.Service;
@@ -83,12 +84,41 @@ namespace DWIMS
             builder.Services.AddScoped<IProcessService, ProcessService>();
             builder.Services.AddScoped<IAcroFormService, AcroFormService>();
             builder.Services.AddScoped<ISubmissionService, SubmissionService>();
-            builder.Services.AddScoped<IStorageService, StorageService>();
+            builder.Services.AddScoped<IStorageService, AzureBlobStorageService>();
             builder.Services.AddScoped<IPdfGenerationService, PdfGenerationService>();
             builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
             builder.Services.AddScoped<INotificationService, NotificationService>();
             builder.Services.AddScoped<ILogService, LogService>();
             builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+            builder.Services.AddDbContext<AppDbContext>();
+
+            if (builder.Environment.IsDevelopment())
+            {
+                builder.Services.AddScoped<IStorageService, StorageService>();
+                
+                builder.Services.AddSingleton<IAmazonS3>(sp =>
+                {
+                    var opts = sp.GetRequiredService<IOptions<StorageOptions>>().Value;
+
+                    return new AmazonS3Client(
+                        opts.AccessKey,
+                        opts.SecretKey,
+                        new AmazonS3Config { ServiceURL = opts.ServiceUrl});
+                });
+                
+            }
+
+            if (builder.Environment.IsProduction())
+            {
+                builder.Services.AddScoped<IStorageService, AzureBlobStorageService>();
+                
+                builder.Services.AddSingleton<BlobServiceClient>(optionsService =>
+                {
+                    var opts = optionsService.GetRequiredService<IOptions<StorageOptions>>().Value;
+
+                    return new BlobServiceClient(opts.ConnectionString);
+                });
+            }
         
             builder.Services.AddCors(options =>
             {
@@ -100,8 +130,6 @@ namespace DWIMS
                         .AllowCredentials();
                 });
             });
-
-            builder.Services.AddDbContext<AppDbContext>();
 
             builder.Services.AddAuthorization(options =>
             {
@@ -141,16 +169,6 @@ namespace DWIMS
             builder.Services
                 .AddOptions<GoogleOptions>()
                 .Bind(builder.Configuration.GetSection(GoogleOptions.SectionName));
-            
-            builder.Services.AddSingleton<IAmazonS3>(sp =>
-            {
-                var opts = sp.GetRequiredService<IOptions<StorageOptions>>().Value;
-
-                return new AmazonS3Client(
-                    opts.AccessKey,
-                    opts.SecretKey,
-                    new AmazonS3Config { ServiceURL = opts.ServiceUrl});
-            });
 
             var app = builder.Build();
         
