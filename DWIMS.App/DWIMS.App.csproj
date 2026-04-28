@@ -9,6 +9,8 @@
 
     <ItemGroup>
       <PackageReference Include="Asp.Versioning.WebApi.ApiExplorer" Version="10.0.0-preview.2" />
+      <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.5.0" />
+      <PackageReference Include="Azure.Identity" Version="1.21.0" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.14">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

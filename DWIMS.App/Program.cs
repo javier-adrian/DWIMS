@@ -1,5 +1,6 @@
 using System.Text;
 using Amazon.S3;
+using Azure.Identity;
 using Azure.Storage.Blobs;
 using DWIMS.Controllers;
 using DWIMS.Data;
@@ -17,6 +18,7 @@ using DWIMS.Service.Submission;
 using DWIMS.Service.User;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
@@ -52,7 +54,27 @@ namespace DWIMS
             builder.Services.AddOptions<JwtOptions>()
                 .Bind(builder.Configuration.GetSection(JwtOptions.SectionName));
             
+            if (builder.Environment.IsProduction())
+            {
+                builder.Configuration.AddAzureKeyVault(
+                    new Uri("https://dwims-vault.vault.azure.net/"),
+                    new DefaultAzureCredential());
+            }
+            
             var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>();
+            
+            builder.Services
+                .AddOptions<StorageOptions>()
+                .Bind(builder.Configuration.GetSection(StorageOptions.SectionName));
+            
+            builder.Services
+                .AddOptions<EmailOptions>()
+                .Bind(builder.Configuration.GetSection(EmailOptions.SectionName));
+            
+            builder.Services
+                .AddOptions<GoogleOptions>()
+                .Bind(builder.Configuration.GetSection(GoogleOptions.SectionName));
+
 
             builder.Services
                 .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -84,13 +106,19 @@ namespace DWIMS
             builder.Services.AddScoped<IProcessService, ProcessService>();
             builder.Services.AddScoped<IAcroFormService, AcroFormService>();
             builder.Services.AddScoped<ISubmissionService, SubmissionService>();
-            builder.Services.AddScoped<IStorageService, AzureBlobStorageService>();
             builder.Services.AddScoped<IPdfGenerationService, PdfGenerationService>();
             builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
             builder.Services.AddScoped<INotificationService, NotificationService>();
             builder.Services.AddScoped<ILogService, LogService>();
             builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
-            builder.Services.AddDbContext<AppDbContext>();
+            
+            builder.Services.AddDbContext<AppDbContext>(options =>
+                options.UseMySql(
+                    builder.Configuration.GetConnectionString("Default"),
+                    ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("Default")))
+                    .LogTo(Console.WriteLine, [DbLoggerCategory.Database.Command.Name], LogLevel.Information)
+                    .EnableSensitiveDataLogging()
+                );
 
             if (builder.Environment.IsDevelopment())
             {
@@ -158,18 +186,6 @@ namespace DWIMS
                 );
             });
             
-            builder.Services
-                .AddOptions<StorageOptions>()
-                .Bind(builder.Configuration.GetSection(StorageOptions.SectionName));
-            
-            builder.Services
-                .AddOptions<EmailOptions>()
-                .Bind(builder.Configuration.GetSection(EmailOptions.SectionName));
-            
-            builder.Services
-                .AddOptions<GoogleOptions>()
-                .Bind(builder.Configuration.GetSection(GoogleOptions.SectionName));
-
             var app = builder.Build();
         
             app.UseCors("Frontend");

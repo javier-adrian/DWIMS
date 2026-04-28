@@ -6,16 +6,8 @@ namespace DWIMS.Data;
 
 public class AppDbContext : DbContext
 {
-    private const string Connection = "server=localhost;user=creui;password=....;database=DWIMS";
-    
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        base.OnConfiguring(optionsBuilder);
-        optionsBuilder.UseMySql(Connection, ServerVersion.AutoDetect(Connection))
-        .LogTo(Console.WriteLine, [DbLoggerCategory.Database.Command.Name], LogLevel.Information)
-        .EnableSensitiveDataLogging();
-    }
-    
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
