@@ -215,7 +215,7 @@ namespace DWIMS
                     {
                         Id = Guid.NewGuid(),
                         Email = "agjavier@kld.edu.ph",
-                        Password = "agjavier",
+                        Password = BCrypt.Net.BCrypt.HashPassword("agjavier"),
                         FirstName = "Adrian",
                         MiddleName = "Gabayno",
                         LastName = "Javier",
