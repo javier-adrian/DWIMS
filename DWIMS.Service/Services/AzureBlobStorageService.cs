@@ -1,4 +1,4 @@
-﻿using Azure.Storage.Blobs;
+using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using DWIMS.Service.Storage;
 using Microsoft.Extensions.Options;
@@ -23,20 +23,26 @@ public class AzureBlobStorageService : IStorageService
 
         var blob = container.GetBlobClient(fileName);
         await blob.UploadAsync(content, new BlobHttpHeaders() { ContentType = contentType }, cancellationToken: cancellationToken);
-        
+
         return blob.Uri.ToString();
     }
 
     public async Task<Stream> DownloadAsync(string storageKey, CancellationToken cancellationToken = default)
     {
-        var blob = new BlobClient(new Uri(storageKey));
+        var blobUri = new Uri(storageKey);
+        var containerName = blobUri.Host.Split('.')[0];
+        var blobName = blobUri.AbsolutePath.TrimStart('/');
+        var blob = _client.GetBlobContainerClient(containerName).GetBlobClient(blobName);
         var response = await blob.DownloadContentAsync(cancellationToken);
         return response.Value.Content.ToStream();
     }
 
     public async Task DeleteAsync(string storageKey, CancellationToken cancellationToken = default)
     {
-        var blob = new BlobClient(new Uri(storageKey));
+        var blobUri = new Uri(storageKey);
+        var containerName = blobUri.Host.Split('.')[0];
+        var blobName = blobUri.AbsolutePath.TrimStart('/');
+        var blob = _client.GetBlobContainerClient(containerName).GetBlobClient(blobName);
         await blob.DeleteAsync(cancellationToken: cancellationToken);
     }
 }
