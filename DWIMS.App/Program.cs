@@ -73,9 +73,22 @@ namespace DWIMS
                     }
                 );
         
+            builder.Services.AddHttpContextAccessor();
             builder.Services.AddScoped<ITokenService, TokenService>();
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<IUserService, UserService>();
+            builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+            builder.Services.AddScoped<IAuthorizationHandler, RoleHandler>();
+            builder.Services.AddScoped<IDepartmentService, DepartmentService>();
+            builder.Services.AddScoped<IProcessService, ProcessService>();
+            builder.Services.AddScoped<IAcroFormService, AcroFormService>();
+            builder.Services.AddScoped<ISubmissionService, SubmissionService>();
+            builder.Services.AddScoped<IStorageService, StorageService>();
+            builder.Services.AddScoped<IPdfGenerationService, PdfGenerationService>();
+            builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+            builder.Services.AddScoped<INotificationService, NotificationService>();
+            builder.Services.AddScoped<ILogService, LogService>();
+            builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
         
             builder.Services.AddCors(options =>
             {
@@ -139,20 +152,6 @@ namespace DWIMS
                     new AmazonS3Config { ServiceURL = opts.ServiceUrl});
             });
 
-            builder.Services.AddHttpContextAccessor();
-            builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
-            builder.Services.AddScoped<IAuthorizationHandler, RoleHandler>();
-            builder.Services.AddScoped<IDepartmentService, DepartmentService>();
-            builder.Services.AddScoped<IProcessService, ProcessService>();
-            builder.Services.AddScoped<IAcroFormService, AcroFormService>();
-            builder.Services.AddScoped<ISubmissionService, SubmissionService>();
-            builder.Services.AddScoped<IStorageService, StorageService>();
-            builder.Services.AddScoped<IPdfGenerationService, PdfGenerationService>();
-            builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
-            builder.Services.AddScoped<INotificationService, NotificationService>();
-            builder.Services.AddScoped<ILogService, LogService>();
-            builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
-        
             var app = builder.Build();
         
             app.UseCors("Frontend");
