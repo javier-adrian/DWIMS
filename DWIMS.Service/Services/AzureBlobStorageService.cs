@@ -30,9 +30,8 @@ public class AzureBlobStorageService : IStorageService
     public async Task<Stream> DownloadAsync(string storageKey, CancellationToken cancellationToken = default)
     {
         var blobUri = new Uri(storageKey);
-        var containerName = blobUri.Host.Split('.')[0];
-        var blobName = blobUri.AbsolutePath.TrimStart('/');
-        var blob = _client.GetBlobContainerClient(containerName).GetBlobClient(blobName);
+        var parts = blobUri.AbsolutePath.TrimStart('/').Split('/', 2);
+        var blob = _client.GetBlobContainerClient(parts[0]).GetBlobClient(parts[1]);
         var response = await blob.DownloadContentAsync(cancellationToken);
         return response.Value.Content.ToStream();
     }
@@ -40,9 +39,8 @@ public class AzureBlobStorageService : IStorageService
     public async Task DeleteAsync(string storageKey, CancellationToken cancellationToken = default)
     {
         var blobUri = new Uri(storageKey);
-        var containerName = blobUri.Host.Split('.')[0];
-        var blobName = blobUri.AbsolutePath.TrimStart('/');
-        var blob = _client.GetBlobContainerClient(containerName).GetBlobClient(blobName);
+        var parts = blobUri.AbsolutePath.TrimStart('/').Split('/', 2);
+        var blob = _client.GetBlobContainerClient(parts[0]).GetBlobClient(parts[1]);
         await blob.DeleteAsync(cancellationToken: cancellationToken);
     }
 }
