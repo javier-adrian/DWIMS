@@ -152,7 +152,7 @@ namespace DWIMS
             {
                 options.AddPolicy("Frontend", policy =>
                 {
-                    policy.WithOrigins(builder.Configuration["Cors:Origin"])
+                    policy.WithOrigins("https://www.kld-dwims.tech")
                         .AllowAnyHeader()
                         .AllowAnyMethod()
                         .AllowCredentials();
