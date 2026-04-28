@@ -202,6 +202,41 @@ namespace DWIMS
             app.MapSubmissionEndpoints();
             app.MapLogEndpoints();
             app.MapAnalyticsEndpoints();
+
+            if (app.Environment.IsProduction())
+            {
+                using var scope = app.Services.CreateScope();
+                var context = scope.ServiceProvider.GetRequiredService<DWIMS.Data.AppDbContext>();
+                context.Database.Migrate();
+                
+                if (!context.Users.Any(x => x.Email == "agjavier@kld.edu.ph"))
+                {
+                    var user = new User
+                    {
+                        Id = Guid.NewGuid(),
+                        Email = "agjavier@kld.edu.ph",
+                        Password = "agjavier",
+                        FirstName = "Adrian",
+                        MiddleName = "Gabayno",
+                        LastName = "Javier",
+                    };
+                    
+                    context.Users.Add(user);
+
+                    context.Roles.Add(new Role
+                    {
+                        Id = Guid.NewGuid(),
+                        Title = "Super Administrator",
+                        Description = "Top-level administrator.",
+                        UserId = user.Id,
+                        GeneralRole = GeneralRole.SuperAdministrator,
+                    });
+                    
+                    context.SaveChanges();
+                }
+
+            }
+            
             
             // app.Use(async (context, next) =>
             // {
