@@ -147,7 +147,7 @@ namespace DWIMS
                     return new BlobServiceClient(opts.ConnectionString);
                 });
             }
-        
+            Console.WriteLine("CORS ORIGIN VALUE: [" + builder.Configuration["Cors:Origin"] + "]");
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("Frontend", policy =>
