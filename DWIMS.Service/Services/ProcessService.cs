@@ -43,14 +43,14 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
                 null,
                 p.DepartmentId,
                 p.Department.Title,
-                p.Steps.Select(s => new StepDto(
+                p.Steps.Where(s => !s.IsDeleted).Select(s => new StepDto(
                     s.Id,
                     s.Order,
                     s.Title,
                     s.Role,
                     s.DepartmentId,
                     s.Department.Title)).ToList(),
-                p.Fields.Select(f => new FieldDto(
+                p.Fields.Where(f => !f.IsDeleted).Select(f => new FieldDto(
                     f.Id,
                     f.Title,
                     f.AcroFormKey,
