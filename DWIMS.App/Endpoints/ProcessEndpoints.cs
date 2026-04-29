@@ -129,9 +129,15 @@ public static class ProcessEndpoints
         throw new NotImplementedException();
     }
 
-    private static async Task DeleteProcess(HttpContext context)
+    private static async Task<IResult> DeleteProcess(
+        Guid id,
+        IProcessService processService,
+        CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = await processService.DeleteProcessAsync(id, cancellationToken);
+        return result.IsSuccess
+            ? Results.NoContent()
+            : Results.UnprocessableEntity(new { result.Error, result.ErrorDescription });
     }
 
     private static async Task<IResult> CreateStep(

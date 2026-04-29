@@ -120,12 +120,53 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
             .Where(x => x.Id == id)
             .Select(x => x.DepartmentId)
             .FirstOrDefaultAsync(cancellationToken);
-        
+
+        if (department == Guid.Empty)
+            return Result.Failure("PROCESS_NOT_FOUND", "Process not found.");
+
         if (!currentUserService.HasRoleInDepartment(department, GeneralRole.Administrator) &&
             !currentUserService.isSuperAdministrator)
             return Result.Failure("FORBIDDEN", "You do not have administrator access to this department.");
-        
-        throw new NotImplementedException();
+
+        var submissions = await context.Submissions
+            .Include(s => s.Inputs)
+            .Include(s => s.Responses)
+            .Where(s => s.ProcessId == id && !s.IsDeleted)
+            .ToListAsync(cancellationToken);
+
+        foreach (var submission in submissions)
+        {
+            context.Inputs.RemoveRange(submission.Inputs.Where(i => !i.IsDeleted));
+            context.Responses.RemoveRange(submission.Responses.Where(r => !r.IsDeleted));
+            context.Submissions.Remove(submission);
+        }
+
+        var documents = await context.Documents
+            .Where(d => d.ProcessId == id && !d.IsDeleted)
+            .ToListAsync(cancellationToken);
+
+        context.Documents.RemoveRange(documents);
+
+        var fields = await context.Fields
+            .Where(f => f.ProcessId == id && !f.IsDeleted)
+            .ToListAsync(cancellationToken);
+
+        context.Fields.RemoveRange(fields);
+
+        var steps = await context.Steps
+            .Where(s => s.ProcessId == id && !s.IsDeleted)
+            .ToListAsync(cancellationToken);
+
+        context.Steps.RemoveRange(steps);
+
+        var process = await context.Processes
+            .FirstAsync(p => p.Id == id, cancellationToken);
+
+        context.Processes.Remove(process);
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
     }
 
     public async Task<Result<Guid>> AddStepAsync(Guid processId, AddStepRequest request, CancellationToken cancellationToken = default)
