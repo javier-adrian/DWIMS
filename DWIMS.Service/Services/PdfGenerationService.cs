@@ -25,6 +25,7 @@ public sealed class PdfGenerationService(
             .Include(s => s.Process)
                 .ThenInclude(p => p.Fields)
             .Include(s => s.Inputs)
+                .ThenInclude(i => i.Field)
             .Include(s => s.Responses)
                 .ThenInclude(r => r.Step)
             .FirstOrDefaultAsync(s => s.Id == submissionId, cancellationToken)
