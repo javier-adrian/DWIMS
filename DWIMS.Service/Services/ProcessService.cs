@@ -239,10 +239,15 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
     {
         var process = await context.Processes
             .Include(p => p.Documents)
+            .Include(p => p.Steps)
+            .Include(p => p.Fields)
             .FirstOrDefaultAsync(p => p.Id == processId, cancellationToken);
 
         if (process is null)
             return Result<Guid>.Failure("PROCESS_NOT_FOUND", "Process not found.");
+
+        context.Steps.RemoveRange(process.Steps);
+        process.Fields.ToList().ForEach(f => context.Fields.Remove(f));
 
         using var ms = new MemoryStream();
         await request.File.CopyToAsync(ms, cancellationToken);
