@@ -13,9 +13,20 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
 {
     public async Task<Result<IReadOnlyList<ProcessSummaryDto>>> GetProcessesAsync(CancellationToken cancellationToken = default)
     {
+        var departmentIds = currentUserService.isSuperAdministrator
+            ? null
+            : currentUserService.Roles
+                .Where(r => r.Key != Guid.Empty && r.Value >= GeneralRole.Administrator)
+                .Select(r => r.Key)
+                .ToList();
+
+        if (departmentIds is not null && departmentIds.Count == 0)
+            return Result<IReadOnlyList<ProcessSummaryDto>>.Success([]);
+
         var processes = await context.Processes
             .Include(p => p.Department)
             .Where(p => !p.IsDeleted)
+            .Where(p => departmentIds == null || departmentIds.Contains(p.DepartmentId))
             .Select(p => new ProcessSummaryDto(
                 p.Id,
                 p.DepartmentId,
