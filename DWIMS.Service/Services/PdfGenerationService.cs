@@ -36,7 +36,7 @@ public sealed class PdfGenerationService(
         var template = await storageService.DownloadAsync(document.Link, cancellationToken);
         
         var fields = submission.Inputs
-            .Where(input => input.Value is not null)
+            .Where(input => input.Value is not null && !input.Field.IsDeleted)
             .ToDictionary(input => input.Field.AcroFormKey, input => input.Value!);
         
         var signatures = await BuildSignaturesAsync(submission.Responses, cancellationToken);
@@ -55,7 +55,8 @@ public sealed class PdfGenerationService(
         var approved = responses
             .Where(response =>
                 response.Result == Status.Approve &&
-                response.ReviewerId.HasValue)
+                response.ReviewerId.HasValue &&
+                !response.Step.IsDeleted)
             .ToList();
 
         foreach (var response in approved)
