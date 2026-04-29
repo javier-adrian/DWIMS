@@ -67,6 +67,7 @@ public class SubmissionService(
         if (!currentUser.isSuperAdministrator)
             query = query.Where(s => departmentIds.Contains(s.Step.DepartmentId));
 
+        query = query.Where(s => s.SubmitterId != currentUser.UserId.Value);
         query = query.Where(s => !s.Responses.Any(r => r.StepId == s.StepId && r.ReviewerId == currentUser.UserId.Value && r.CompletedOn != null));
 
         var pending = await query
