@@ -262,7 +262,7 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
     {
         var steps = await context.Steps
             .Include(s => s.Department)
-            .Where(s => s.ProcessId == processId)
+            .Where(s => s.ProcessId == processId && !s.IsDeleted)
             .OrderBy(s => s.Order)
             .Select(s => new StepDto(
                 s.Id,
