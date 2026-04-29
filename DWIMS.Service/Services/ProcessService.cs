@@ -15,6 +15,7 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
     {
         var processes = await context.Processes
             .Include(p => p.Department)
+            .Where(p => !p.IsDeleted)
             .Select(p => new ProcessSummaryDto(
                 p.Id,
                 p.DepartmentId,
