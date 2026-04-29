@@ -9,6 +9,9 @@ public interface IProcessService
     Task<Result<IReadOnlyList<ProcessSummaryDto>>> GetProcessesAsync(
         CancellationToken cancellationToken = default);
 
+    Task<Result<IReadOnlyList<ProcessSummaryDto>>> GetAllProcessesAsync(
+        CancellationToken cancellationToken = default);
+
     Task<Result<ProcessDetailDto>> GetProcessAsync(
         Guid id,
         CancellationToken cancellationToken = default);

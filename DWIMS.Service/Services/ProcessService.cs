@@ -26,7 +26,26 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
         var processes = await context.Processes
             .Include(p => p.Department)
             .Where(p => !p.IsDeleted)
-            .Where(p => departmentIds == null || departmentIds.Contains(p.DepartmentId))
+            .Where(p => departmentIds == null || departmentIds.Contains(p.DepartmentId) || p.Steps.Any(s => departmentIds.Contains(s.DepartmentId)))
+            .Select(p => new ProcessSummaryDto(
+                p.Id,
+                p.DepartmentId,
+                p.Department.Title,
+                p.Title,
+                null,
+                p.Steps.Count,
+                context.Documents.Any(d => d.ProcessId == p.Id && !d.IsDeleted)
+            ))
+            .ToListAsync(cancellationToken);
+
+        return Result<IReadOnlyList<ProcessSummaryDto>>.Success(processes);
+    }
+
+    public async Task<Result<IReadOnlyList<ProcessSummaryDto>>> GetAllProcessesAsync(CancellationToken cancellationToken = default)
+    {
+        var processes = await context.Processes
+            .Include(p => p.Department)
+            .Where(p => !p.IsDeleted)
             .Select(p => new ProcessSummaryDto(
                 p.Id,
                 p.DepartmentId,

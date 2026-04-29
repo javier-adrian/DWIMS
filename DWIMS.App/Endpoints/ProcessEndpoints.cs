@@ -20,6 +20,9 @@ public static class ProcessEndpoints
         group.MapGet("/", GetProcesses)
             .WithDisplayName("Get Processes")
             .WithSummary("Get all processes");
+        group.MapGet("/all", GetAllProcesses)
+            .WithDisplayName("Get All Processes")
+            .WithSummary("Get all processes without department filtering");
         group.MapGet("/{id:guid}", GetProcess)
             .WithDisplayName("Get Process")
             .WithSummary("Get a process by ID with steps and fields");
@@ -112,6 +115,14 @@ public static class ProcessEndpoints
         )
     {
         var result = await processService.GetProcessesAsync(cancellationToken);
+        return result.ToOkResult();
+    }
+
+    private static async Task<IResult> GetAllProcesses(
+        IProcessService processService,
+        CancellationToken cancellationToken)
+    {
+        var result = await processService.GetAllProcessesAsync(cancellationToken);
         return result.ToOkResult();
     }
 
