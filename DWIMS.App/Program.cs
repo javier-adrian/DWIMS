@@ -120,39 +120,32 @@ namespace DWIMS
                     .EnableSensitiveDataLogging()
                 );
 
-            if (builder.Environment.IsDevelopment())
-            {
-                builder.Services.AddScoped<IStorageService, StorageService>();
-                
-                builder.Services.AddSingleton<IAmazonS3>(sp =>
-                {
-                    var opts = sp.GetRequiredService<IOptions<StorageOptions>>().Value;
+            var storageOptions = builder.Configuration
+                .GetSection(StorageOptions.SectionName).Get<StorageOptions>()!;
 
-                    return new AmazonS3Client(
-                        opts.AccessKey,
-                        opts.SecretKey,
-                        new AmazonS3Config { ServiceURL = opts.ServiceUrl});
-                });
-                
-            }
-
-            if (builder.Environment.IsProduction())
+            if (storageOptions.Provider.Equals("Azure", StringComparison.OrdinalIgnoreCase))
             {
                 builder.Services.AddScoped<IStorageService, AzureBlobStorageService>();
-                
-                builder.Services.AddSingleton<BlobServiceClient>(optionsService =>
-                {
-                    var opts = optionsService.GetRequiredService<IOptions<StorageOptions>>().Value;
 
-                    return new BlobServiceClient(opts.ConnectionString);
-                });
+                builder.Services.AddSingleton<BlobServiceClient>(_ =>
+                    new BlobServiceClient(storageOptions.ConnectionString));
+            }
+            else
+            {
+                builder.Services.AddScoped<IStorageService, StorageService>();
+
+                builder.Services.AddSingleton<IAmazonS3>(_ =>
+                    new AmazonS3Client(
+                        storageOptions.AccessKey,
+                        storageOptions.SecretKey,
+                        new AmazonS3Config { ServiceURL = storageOptions.ServiceUrl }));
             }
             Console.WriteLine("CORS ORIGIN VALUE: [" + builder.Configuration["Cors:Origin"] + "]");
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("Frontend", policy =>
                 {
-                    policy.WithOrigins("https://www.kld-dwims.tech")
+                    policy.WithOrigins(builder.Configuration["Cors:Origin"])
                         .AllowAnyHeader()
                         .AllowAnyMethod()
                         .AllowCredentials();

@@ -3,11 +3,12 @@
 public sealed class StorageOptions
 {
     public const string SectionName = "Storage";
+    public string Provider { get; init; } = "S3";
     public required string BucketName { get; init; }
-    public required string AccessKey { get; init; }
-    public required string SecretKey { get; init; }
-    public required string ServiceUrl { get; init; }
-    public required string ConnectionString { get; init; } = string.Empty;
+    public string AccessKey { get; init; } = string.Empty;
+    public string SecretKey { get; init; } = string.Empty;
+    public string ServiceUrl { get; init; } = string.Empty;
+    public string ConnectionString { get; init; } = string.Empty;
     
     public string TemplatePrefix { get; init; } = "templates";
     public string OutputPrefix { get; init; } = "outputs";
