@@ -119,10 +119,17 @@ public sealed class PdfGenerationService(
         foreach (var (key, value) in fields)
         {
             var field = form.GetField(key);
-            
+
             if (field is null)
                 continue;
-            
+
+            foreach (var widget in field.GetWidgets())
+            {
+                var mk = widget.GetPdfObject().GetAsDictionary(PdfName.MK);
+                if (mk is not null)
+                    mk.Remove(PdfName.BG);
+            }
+
             field.SetValue(value);
             field.SetReadOnly(true);
         }
