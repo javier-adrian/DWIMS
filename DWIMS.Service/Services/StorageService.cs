@@ -15,9 +15,10 @@ public sealed class StorageService(
         Stream content, 
         string fileName, 
         string contentType, 
+        Prefix prefix,
         CancellationToken cancellationToken = default)
     {
-        var key = $"{_storageOptions.TemplatePrefix}/{Guid.NewGuid()}_{fileName}";
+        var key = $"{prefix.Resolve(_storageOptions)}/{fileName}";
 
         var request = new PutObjectRequest
         {

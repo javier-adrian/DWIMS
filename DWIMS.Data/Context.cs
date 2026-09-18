@@ -42,6 +42,7 @@ public class AppDbContext : DbContext
     public DbSet<Role> Roles { get; set; }
     public DbSet<Department> Departments { get; set; }
     public DbSet<Submission> Submissions { get; set; }
+    public DbSet<Attachment> Attachments { get; set; }
     public DbSet<Process> Processes { get; set; }
     public DbSet<Step> Steps { get; set; }
     public DbSet<Document> Documents { get; set; }

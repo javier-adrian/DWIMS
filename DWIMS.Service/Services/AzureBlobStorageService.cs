@@ -16,12 +16,17 @@ public class AzureBlobStorageService : IStorageService
         _options = options.Value;
     }
 
-    public async Task<string> UploadAsync(Stream content, string fileName, string contentType, CancellationToken cancellationToken = default)
+    public async Task<string> UploadAsync(
+        Stream content, 
+        string fileName, 
+        string contentType, 
+        Prefix prefix,
+        CancellationToken cancellationToken = default)
     {
         var container = _client.GetBlobContainerClient(_options.BucketName);
         await container.CreateIfNotExistsAsync(cancellationToken: cancellationToken);
 
-        var blob = container.GetBlobClient(fileName);
+        var blob = container.GetBlobClient($"{prefix.Resolve(_options)}/{fileName}");
         await blob.UploadAsync(content, new BlobHttpHeaders() { ContentType = contentType }, cancellationToken: cancellationToken);
 
         return blob.Uri.ToString();

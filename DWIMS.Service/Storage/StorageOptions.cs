@@ -12,6 +12,7 @@ public sealed class StorageOptions
     
     public string TemplatePrefix { get; init; } = "templates";
     public string OutputPrefix { get; init; } = "outputs";
+    public string AttachmentPrefix { get; init; } = "attachments";
     
     public int ExpiryMinutes { get; init; } = 30;
 }

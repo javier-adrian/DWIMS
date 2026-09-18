@@ -2,6 +2,7 @@ using DWIMS.Service.Auth;
 using DWIMS.Service.Common;
 using DWIMS.Service.Services;
 using DWIMS.Service.Submission;
+using DWIMS.Service.Submission.Dtos;
 using DWIMS.Service.Submission.Requests;
 
 namespace DWIMS.Controllers;
@@ -41,9 +42,91 @@ public static class SubmissionEndpoints
         group.MapGet("/{id:guid}/pdf", GetDocument)
             .WithDisplayName("Get Result Document")
             .WithSummary("Get the result document of a submission");
+        group.MapGet("/{id:guid}/attachments", GetAttachments)
+            .WithDisplayName("Get Submission Attachments")
+            .WithSummary("Get a submission's attachments");
         
+        group.MapGet("/{id:guid}/attachments/{attachmentId:guid}", DownloadAttachment)
+            .WithDisplayName("Download Attachment")
+            .WithSummary("Download a submission's attachment");
+        
+        group.MapPost("/{id:guid}/attachments", UploadAttachment)
+            .WithDisplayName("Upload Attachment")
+            .WithSummary("Upload attachments to a submission.");
+        
+        group.MapDelete("/{id:guid}/attachments/{attachmentId:guid}", DeleteAttachment)
+            .WithDisplayName("Delete Attachment")
+            .WithSummary("Delete a submission's attachment.");
         
         return app;
+    }
+
+    private static async Task<IResult> DeleteAttachment(
+        Guid submissionId, 
+        Guid attachmentId, 
+        ISubmissionService submissionService, 
+        CancellationToken cancellationToken)
+    {
+        var result = await submissionService.DeleteAttachmentAsync(submissionId, attachmentId, cancellationToken);
+        return result.IsSuccess
+            ? Results.NoContent()
+            : Results.UnprocessableEntity(new
+            {
+                result.Error
+            });
+    }
+
+    private static async Task<IResult> UploadAttachment(
+        Guid submissionId, 
+        IFormFileCollection files, 
+        ISubmissionService submissionService, 
+        CancellationToken cancellationToken)
+    {
+        List<AttachmentUploadDto> attachments = [];
+        foreach (var file in files)
+        {
+            var dto = new AttachmentUploadDto(file.OpenReadStream(), file.FileName, file.ContentType);
+            attachments.Add(dto);
+        }
+        
+        var result = await submissionService.UploadAttachmentsAsync(submissionId, attachments, cancellationToken);
+        return result.IsSuccess
+            ? Results.NoContent()
+            : Results.UnprocessableEntity(new
+            {
+                result.Error
+            });
+    }
+
+    private static async Task<IResult> DownloadAttachment(
+        Guid id,
+        Guid attachmentId,
+        ISubmissionService submissionService,
+        CancellationToken cancellationToken)
+    {
+        var result = await submissionService.DownloadAttachmentAsync(id, attachmentId, cancellationToken);
+        if (!result.IsSuccess)
+            return Results.UnprocessableEntity(new
+            {
+                result.Error
+            });
+        var dto = result.Data!;
+        return Results.File(dto.Content, dto.ContentType, dto.FileName);
+    }
+
+    private static async Task<IResult> GetAttachments(
+        Guid id,
+        ISubmissionService submissionService,
+        CancellationToken cancellationToken)
+    {
+        var result = await submissionService.GetAttachmentsAsync(id, cancellationToken);
+        
+        return result.IsSuccess
+            ? Results.Ok(result.Data)
+            : Results.UnprocessableEntity(new
+            {
+                result.Error
+            });
     }
 
     private static async Task<IResult> GetDocument(

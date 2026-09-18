@@ -347,8 +347,9 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
 
         var storageKey = await storageService.UploadAsync(
             ms,
-            request.FileName,
+            $"{document.Id}/{Path.GetFileName(request.FileName)}",
             "application/octet-stream",
+            Prefix.Template,
             cancellationToken);
 
         document.Link = storageKey;

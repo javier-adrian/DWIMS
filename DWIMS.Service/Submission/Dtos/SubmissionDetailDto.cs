@@ -11,5 +11,6 @@ public record SubmissionDetailDto(
     DateTime? CompletedAt,
     string? CurrentStep,
     IReadOnlyList<SubmissionStepResponseDto> StepResponses,
-    IReadOnlyList<SubmissionFieldValueDto> FieldValues
+    IReadOnlyList<SubmissionFieldValueDto> FieldValues,
+    IReadOnlyList<AttachmentDto> Attachments
     );

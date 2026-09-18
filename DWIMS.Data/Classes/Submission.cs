@@ -16,6 +16,7 @@ public class Submission : ISoftDeletable
     public User Submitter { get; set; }
     public ICollection<Input> Inputs { get; set; }
     public ICollection<Response> Responses { get; set; }
+    public ICollection<Attachment> Attachments { get; set; }
     
     public bool IsDeleted { get; set; }
     public DateTime? DeletedOn { get; set; }

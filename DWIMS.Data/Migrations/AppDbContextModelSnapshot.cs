@@ -22,6 +22,40 @@ namespace DWIMS.Data.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
+            modelBuilder.Entity("DWIMS.Data.Attachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("DeletedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Link")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid>("SubmissionId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubmissionId");
+
+                    b.ToTable("attachments");
+                });
+
             modelBuilder.Entity("DWIMS.Data.Department", b =>
                 {
                     b.Property<Guid>("Id")
@@ -543,6 +577,17 @@ namespace DWIMS.Data.Migrations
                     b.ToTable("departmentuser");
                 });
 
+            modelBuilder.Entity("DWIMS.Data.Attachment", b =>
+                {
+                    b.HasOne("DWIMS.Data.Submission", "Submission")
+                        .WithMany("Attachments")
+                        .HasForeignKey("SubmissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Submission");
+                });
+
             modelBuilder.Entity("DWIMS.Data.Document", b =>
                 {
                     b.HasOne("DWIMS.Data.Process", "Process")
@@ -772,6 +817,8 @@ namespace DWIMS.Data.Migrations
 
             modelBuilder.Entity("DWIMS.Data.Submission", b =>
                 {
+                    b.Navigation("Attachments");
+
                     b.Navigation("Inputs");
 
                     b.Navigation("Responses");

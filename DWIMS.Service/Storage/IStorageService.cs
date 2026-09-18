@@ -6,6 +6,7 @@ public interface IStorageService
         Stream content, 
         string fileName, 
         string contentType, 
+        Prefix prefix,
         CancellationToken cancellationToken = default);
 
     Task<Stream> DownloadAsync(

@@ -1,10 +1,12 @@
 ﻿using DWIMS.Data;
 using DWIMS.Service.Common;
 using DWIMS.Service.Logs;
+using DWIMS.Service.Storage;
 using DWIMS.Service.Submission;
 using DWIMS.Service.Submission.Dtos;
 using DWIMS.Service.Submission.Requests;
 using DWIMS.Service.User;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace DWIMS.Service.Services;
@@ -13,6 +15,7 @@ public class SubmissionService(
     AppDbContext context, 
     ICurrentUserService currentUser,
     INotificationService notificationService,
+    IStorageService storageService,
     ILogService logService) 
     : ISubmissionService
 {
@@ -95,8 +98,9 @@ public class SubmissionService(
             .Include(s => s.Step)
             .Include(s => s.Submitter)
             .Include(s => s.Inputs).ThenInclude(i => i.Field)
-            .Include(s => s.Responses).ThenInclude(r => r.Reviewer).Include(submission => submission.Responses)
-            .ThenInclude(response => response.Step)
+            .Include(s => s.Responses).ThenInclude(r => r.Reviewer)
+            .Include(s => s.Responses).ThenInclude(r => r.Step)
+            .Include(s => s.Attachments)
             .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
 
         if (submission is null)
@@ -118,6 +122,16 @@ public class SubmissionService(
             i.Value
         )).ToList();
 
+        var attachments = submission.Attachments.Where(
+            attachment => !attachment.IsDeleted).ToList();
+        var attachmentDtos = attachments.Select(
+            attachment => new AttachmentDto(
+                attachment.Id, 
+                attachment.Title, 
+                attachment.Type))
+            .ToList();
+
+
         return Result<SubmissionDetailDto>.Success(new SubmissionDetailDto(
             submission.Id,
             submission.ProcessId,
@@ -127,7 +141,8 @@ public class SubmissionService(
             submission.CompletedOn,
             submission.Step.Title,
             stepResponses,
-            fieldValues
+            fieldValues,
+            attachmentDtos
         ));
     }
 
@@ -140,6 +155,7 @@ public class SubmissionService(
             .Include(s => s.Inputs).ThenInclude(i => i.Field)
             .Include(s => s.Responses).ThenInclude(r => r.Reviewer)
             .Include(s => s.Responses).ThenInclude(r => r.Step)
+            .Include(s => s.Attachments)
             .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
 
         if (submission is null)
@@ -161,6 +177,15 @@ public class SubmissionService(
             i.Value
         )).ToList();
 
+        var attachments = submission.Attachments.Where(
+            attachment => !attachment.IsDeleted).ToList();
+        var attachmentDtos = attachments.Select(
+            attachment => new AttachmentDto(
+                attachment.Id, 
+                attachment.Title, 
+                attachment.Type))
+            .ToList();
+
         return Result<SubmissionDetailDto>.Success(new SubmissionDetailDto(
             submission.Id,
             submission.ProcessId,
@@ -170,7 +195,8 @@ public class SubmissionService(
             submission.CompletedOn,
             submission.Step.Title,
             stepResponses,
-            fieldValues
+            fieldValues,
+            attachmentDtos
         ));
     }
 
@@ -331,5 +357,141 @@ public class SubmissionService(
         await logService.LogAsync("Submission Cancelled", "Submission", id, cancellationToken: cancellationToken);
         
         return Result.Success();
+    }
+    
+    public async Task<Result<List<Attachment>>> UploadAttachmentsAsync(
+        Guid submissionId,
+        IReadOnlyList<AttachmentUploadDto> attachments,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Result<List<Attachment>>.Failure("UNAUTHORIZED", "User is not authenticated.");
+
+        var submission = await context.Submissions
+            .FirstOrDefaultAsync(submission =>
+                submission.Id == submissionId, cancellationToken);
+        
+        if (submission is null)
+            return Result<List<Attachment>>.Failure("SUBMISSION_NOT_FOUND", "Submission not found.");
+
+        if (submission.SubmitterId != currentUser.UserId.Value)
+            return Result<List<Attachment>>.Failure("FORBIDDEN", "You can only upload attachments to your own submissions.");
+        
+        var results = new List<Attachment>();
+
+        foreach (var file in attachments)
+        {
+            var attachmentId = Guid.NewGuid();
+            var key = await storageService.UploadAsync(
+                file.Content, 
+                $"{submissionId}/{attachmentId}/{Path.GetFileName(file.FileName)}", 
+                file.ContentType, 
+                Prefix.Attachment, 
+                cancellationToken);
+            
+            results.Add(new Attachment
+            {
+                Id = attachmentId,
+                SubmissionId = submissionId,
+                Title = file.FileName,
+                Type = file.ContentType,
+                Link = key
+            });
+        }
+        
+        context.Attachments.AddRange(results);
+        await context.SaveChangesAsync(cancellationToken);
+        
+        return Result<List<Attachment>>.Success(results);
+    }
+
+    public async Task<Result> DeleteAttachmentAsync(
+        Guid submissionId, 
+        Guid attachmentId, 
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Result.Failure("UNAUTHORIZED", "User is not authenticated.");
+
+        var submission = await context.Submissions
+                             .FirstOrDefaultAsync(submission => 
+                                 submission.Id == submissionId, cancellationToken);
+        
+        if (submission is null)
+            return Result.Failure("SUBMISSION_NOT_FOUND", "Submission not found.");
+        
+        if (submission.SubmitterId != currentUser.UserId)
+            return Result.Failure("UNAUTHORIZED", "User is not authorized to delete this attachment.");
+
+        var attachment = await context.Attachments
+            .FirstOrDefaultAsync(attachment =>
+                    attachment.SubmissionId == submissionId &&
+                    attachment.Id == attachmentId,
+                cancellationToken);
+            
+        if (attachment is null)
+            return Result.Failure("ATTACHMENT_NOT_FOUND", "Attachment not found.");
+
+        context.Attachments.Remove(attachment);
+        
+        await context.SaveChangesAsync(cancellationToken);
+        
+        return Result.Success();
+    }
+
+    public async Task<Result<IReadOnlyList<AttachmentDto>>> GetAttachmentsAsync(
+        Guid submissionId,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Result<IReadOnlyList<AttachmentDto>>.Failure("UNAUTHORIZED", "User is not authenticated.");
+
+        var submission = await context.Submissions
+                             .FirstOrDefaultAsync(submission => 
+                                 submission.Id == submissionId, cancellationToken);
+        
+        if (submission is null)
+            return Result<IReadOnlyList<AttachmentDto>>.Failure("SUBMISSION_NOT_FOUND", "Submission not found.");
+        
+        var attachments = await context.Attachments
+            .Where(attachment => 
+                attachment.SubmissionId == submissionId && !attachment.IsDeleted)
+            .Select(attachment => new AttachmentDto(
+                attachment.Id,
+                attachment.Title,
+                attachment.Type))
+            .ToListAsync(cancellationToken);
+        
+        return Result<IReadOnlyList<AttachmentDto>>.Success(attachments);
+    }
+
+    public async Task<Result<AttachmentDownloadDto>> DownloadAttachmentAsync(
+        Guid submissionId,
+        Guid attachmentId,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Result<AttachmentDownloadDto>.Failure("UNAUTHORIZED", "User is not authenticated.");
+
+        var submission = await context.Submissions
+                             .FirstOrDefaultAsync(submission => 
+                                 submission.Id == submissionId, cancellationToken) ;
+        
+        if (submission is null)
+            return Result<AttachmentDownloadDto>.Failure("SUBMISSION_NOT_FOUND", "Submission not found.");
+
+        var attachment = await context.Attachments
+            .FirstOrDefaultAsync(attachment =>
+                    attachment.SubmissionId == submissionId &&
+                    attachment.Id == attachmentId && 
+                    !attachment.IsDeleted,
+                cancellationToken);
+            
+        if (attachment is null)
+            return Result<AttachmentDownloadDto>.Failure("ATTACHMENT_NOT_FOUND", "Attachment not found.");
+
+        var stream = await storageService.DownloadAsync(attachment.Link, cancellationToken);
+        
+        return Result<AttachmentDownloadDto>.Success(new AttachmentDownloadDto(stream, attachment.Title, attachment.Type));
     }
 }

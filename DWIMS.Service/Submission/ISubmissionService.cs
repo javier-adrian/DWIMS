@@ -37,4 +37,23 @@ public interface ISubmissionService
     Task<Result> CancelSubmissionAsync(
         Guid id,
         CancellationToken cancellationToken = default);
+
+    Task<Result<IReadOnlyList<AttachmentDto>>> GetAttachmentsAsync(
+        Guid submissionId,
+        CancellationToken cancellationToken = default);
+
+    Task<Result<AttachmentDownloadDto>> DownloadAttachmentAsync(
+        Guid submissionId,
+        Guid attachmentId,
+        CancellationToken cancellationToken = default);
+    
+    Task<Result<List<Attachment>>> UploadAttachmentsAsync(
+        Guid submissionId,
+        IReadOnlyList<AttachmentUploadDto> files,
+        CancellationToken cancellationToken = default);
+    
+    Task<Result> DeleteAttachmentAsync(
+        Guid submissionId,
+        Guid attachmentId,
+        CancellationToken cancellationToken = default);
 }
