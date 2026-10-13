@@ -1,6 +1,7 @@
 ﻿using DWIMS.Data;
 using DWIMS.Service.Common;
 using DWIMS.Service.Logs;
+using DWIMS.Service.Routing;
 using DWIMS.Service.Storage;
 using DWIMS.Service.Submission;
 using DWIMS.Service.Submission.Dtos;
@@ -15,6 +16,7 @@ public class SubmissionService(
     AppDbContext context, 
     ICurrentUserService currentUser,
     INotificationService notificationService,
+    IRoutingService routingService,
     IStorageService storageService,
     ILogService logService) 
     : ISubmissionService
@@ -213,28 +215,17 @@ public class SubmissionService(
         if (process is null)
             return Result<Guid>.Failure("PROCESS_NOT_FOUND", "Process not found.");
 
-        var firstStep = process.Steps.FirstOrDefault()
-            ?? throw new InvalidOperationException("Process has no steps.");
-
         var submission = new Data.Submission
         {
             Id = Guid.NewGuid(),
             ProcessId = process.Id,
-            StepId = firstStep.Id,
-            Status = Status.Review,
             SubmittedOn = DateTime.UtcNow,
             SubmitterId = currentUser.UserId.Value,
         };
+        
+        routingService.StartRoute(submission, process);
 
         context.Submissions.Add(submission);
-
-        context.Responses.Add(new Response
-        {
-            Id = Guid.NewGuid(),
-            SubmissionId = submission.Id,
-            StepId = firstStep.Id,
-            ActivatedOn = DateTime.UtcNow,
-        });
 
         foreach (var fieldInput in request.Fields)
         {
@@ -293,36 +284,10 @@ public class SubmissionService(
         response.Result = request.Outcome;
         response.Remarks = request.Remarks ?? "";
         response.CompletedOn = DateTime.UtcNow;
-
-        if (request.Outcome == Status.Reject)
-        {
-            submission.Status = Status.Reject;
-        }
-        else
-        {
-            var nextStep = submission.Process.Steps
-                .FirstOrDefault(s => s.Order > currentStep.Order);
-
-            if (nextStep is not null)
-            {
-                submission.StepId = nextStep.Id;
-                submission.Status = Status.Review;
-
-                context.Responses.Add(new Response
-                {
-                    Id = Guid.NewGuid(),
-                    SubmissionId = submissionId,
-                    StepId = nextStep.Id,
-                    ActivatedOn = DateTime.UtcNow,
-                });
-            }
-            else
-            {
-                submission.Status = Status.Approve;
-            }
-        }
-
-        if (submission.Status != Status.Review)
+        
+        var route = routingService.Advance(submission, currentStep, request.Outcome);
+        
+        if (route.outcome != RouteOutcome.Advanced && route.outcome != RouteOutcome.OnHold)
             submission.CompletedOn = DateTime.UtcNow;
 
         await context.SaveChangesAsync(cancellationToken);

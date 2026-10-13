@@ -14,6 +14,7 @@ using DWIMS.Service.Process;
 using DWIMS.Service.Services;
 using DWIMS.Service.Storage;
 using DWIMS.Service.Logs;
+using DWIMS.Service.Routing;
 using DWIMS.Service.Submission;
 using DWIMS.Service.User;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -106,6 +107,7 @@ namespace DWIMS
             builder.Services.AddScoped<IProcessService, ProcessService>();
             builder.Services.AddScoped<IAcroFormService, AcroFormService>();
             builder.Services.AddScoped<ISubmissionService, SubmissionService>();
+            builder.Services.AddScoped<IRoutingService, RoutingService>();
             builder.Services.AddScoped<IPdfGenerationService, PdfGenerationService>();
             builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
             builder.Services.AddScoped<INotificationService, NotificationService>();
