@@ -33,7 +33,7 @@ public static class DepartmentEndpoints
             .WithSummary("Delete a department")
             .RequireAuthorization(DwimsPolicies.SuperAdministrator);
 
-        group.MapGet("/{id:guid}/members", GetMembers)
+        group.MapGet("/{departmentId:guid}/members", GetMembers)
             .WithDisplayName("Get Department Members")
             .WithSummary("Get all members of a department")
             .RequireAuthorization(DwimsPolicies.Administrator);

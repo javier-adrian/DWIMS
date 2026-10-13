@@ -23,28 +23,28 @@ public static class ProcessEndpoints
         group.MapGet("/all", GetAllProcesses)
             .WithDisplayName("Get All Processes")
             .WithSummary("Get all processes without department filtering");
-        group.MapGet("/{id:guid}", GetProcess)
+        group.MapGet("/{processId:guid}", GetProcess)
             .WithDisplayName("Get Process")
             .WithSummary("Get a process by ID with steps and fields");
-        group.MapPut("/{id:guid}", UpdateProcess)
+        group.MapPut("/{processId:guid}", UpdateProcess)
             .WithDisplayName("Update Process")
             .WithSummary("Update an existing process")
             .RequireAuthorization(DwimsPolicies.Administrator);
-        group.MapDelete("/{id:guid}", DeleteProcess)
+        group.MapDelete("/{processId:guid}", DeleteProcess)
             .WithDisplayName("Delete Process")
             .WithSummary("Delete a process")
             .RequireAuthorization(DwimsPolicies.Administrator);
         
-        group.MapPost("/{id:guid}/document", CreateDocument)
+        group.MapPost("/{processId:guid}/document", CreateDocument)
             .WithDisplayName("Add Document")
             .WithSummary("Add a document to a process")
             .RequireAuthorization(DwimsPolicies.Administrator);
 
-        group.MapPost("/{id:guid}/step", CreateStep)
+        group.MapPost("/{processId:guid}/step", CreateStep)
             .WithDisplayName("Add Step")
             .WithSummary("Add a step to a process")
             .RequireAuthorization(DwimsPolicies.Administrator);
-        group.MapGet("/{id:guid}/step", GetSteps)
+        group.MapGet("/{processId:guid}/step", GetSteps)
             .WithDisplayName("Get Steps")
             .WithSummary("Get all steps of a process");
         // group.MapGet("/{id:guid}/step/{id:guid}", GetStep);
@@ -53,7 +53,7 @@ public static class ProcessEndpoints
         // group.MapDelete("/{id:guid/step/{id:guid}", DeleteStep)
         //     .RequireAuthorization(DwimsPolicies.Administrator);
         
-        group.MapPost("/{id:guid}/field", CreateField)
+        group.MapPost("/{processId:guid}/field", CreateField)
             .WithDisplayName("Add Field")
             .WithSummary("Add a field to a process")
             .RequireAuthorization(DwimsPolicies.Administrator);
@@ -70,7 +70,7 @@ public static class ProcessEndpoints
     }
 
     private static async Task<IResult> CreateDocument(
-        Guid id,
+        Guid processId,
         HttpRequest request,
         IProcessService processService,
         CancellationToken cancellationToken)
@@ -93,7 +93,7 @@ public static class ProcessEndpoints
             FileName = file.FileName,
         };
 
-        var result = await processService.UploadDocumentAsync(id, uploadRequest, cancellationToken);
+        var result = await processService.UploadDocumentAsync(processId, uploadRequest, cancellationToken);
 
         return result.IsSuccess
             ? Results.Ok(result.Data)
@@ -127,11 +127,11 @@ public static class ProcessEndpoints
     }
 
     private static async Task<IResult> GetProcess(
-        Guid id,
+        Guid processId,
         IProcessService processService,
         CancellationToken cancellationToken)
     {
-        var result = await processService.GetProcessAsync(id, cancellationToken);
+        var result = await processService.GetProcessAsync(processId, cancellationToken);
         return result.ToOkResult();
     }
 
@@ -141,11 +141,11 @@ public static class ProcessEndpoints
     }
 
     private static async Task<IResult> DeleteProcess(
-        Guid id,
+        Guid processId,
         IProcessService processService,
         CancellationToken cancellationToken)
     {
-        var result = await processService.DeleteProcessAsync(id, cancellationToken);
+        var result = await processService.DeleteProcessAsync(processId, cancellationToken);
         return result.IsSuccess
             ? Results.NoContent()
             : Results.UnprocessableEntity(new { result.Error, result.ErrorDescription });
@@ -162,11 +162,11 @@ public static class ProcessEndpoints
     }
 
     private static async Task<IResult> GetSteps(
-        Guid id,
+        Guid processId,
         IProcessService processService,
         CancellationToken cancellationToken)
     {
-        var result = await processService.GetStepsAsync(id, cancellationToken);
+        var result = await processService.GetStepsAsync(processId, cancellationToken);
         return result.ToOkResult();
     }
 
