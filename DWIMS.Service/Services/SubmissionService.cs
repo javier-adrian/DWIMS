@@ -223,7 +223,6 @@ public class SubmissionService(
             StepId = firstStep.Id,
             Status = Status.Review,
             SubmittedOn = DateTime.UtcNow,
-            CompletedOn = DateTime.UtcNow,
             SubmitterId = currentUser.UserId.Value,
         };
 
