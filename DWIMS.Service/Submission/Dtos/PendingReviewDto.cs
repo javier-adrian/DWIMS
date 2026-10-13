@@ -1,4 +1,6 @@
-﻿namespace DWIMS.Service.Submission.Dtos;
+﻿using DWIMS.Data;
+
+namespace DWIMS.Service.Submission.Dtos;
 
 public sealed record PendingReviewDto(
     Guid Id,
@@ -6,6 +8,7 @@ public sealed record PendingReviewDto(
     string ResponseName,
     string StepName,
     string SubmitterName,
+    Status Status,
     DateTime SubmittedAt,
     DateTime? StepActivatedAt
     );

@@ -59,7 +59,7 @@ public class SubmissionService(
             .Include(s => s.Submitter)
             .Include(s => s.Process)
             .Include(s => s.Responses)
-            .Where(s => s.Status == Status.Review);
+            .Where(s => s.Status == Status.Review || s.Status == Status.OnHold);
 
         query = query.Where(s => s.SubmitterId != currentUser.UserId.Value);
 
@@ -78,6 +78,7 @@ public class SubmissionService(
                 s.Process.Title,
                 s.Step.Title,
                 $"{s.Submitter.FirstName} {s.Submitter.LastName}",
+                s.Status,
                 s.SubmittedOn,
                 s.CompletedOn
             ))
@@ -256,8 +257,11 @@ public class SubmissionService(
         if (currentUser.UserId is null)
             return Result.Failure("UNAUTHORIZED", "User is not authenticated.");
         
-        if (request.Outcome is not Status.Approve and not Status.Reject)
+        if (request.Outcome is not Status.Approve and not Status.Reject and not Status.OnHold)
             return Result.Failure("INVALID_OUTCOME", "Outcome must be Approve or Reject.");
+        
+        if (request.Outcome is Status.OnHold && string.IsNullOrWhiteSpace(request.Remarks))
+            return Result.Failure("REASON_REQUIRED", "Remarks must be provided when outcome is OnHold.");
 
         var submission = await context.Submissions
             .Include(s => s.Process)
@@ -282,6 +286,18 @@ public class SubmissionService(
         
         if (response.AssigneeId != currentUser.UserId && !currentUser.isSuperAdministrator)
             return Result.Failure("FORBIDDEN", "User is not authorized to respond to this submission.");
+
+        if (request.Outcome is Status.OnHold)
+        {
+            response.Result = Status.OnHold;
+            response.Remarks = request.Remarks ?? "";
+            response.CompletedOn = DateTime.UtcNow;
+            submission.Status = Status.OnHold;
+            
+            await context.SaveChangesAsync(cancellationToken);
+            
+            return Result.Success();
+        }
         
         var hasNextStep = submission.Process.Steps.Any(step => step.Order > currentStep.Order);
 
@@ -308,6 +324,41 @@ public class SubmissionService(
 
         await logService.LogAsync("Submission Responded", "Submission", submissionId, cancellationToken: cancellationToken);
         
+        return Result.Success();
+    }
+
+    
+    public async Task<Result> ResumeSubmissionAsync(Guid submissionId, CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Result.Failure("UNAUTHORIZED", "User is not authenticated.");
+        
+        var submission = context.Submissions.FirstOrDefault(s => s.Id == submissionId);
+        
+        if (submission is null)
+            return Result.Failure("SUBMISSION_NOT_FOUND", "Submission not found.");
+        
+        if (submission.Status != Status.OnHold)
+            return Result.Failure("INVALID_STATUS", "Submission is not on hold.");
+        
+        var responseId = Guid.NewGuid();
+        
+        var lastResponse = submission.Responses
+            .FirstOrDefault(
+                response => response.Result == Status.OnHold && response.StepId == submission.StepId);
+        
+        context.Responses.Add(new Response {
+            Id = responseId, 
+            SubmissionId = submission.Id,
+            StepId = submission.StepId,
+            ActivatedOn = DateTime.UtcNow, 
+            Assignee = lastResponse.Assignee,
+            AssigneeId = lastResponse.AssigneeId
+        });
+
+        submission.Status = Status.OnHold;
+        
+        await context.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
 

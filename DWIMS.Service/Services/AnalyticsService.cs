@@ -301,7 +301,7 @@ public class AnalyticsService(
             SubmissionCount = total,
             ApprovedCount = approved,
             RejectedCount = Count(Status.Reject),
-            PendingCount = Count(Status.Review),
+            PendingCount = Count(Status.Review) + Count(Status.OnHold),
             CancelledCount = Count(Status.Cancel),
             ApprovalRate = total > 0 
                 ? Math.Round((double)approved / total, 4) 

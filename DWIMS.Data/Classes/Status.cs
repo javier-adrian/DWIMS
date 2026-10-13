@@ -6,5 +6,6 @@ public enum Status
     Review = 1,
     Approve = 2,
     Reject = 3,
-    Cancel = 4
+    Cancel = 4,
+    OnHold = 5
 }

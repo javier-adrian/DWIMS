@@ -39,6 +39,9 @@ public static class SubmissionEndpoints
         group.MapPost("/{id:guid}/cancel", CancelSubmission)
             .WithDisplayName("Cancel Submission")
             .WithSummary("Cancel a submission");
+        group.MapPost("/{id:guid}/resume", ResumeSubmission)
+            .WithDisplayName("Resume Submission")
+            .WithSummary("Resume a submission");
         group.MapGet("/{id:guid}/pdf", GetDocument)
             .WithDisplayName("Get Result Document")
             .WithSummary("Get the result document of a submission");
@@ -60,6 +63,22 @@ public static class SubmissionEndpoints
             .WithSummary("Delete a submission's attachment.");
         
         return app;
+    }
+
+    private static async Task<IResult> ResumeSubmission(
+        Guid id,
+        ISubmissionService submissionService,
+        CancellationToken cancellationToken)
+    {
+        var result = await submissionService.ResumeSubmissionAsync(id, cancellationToken);
+        
+        return result.IsSuccess
+            ? Results.Ok()
+            : Results.UnprocessableEntity(new
+            {
+                result.Error,
+                result.ErrorDescription
+            });
     }
 
     private static async Task<IResult> DeleteAttachment(

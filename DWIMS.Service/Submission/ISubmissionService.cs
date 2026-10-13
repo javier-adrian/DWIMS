@@ -56,4 +56,8 @@ public interface ISubmissionService
         Guid submissionId,
         Guid attachmentId,
         CancellationToken cancellationToken = default);
+    
+    Task<Result> ResumeSubmissionAsync(
+        Guid submissionId,
+        CancellationToken cancellationToken = default);
 }
