@@ -333,7 +333,9 @@ public class SubmissionService(
         if (currentUser.UserId is null)
             return Result.Failure("UNAUTHORIZED", "User is not authenticated.");
         
-        var submission = context.Submissions.FirstOrDefault(s => s.Id == submissionId);
+        var submission = await context.Submissions
+            .Include(s => s.Responses).ThenInclude(response => response.Assignee)
+            .FirstOrDefaultAsync(s => s.Id == submissionId);
         
         if (submission is null)
             return Result.Failure("SUBMISSION_NOT_FOUND", "Submission not found.");
@@ -346,6 +348,9 @@ public class SubmissionService(
         var lastResponse = submission.Responses
             .FirstOrDefault(
                 response => response.Result == Status.OnHold && response.StepId == submission.StepId);
+        
+        if (lastResponse is null)
+            return Result.Failure("INVALID_STATUS", "Submission is not on hold.");
         
         context.Responses.Add(new Response {
             Id = responseId, 
