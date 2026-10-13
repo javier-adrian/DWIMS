@@ -52,7 +52,8 @@ public static class SubmissionEndpoints
         
         group.MapPost("/{id:guid}/attachments", UploadAttachment)
             .WithDisplayName("Upload Attachment")
-            .WithSummary("Upload attachments to a submission.");
+            .WithSummary("Upload attachments to a submission.")
+            .DisableAntiforgery();
         
         group.MapDelete("/{id:guid}/attachments/{attachmentId:guid}", DeleteAttachment)
             .WithDisplayName("Delete Attachment")
@@ -77,7 +78,7 @@ public static class SubmissionEndpoints
     }
 
     private static async Task<IResult> UploadAttachment(
-        Guid submissionId, 
+        Guid id, 
         IFormFileCollection files, 
         ISubmissionService submissionService, 
         CancellationToken cancellationToken)
@@ -89,7 +90,7 @@ public static class SubmissionEndpoints
             attachments.Add(dto);
         }
         
-        var result = await submissionService.UploadAttachmentsAsync(submissionId, attachments, cancellationToken);
+        var result = await submissionService.UploadAttachmentsAsync(id, attachments, cancellationToken);
         return result.IsSuccess
             ? Results.NoContent()
             : Results.UnprocessableEntity(new
