@@ -63,12 +63,12 @@ public static class SubmissionEndpoints
     }
 
     private static async Task<IResult> DeleteAttachment(
-        Guid submissionId, 
+        Guid id, 
         Guid attachmentId, 
         ISubmissionService submissionService, 
         CancellationToken cancellationToken)
     {
-        var result = await submissionService.DeleteAttachmentAsync(submissionId, attachmentId, cancellationToken);
+        var result = await submissionService.DeleteAttachmentAsync(id, attachmentId, cancellationToken);
         return result.IsSuccess
             ? Results.NoContent()
             : Results.UnprocessableEntity(new
