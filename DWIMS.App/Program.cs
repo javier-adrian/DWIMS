@@ -1,6 +1,6 @@
 using System.Text;
 using Amazon.S3;
-using Azure.Identity;
+// using Azure.Identity;
 using Azure.Storage.Blobs;
 using DWIMS.Controllers;
 using DWIMS.Data;
@@ -55,12 +55,12 @@ namespace DWIMS
             builder.Services.AddOptions<JwtOptions>()
                 .Bind(builder.Configuration.GetSection(JwtOptions.SectionName));
             
-            if (builder.Environment.IsProduction())
-            {
-                builder.Configuration.AddAzureKeyVault(
-                    new Uri("https://dwims-vault.vault.azure.net/"),
-                    new DefaultAzureCredential());
-            }
+            // if (builder.Environment.IsProduction())
+            // {
+            //     builder.Configuration.AddAzureKeyVault(
+            //         new Uri("https://dwims-vault.vault.azure.net/"),
+            //         new DefaultAzureCredential());
+            // }
             
             var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>();
             
@@ -115,12 +115,19 @@ namespace DWIMS
             builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
             
             builder.Services.AddDbContext<AppDbContext>(options =>
-                options.UseMySql(
-                    builder.Configuration.GetConnectionString("Default"),
-                    ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("Default")))
-                    .LogTo(Console.WriteLine, [DbLoggerCategory.Database.Command.Name], LogLevel.Information)
-                    .EnableSensitiveDataLogging()
-                );
+                {
+                    options.UseMySql(
+                        builder.Configuration.GetConnectionString("Default"),
+                        ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("Default"))
+                    );
+
+                    if (!builder.Environment.IsProduction())
+                        options
+                            .LogTo(Console.WriteLine, [DbLoggerCategory.Database.Command.Name], LogLevel.Information)
+                            .EnableSensitiveDataLogging();
+                }
+            );
+            
 
             var storageOptions = builder.Configuration
                 .GetSection(StorageOptions.SectionName).Get<StorageOptions>()!;
@@ -140,7 +147,7 @@ namespace DWIMS
                     new AmazonS3Client(
                         storageOptions.AccessKey,
                         storageOptions.SecretKey,
-                        new AmazonS3Config { ServiceURL = storageOptions.ServiceUrl }));
+                        new AmazonS3Config { ServiceURL = storageOptions.ServiceUrl, ForcePathStyle = true }));
             }
             Console.WriteLine("CORS ORIGIN VALUE: [" + builder.Configuration["Cors:Origin"] + "]");
             builder.Services.AddCors(options =>
