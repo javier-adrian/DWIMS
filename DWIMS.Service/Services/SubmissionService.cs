@@ -356,7 +356,7 @@ public class SubmissionService(
             AssigneeId = lastResponse.AssigneeId
         });
 
-        submission.Status = Status.OnHold;
+        submission.Status = Status.Review;
         
         await context.SaveChangesAsync(cancellationToken);
         return Result.Success();
