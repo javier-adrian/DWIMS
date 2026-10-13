@@ -1,10 +1,11 @@
 ﻿using DWIMS.Data;
+using DWIMS.Service.Common;
 
 namespace DWIMS.Service.Routing;
 
 public interface IRoutingService
 {
-    void StartRoute(Data.Submission submission, Data.Process process);
+    Task<Result<Guid>> StartRoute(Data.Submission submission, Data.Process process, string firstReviewerEmail);
     
-    RouteResult Advance(Data.Submission submission, Step currentStep, Status outcome);
+    Task<Result<RouteResult>> Advance(Data.Submission submission, Step currentStep, Status outcome, string? nextReviewerEmail);
 }

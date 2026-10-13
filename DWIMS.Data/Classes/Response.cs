@@ -10,7 +10,9 @@ public class Response : ISoftDeletable
     public Guid StepId { get; set; }
     public Step Step { get; set; }
     public Guid? ReviewerId { get; set; }
-    public User Reviewer { get; set; }
+    public User? Reviewer { get; set; }
+    public Guid? AssigneeId { get; set; }
+    public User? Assignee { get; set; }
     public Status? Result { get; set; }
     public string Remarks { get; set; } = "";
     public DateTime ActivatedOn { get; set; }

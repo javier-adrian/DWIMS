@@ -329,6 +329,9 @@ namespace DWIMS.Data.Migrations
                     b.Property<DateTime>("ActivatedOn")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<Guid?>("AssigneeId")
+                        .HasColumnType("char(36)");
+
                     b.Property<DateTime?>("CompletedOn")
                         .HasColumnType("datetime(6)");
 
@@ -355,6 +358,8 @@ namespace DWIMS.Data.Migrations
                         .HasColumnType("char(36)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AssigneeId");
 
                     b.HasIndex("ReviewerId");
 
@@ -690,6 +695,10 @@ namespace DWIMS.Data.Migrations
 
             modelBuilder.Entity("DWIMS.Data.Response", b =>
                 {
+                    b.HasOne("DWIMS.Data.User", "Assignee")
+                        .WithMany()
+                        .HasForeignKey("AssigneeId");
+
                     b.HasOne("DWIMS.Data.User", "Reviewer")
                         .WithMany()
                         .HasForeignKey("ReviewerId");
@@ -705,6 +714,8 @@ namespace DWIMS.Data.Migrations
                         .HasForeignKey("SubmissionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Assignee");
 
                     b.Navigation("Reviewer");
 

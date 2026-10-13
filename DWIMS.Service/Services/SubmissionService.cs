@@ -54,14 +54,6 @@ public class SubmissionService(
         if (currentUser.UserId is null)
             return Result<IReadOnlyList<PendingReviewDto>>.Failure("UNAUTHORIZED", "User is not authenticated.");
 
-        var departmentIds = currentUser.Roles
-            .Where(r => r.Value >= GeneralRole.Reviewer && r.Key != Guid.Empty)
-            .Select(r => r.Key)
-            .ToList();
-
-        if (departmentIds.Count == 0 && !currentUser.isSuperAdministrator)
-            return Result<IReadOnlyList<PendingReviewDto>>.Success([]);
-
         var query = context.Submissions
             .Include(s => s.Step)
             .Include(s => s.Submitter)
@@ -69,11 +61,15 @@ public class SubmissionService(
             .Include(s => s.Responses)
             .Where(s => s.Status == Status.Review);
 
-        if (!currentUser.isSuperAdministrator)
-            query = query.Where(s => departmentIds.Contains(s.Step.DepartmentId));
-
         query = query.Where(s => s.SubmitterId != currentUser.UserId.Value);
-        query = query.Where(s => !s.Responses.Any(r => r.StepId == s.StepId && r.ReviewerId == currentUser.UserId.Value && r.CompletedOn != null));
+
+        query = query.Where(
+            submission => 
+                submission.Responses.Any(
+                    response => 
+                        response.StepId == submission.StepId && 
+                        response.AssigneeId == currentUser.UserId));
+        
 
         var pending = await query
             .Select(s => new PendingReviewDto(
@@ -223,8 +219,11 @@ public class SubmissionService(
             SubmitterId = currentUser.UserId.Value,
         };
         
-        routingService.StartRoute(submission, process);
-
+        var start = await routingService.StartRoute(submission, process, request.FirstReviewerEmail);
+        
+        if (!start.IsSuccess)
+            return Result<Guid>.Failure(start.Error!, start.ErrorDescription!);
+        
         context.Submissions.Add(submission);
 
         foreach (var fieldInput in request.Fields)
@@ -256,7 +255,7 @@ public class SubmissionService(
     {
         if (currentUser.UserId is null)
             return Result.Failure("UNAUTHORIZED", "User is not authenticated.");
-
+        
         if (request.Outcome is not Status.Approve and not Status.Reject)
             return Result.Failure("INVALID_OUTCOME", "Outcome must be Approve or Reject.");
 
@@ -277,17 +276,32 @@ public class SubmissionService(
             return Result.Failure("STEP_NOT_FOUND", "Step not found.");
 
         var response = submission.Responses.FirstOrDefault(r => r.StepId == stepId && r.CompletedOn == null);
+        
         if (response is null)
             return Result.Failure("RESPONSE_NOT_FOUND", "No active response found for this step.");
+        
+        if (response.AssigneeId != currentUser.UserId && !currentUser.isSuperAdministrator)
+            return Result.Failure("FORBIDDEN", "User is not authorized to respond to this submission.");
+        
+        var hasNextStep = submission.Process.Steps.Any(step => step.Order > currentStep.Order);
+
+        if (request.Outcome == Status.Approve && hasNextStep && request.NextReviewerEmail is null)
+            return Result.Failure("NEXT_RESPONDER_REQUIRED",
+                "You must select the responder for the next step.");
 
         response.ReviewerId = currentUser.UserId.Value;
         response.Result = request.Outcome;
         response.Remarks = request.Remarks ?? "";
         response.CompletedOn = DateTime.UtcNow;
         
-        var route = routingService.Advance(submission, currentStep, request.Outcome);
+        var route = await routingService.Advance(submission, currentStep, request.Outcome, request.NextReviewerEmail);
         
-        if (route.outcome != RouteOutcome.Advanced && route.outcome != RouteOutcome.OnHold)
+        if (!route.IsSuccess)
+            return Result.Failure(route.Error!, route.ErrorDescription!);
+        
+        var result = route.Data!;
+        
+        if (result.outcome != RouteOutcome.Advanced && result.outcome != RouteOutcome.OnHold)
             submission.CompletedOn = DateTime.UtcNow;
 
         await context.SaveChangesAsync(cancellationToken);
