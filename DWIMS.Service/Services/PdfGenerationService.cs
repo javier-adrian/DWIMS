@@ -1,6 +1,7 @@
 ﻿using DWIMS.Data;
 using DWIMS.Service.Common;
 using DWIMS.Service.Storage;
+using DWIMS.Service.User;
 using iText.Forms;
 using iText.IO.Image;
 using iText.Kernel.Geom;
@@ -14,6 +15,7 @@ using Svg.Skia;
 namespace DWIMS.Service.Services;
 
 public sealed class PdfGenerationService(
+    ICurrentUserService currentUser,
     AppDbContext context,
     IStorageService storageService) : IPdfGenerationService
 {
@@ -33,6 +35,11 @@ public sealed class PdfGenerationService(
 
         var document = submission?.Process?.Documents.FirstOrDefault()
             ?? throw new KeyNotFoundException("Document not found for this submission.");
+        
+        if (currentUser.UserId != submission.SubmitterId && 
+            !currentUser.isSuperAdministrator &&
+            !submission.Responses.Any(r => r.ReviewerId == currentUser.UserId || r.AssigneeId == currentUser.UserId))
+            throw new UnauthorizedAccessException("You are not authorized to access this submission.");
 
         var template = await storageService.DownloadAsync(document.Link, cancellationToken);
         

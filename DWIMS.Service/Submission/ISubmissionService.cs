@@ -60,4 +60,9 @@ public interface ISubmissionService
     Task<Result> ResumeSubmissionAsync(
         Guid submissionId,
         CancellationToken cancellationToken = default);
+    
+    Task<Result<IReadOnlyList<SubmissionSummaryDto>>> GetSubmissionsReviewedAsync(
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
 }

@@ -23,19 +23,23 @@ public static class SubmissionEndpoints
             .WithSummary("Get the current user's submissions");
         group.MapGet("/review", GetSubmissionsToReview)
             .WithDisplayName("Get Pending Reviews")
-            .WithSummary("Get all submissions pending review")
-            .RequireAuthorization(DwimsPolicies.Reviewer);
+            .WithSummary("Get all submissions pending review");
+            // .RequireAuthorization(DwimsPolicies.Reviewer);
+        group.MapGet("/reviewed", GetSubmissionsReviewed)
+            .WithDisplayName("Get Reviewed Submissions")
+            .WithSummary("Get all submissions reviewed");
+            // .RequireAuthorization(DwimsPolicies.Reviewer);
         group.MapGet("/review/{id:guid}", GetSubmissionToReview)
             .WithDisplayName("Get Submission to Review")
-            .WithSummary("Get a submission's full details for review")
-            .RequireAuthorization(DwimsPolicies.Reviewer);
+            .WithSummary("Get a submission's full details for review");
+            // .RequireAuthorization(DwimsPolicies.Reviewer);
         group.MapGet("/{id:guid}", GetSubmission)
             .WithDisplayName("Get Submission")
             .WithSummary("Get a submission by ID");
         group.MapPost("/{id:guid}/steps/{stepId}", RespondSubmission)
             .WithDisplayName("Respond to Step")
-            .WithSummary("Approve or reject a submission at a specific step")
-            .RequireAuthorization(DwimsPolicies.Reviewer);
+            .WithSummary("Approve or reject a submission at a specific step");
+            // .RequireAuthorization(DwimsPolicies.Reviewer);
         group.MapPost("/{id:guid}/cancel", CancelSubmission)
             .WithDisplayName("Cancel Submission")
             .WithSummary("Cancel a submission");
@@ -63,6 +67,21 @@ public static class SubmissionEndpoints
             .WithSummary("Delete a submission's attachment.");
         
         return app;
+    }
+
+    private static async Task<IResult> GetSubmissionsReviewed(
+        [AsParameters] GetMySubmissionsQuery query,
+        ISubmissionService submissionService, 
+        CancellationToken cancellationToken)
+    {
+        var result = await submissionService.GetSubmissionsReviewedAsync(query.Page, query.PageSize, cancellationToken);
+        return result.IsSuccess
+            ? Results.Ok(result.Data)
+            : Results.UnprocessableEntity(new
+            {
+                result.Error,
+                result.ErrorDescription
+            });
     }
 
     private static async Task<IResult> ResumeSubmission(
@@ -154,8 +173,20 @@ public static class SubmissionEndpoints
         IPdfGenerationService pdfGenerationService,
         CancellationToken cancellationToken)
     {
-        var stream = await pdfGenerationService.GenerateAsync(id, cancellationToken);
-        return Results.File(stream, "application/pdf");
+
+        try
+        {
+            var stream = await pdfGenerationService.GenerateAsync(id, cancellationToken);
+            return Results.File(stream, "application/pdf");
+        }
+        catch (UnauthorizedAccessException e)
+        {
+            return Results.Forbid();
+        }
+        catch (KeyNotFoundException e)
+        {
+            return Results.NotFound();
+        }
     }
 
     private static async Task<IResult> CreateSubmission(

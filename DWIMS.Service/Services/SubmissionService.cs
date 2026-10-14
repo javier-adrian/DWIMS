@@ -104,6 +104,11 @@ public class SubmissionService(
 
         if (submission is null)
             return Result<SubmissionDetailDto>.Failure("SUBMISSION_NOT_FOUND", "Submission not found.");
+       
+        if (currentUser.UserId != submission.SubmitterId && 
+            !currentUser.isSuperAdministrator &&
+            !submission.Responses.Any(r => r.Reviewer?.Id == currentUser.UserId || r.AssigneeId == currentUser.UserId))
+            return Result<SubmissionDetailDto>.Failure("UNAUTHORIZED", "You are not authorized to access this submission.");
 
         var stepResponses = submission.Responses.Select(r => new SubmissionStepResponseDto(
             r.Id,
@@ -147,6 +152,9 @@ public class SubmissionService(
 
     public async Task<Result<SubmissionDetailDto>> GetSubmissionAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null)
+            return Result<SubmissionDetailDto>.Failure("UNAUTHORIZED", "You are not authorized to access this submission.");
+        
         var submission = await context.Submissions
             .Include(s => s.Process)
             .Include(s => s.Step)
@@ -159,6 +167,11 @@ public class SubmissionService(
 
         if (submission is null)
             return Result<SubmissionDetailDto>.Failure("SUBMISSION_NOT_FOUND", "Submission not found.");
+       
+        if (currentUser.UserId != submission.SubmitterId && 
+            !currentUser.isSuperAdministrator &&
+            !submission.Responses.Any(r => r.Reviewer?.Id == currentUser.UserId || r.AssigneeId == currentUser.UserId))
+            return Result<SubmissionDetailDto>.Failure("UNAUTHORIZED", "You are not authorized to access this submission.");
 
         var stepResponses = submission.Responses.Select(r => new SubmissionStepResponseDto(
             r.Id,
@@ -367,6 +380,34 @@ public class SubmissionService(
         return Result.Success();
     }
 
+    public async Task<Result<IReadOnlyList<SubmissionSummaryDto>>> GetSubmissionsReviewedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Result<IReadOnlyList<SubmissionSummaryDto>>.Failure("UNAUTHORIZED", "User is not authenticated.");
+
+        var query = context.Submissions
+            .Include(s => s.Step)
+            .Include(s => s.Submitter)
+            .Include(s => s.Process)
+            .Where(s => s.Responses.Any(r => 
+                (r.ReviewerId == currentUser.UserId || r.AssigneeId == currentUser.UserId || currentUser.isSuperAdministrator) && r.CompletedOn != null));
+
+        var submissions = await query
+            .OrderByDescending(s => s.SubmittedOn)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(s => new SubmissionSummaryDto(
+                s.Id,
+                s.Process.Title,
+                s.Status,
+                s.SubmittedOn,
+                s.Step.Title
+            ))
+            .ToListAsync(cancellationToken);
+
+        return Result<IReadOnlyList<SubmissionSummaryDto>>.Success(submissions);
+    }
+
     public async Task<Result> CancelSubmissionAsync(Guid id, CancellationToken cancellationToken = default)
     {
         if (currentUser.UserId is null)
@@ -481,11 +522,18 @@ public class SubmissionService(
             return Result<IReadOnlyList<AttachmentDto>>.Failure("UNAUTHORIZED", "User is not authenticated.");
 
         var submission = await context.Submissions
-                             .FirstOrDefaultAsync(submission => 
+            .Include(submission => submission.Responses)
+            .ThenInclude(response => response.Reviewer)
+            .FirstOrDefaultAsync(submission => 
                                  submission.Id == submissionId, cancellationToken);
         
         if (submission is null)
             return Result<IReadOnlyList<AttachmentDto>>.Failure("SUBMISSION_NOT_FOUND", "Submission not found.");
+       
+        if (currentUser.UserId != submission.SubmitterId && 
+            !currentUser.isSuperAdministrator &&
+            !submission.Responses.Any(r => r.Reviewer?.Id == currentUser.UserId || r.AssigneeId == currentUser.UserId))
+            return Result<IReadOnlyList<AttachmentDto>>.Failure("UNAUTHORIZED", "You are not authorized to access this submission.");
         
         var attachments = await context.Attachments
             .Where(attachment => 
@@ -508,11 +556,17 @@ public class SubmissionService(
             return Result<AttachmentDownloadDto>.Failure("UNAUTHORIZED", "User is not authenticated.");
 
         var submission = await context.Submissions
-                             .FirstOrDefaultAsync(submission => 
-                                 submission.Id == submissionId, cancellationToken) ;
+            .Include(s => s.Responses)
+            .FirstOrDefaultAsync(submission => 
+                                 submission.Id == submissionId, cancellationToken);
         
         if (submission is null)
             return Result<AttachmentDownloadDto>.Failure("SUBMISSION_NOT_FOUND", "Submission not found.");
+        
+        if (currentUser.UserId != submission.SubmitterId && 
+            !currentUser.isSuperAdministrator &&
+            !submission.Responses.Any(r => r.ReviewerId == currentUser.UserId || r.AssigneeId == currentUser.UserId))
+            return Result<AttachmentDownloadDto>.Failure("UNAUTHORIZED", "You are not authorized to access this submission.");
 
         var attachment = await context.Attachments
             .FirstOrDefaultAsync(attachment =>
