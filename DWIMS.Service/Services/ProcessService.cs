@@ -81,7 +81,10 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
                     s.Role,
                     s.DepartmentId,
                     s.Department.Title)).ToList(),
-                p.Fields.Where(f => !f.IsDeleted).Select(f => new FieldDto(
+                p.Fields.Where(f => !f.IsDeleted)
+                    .OrderBy(f => f.Order)
+                    .ThenBy(f => f.Title)
+                    .Select(f => new FieldDto(
                     f.Id,
                     f.Title,
                     f.AcroFormKey,
@@ -280,6 +283,7 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
             Title = request.Title,
             Type = request.InputType,
             Required = request.Required,
+            Order = await context.Fields.Where(f => f.ProcessId == processId).MaxAsync(f => (int?)f.Order) + 1 ?? 1
         };
         
         context.Fields.Add(field);
@@ -354,6 +358,8 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
 
         document.Link = storageKey;
 
+        var fallback = 1000;
+
         foreach (var acroField in extractionResult.Data!)
         {
             if (acroField.IsSignature)
@@ -378,6 +384,8 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
                 }
                 continue;
             }
+            
+            var order = int.TryParse(acroField.Name.Split('-')[0].Trim(), out var n) ? n : fallback++;
 
             var field = new Field
             {
@@ -388,6 +396,7 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
                 Type = InputTypes.Text,
                 Required = true,
                 DocumentId = document.Id,
+                Order = order,
             };
 
             context.Fields.Add(field);

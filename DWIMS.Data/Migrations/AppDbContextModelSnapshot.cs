@@ -148,6 +148,9 @@ namespace DWIMS.Data.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<int>("Order")
+                        .HasColumnType("int");
+
                     b.Property<Guid>("ProcessId")
                         .HasColumnType("char(36)");
 

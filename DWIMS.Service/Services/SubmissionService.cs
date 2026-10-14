@@ -120,7 +120,10 @@ public class SubmissionService(
             r.CompletedOn
         )).ToList();
 
-        var fieldValues = submission.Inputs.Select(i => new SubmissionFieldValueDto(
+        var fieldValues = submission.Inputs
+            .OrderBy(i => i.Field.Order)
+            .ThenBy(i => i.Field.Title)
+            .Select(i => new SubmissionFieldValueDto(
             i.Field.Title,
             i.Field.Type.ToString(),
             i.Value
@@ -183,10 +186,13 @@ public class SubmissionService(
             r.CompletedOn
         )).ToList();
 
-        var fieldValues = submission.Inputs.Select(i => new SubmissionFieldValueDto(
-            i.Field.Title,
-            i.Field.Type.ToString(),
-            i.Value
+        var fieldValues = submission.Inputs
+            .OrderBy(f => f.Field.Order)
+            .ThenBy(f => f.Field.Title)
+            .Select(f => new SubmissionFieldValueDto(
+            f.Field.Title,
+            f.Field.Type.ToString(),
+            f.Value
         )).ToList();
 
         var attachments = submission.Attachments.Where(
