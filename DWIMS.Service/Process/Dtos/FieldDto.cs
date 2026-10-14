@@ -7,4 +7,5 @@ public sealed record FieldDto(
     string Name,
     string AcroFormKey,
     InputTypes Type,
-    bool Required);
+    bool Required,
+    int Order);

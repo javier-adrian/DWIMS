@@ -89,7 +89,8 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
                     f.Title,
                     f.AcroFormKey,
                     f.Type,
-                    f.Required)).ToList()
+                    f.Required,
+                    f.Order)).ToList()
             ))
             .FirstOrDefaultAsync(cancellationToken);
 
