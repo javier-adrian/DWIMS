@@ -322,6 +322,20 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
 
         if (process is null)
             return Result<Guid>.Failure("PROCESS_NOT_FOUND", "Process not found.");
+        
+        var hasPending = await context.Submissions.AnyAsync(
+            submission => 
+                submission.ProcessId == processId && 
+                !submission.IsDeleted && 
+                submission.Status != Status.Approve &&
+                submission.Status != Status.Reject &&
+                submission.Status != Status.Cancel, cancellationToken);
+        
+        if (hasPending)
+            return Result<Guid>.Failure("PROCESS_HAS_PENDING_SUBMISSIONS", "Template cannot be replaced while submissions are pending.");
+        
+        var oldSteps = process.Steps.ToList();
+        var oldFields = process.Fields.ToList();
 
         context.Steps.RemoveRange(process.Steps);
         process.Fields.ToList().ForEach(f => context.Fields.Remove(f));
@@ -361,6 +375,9 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
 
         var fallback = 1000;
 
+        var newFields = new List<Field>();
+        var newSteps = new List<Step>();
+
         foreach (var acroField in extractionResult.Data!)
         {
             if (acroField.IsSignature)
@@ -382,6 +399,7 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
                     };
 
                     context.Steps.Add(step);
+                    newSteps.Add(step);
                 }
                 continue;
             }
@@ -401,7 +419,57 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
             };
 
             context.Fields.Add(field);
+            newFields.Add(field);
         }
+        
+        var oldFieldKeys = oldFields
+            .ToDictionary(
+            f => f.Id, 
+            f => f.AcroFormKey);
+        
+        var newFieldByKey = newFields
+            .GroupBy(
+                f => 
+                    f.AcroFormKey)
+            .ToDictionary(
+                g => g.Key, 
+                g => g.First());
+        
+        var oldStepKey = oldSteps
+            .ToDictionary(
+                s => s.Id, 
+                s => (s.Order, s.Title));
+        
+        var newStepByKey = newSteps
+                .GroupBy(
+                    s => (s.Order, s.Title))
+                .ToDictionary(
+                    g => g.Key, 
+                    g => g.First());
+        
+        var inputs = await context.Inputs
+            .Where(i => i.Submission.ProcessId == processId)
+            .ToListAsync(cancellationToken);
+        
+        foreach (var input in inputs.Where(i => oldFieldKeys.ContainsKey(i.FieldId)))
+            if (newFieldByKey.TryGetValue(oldFieldKeys[input.FieldId], out var newField))
+                input.FieldId = newField.Id;
+        
+        var responses = await context.Responses
+            .Where(i => i.Submission.ProcessId == processId)
+            .ToListAsync(cancellationToken);
+
+        foreach (var response in responses.Where(r => oldStepKey.ContainsKey(r.StepId)))
+            if (newStepByKey.TryGetValue(oldStepKey[response.StepId], out var newStep))
+                response.StepId = newStep.Id;
+        
+        var submissions = await context.Submissions
+            .Where(s => s.ProcessId == processId)
+            .ToListAsync(cancellationToken);
+        
+        foreach (var submission in submissions.Where(s => oldStepKey.ContainsKey(s.StepId)))
+            if (newStepByKey.TryGetValue(oldStepKey[submission.StepId], out var newStep))
+                submission.StepId = newStep.Id;
 
         await context.SaveChangesAsync(cancellationToken);
         return Result<Guid>.Success(document.Id);
