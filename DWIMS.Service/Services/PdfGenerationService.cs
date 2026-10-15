@@ -12,6 +12,7 @@ using iText.Kernel.Pdf.Canvas;
 using iText.Layout.Element;
 using iText.Layout.Properties;
 using System.Globalization;
+using iText.Forms.Fields;
 using Microsoft.EntityFrameworkCore;
 using SkiaSharp;
 using Svg.Skia;
@@ -146,6 +147,7 @@ public sealed class PdfGenerationService(
                     mk.Remove(PdfName.BG);
             }
 
+            field.SetJustification(TextAlignment.CENTER);
             field.SetValue(value);
             field.SetReadOnly(true);
         }
