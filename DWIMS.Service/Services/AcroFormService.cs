@@ -55,6 +55,11 @@ public sealed class AcroFormService : IAcroFormService
                 if (fieldName.Contains(':', StringComparison.Ordinal))
                     title = fieldName[(fieldName.IndexOf(':') + 1)..].Trim();
 
+                // the "N-" prefix is the order marker ProcessService parses into Field.Order;
+                // only the label after it is user-facing
+                if (title.Contains('-') && int.TryParse(title.Split('-')[0].Trim(), out _))
+                    title = title[(title.IndexOf('-') + 1)..].Trim();
+
                 extractedFields.Add(new AcroFormField(fieldName, title, isSignature, options, type));
             }
 
