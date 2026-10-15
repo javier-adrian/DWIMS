@@ -3,11 +3,15 @@ using DWIMS.Service.Common;
 using DWIMS.Service.Storage;
 using DWIMS.Service.User;
 using iText.Forms;
+using iText.IO.Font.Constants;
 using iText.IO.Image;
+using iText.Kernel.Font;
 using iText.Kernel.Geom;
 using iText.Kernel.Pdf;
 using iText.Kernel.Pdf.Canvas;
 using iText.Layout.Element;
+using iText.Layout.Properties;
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using SkiaSharp;
 using Svg.Skia;
@@ -30,6 +34,8 @@ public sealed class PdfGenerationService(
                 .ThenInclude(i => i.Field)
             .Include(s => s.Responses)
                 .ThenInclude(r => r.Step)
+            .Include(s => s.Responses)
+                .ThenInclude(r => r.Reviewer)
             .FirstOrDefaultAsync(s => s.Id == submissionId, cancellationToken)
             ?? throw new KeyNotFoundException("Submission not found.");
 
@@ -54,11 +60,11 @@ public sealed class PdfGenerationService(
         // return await storageService.DownloadAsync(document.Link, cancellationToken);
     }
 
-    private async Task<Dictionary<string, byte[]>> BuildSignaturesAsync(
+    private async Task<Dictionary<string, SignatureStamp>> BuildSignaturesAsync(
         IEnumerable<Response> responses,
         CancellationToken cancellationToken = default)
     {
-        var result = new Dictionary<string, byte[]>();
+        var result = new Dictionary<string, SignatureStamp>();
 
         var approved = responses
             .Where(response =>
@@ -78,7 +84,10 @@ public sealed class PdfGenerationService(
                 .OrderByDescending(signature => signature.Created)
                 .FirstOrDefaultAsync(cancellationToken);
             
-            result[key] = signature.EncryptedBlob;
+            result[key] = new SignatureStamp(
+                signature.EncryptedBlob,
+                $"{response.Reviewer?.FirstName} {response.Reviewer?.LastName}".Trim(),
+                response.CompletedOn);
         }
         
         return result;
@@ -87,7 +96,7 @@ public sealed class PdfGenerationService(
     private static MemoryStream RenderPdf(
         Stream template,
         Dictionary<string, string> fields,
-        Dictionary<string, byte[]> signatures)
+        Dictionary<string, SignatureStamp> signatures)
     {
         var output = new MemoryStream();
 
@@ -145,9 +154,9 @@ public sealed class PdfGenerationService(
     private static void FillSignatures(
         PdfAcroForm form,
         PdfDocument document,
-        Dictionary<string, byte[]> signatures)
+        Dictionary<string, SignatureStamp> signatures)
     {
-        foreach (var (key, signature) in signatures)
+        foreach (var (key, stamp) in signatures)
         {
             var field = form.GetField(key);
             
@@ -157,19 +166,51 @@ public sealed class PdfGenerationService(
             var widget = field.GetWidgets().FirstOrDefault();
             if (widget is null)
                 continue;
+            
 
             var rectangle = widget.GetRectangle().ToRectangle();
             var pageNumber = document.GetPageNumber(widget.GetPage());
             var page = document.GetPage(pageNumber);
             var canvas = new PdfCanvas(page);
-            var pngBytes = ConvertSvgToPng(signature);
+            var pngBytes = ConvertSvgToPng(stamp.Svg);
             var imageData = ImageDataFactory.Create(pngBytes);
+            var font = PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
+
+            var bandHeight = stamp.CompletedOn is null ? 12f : 20f;
+            
+            var imageRect = new Rectangle(
+                rectangle.GetX(),
+                rectangle.GetY() + bandHeight,
+                rectangle.GetWidth(),
+                rectangle.GetHeight() - bandHeight);
 
             canvas
                 .SaveState()
-                .AddImageFittedIntoRectangle(imageData, rectangle, true);
+                .AddImageFittedIntoRectangle(imageData, imageRect, true);
             
             canvas.RestoreState();
+            
+            var nameRect = new Rectangle(
+                rectangle.GetX(),
+                rectangle.GetY(),
+                rectangle.GetWidth(),
+                bandHeight);
+            
+            var nameCanvas = new iText.Layout.Canvas(canvas, nameRect);
+            
+            nameCanvas.Add(new Paragraph(stamp.Name)
+                .SetFont(font)
+                .SetFontSize(8)
+                .SetTextAlignment(TextAlignment.CENTER));
+
+            if (stamp.CompletedOn is { } completedOn)
+                nameCanvas.Add(new Paragraph(completedOn.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture))
+                    .SetFont(font)
+                    .SetFontSize(7)
+                    .SetTextAlignment(TextAlignment.CENTER));
+            
+            nameCanvas.Close();
+            
             canvas.Release();
             
             field.SetReadOnly(true);
