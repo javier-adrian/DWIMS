@@ -307,6 +307,13 @@ public class SubmissionService(
         if (response.AssigneeId != currentUser.UserId && !currentUser.isSuperAdministrator)
             return Result.Failure("FORBIDDEN", "User is not authorized to respond to this submission.");
 
+        if (request.Outcome is Status.Approve)
+        {
+            var hasSignature = await context.Signatures.AnyAsync(s => s.UserId == currentUser.UserId, cancellationToken: cancellationToken);
+            if (!hasSignature)
+                return Result.Failure("SIGNATURE_REQUIRED", "You must register a signature in the settings before approving.");
+        }
+
         if (request.Outcome is Status.OnHold)
         {
             response.Result = Status.OnHold;

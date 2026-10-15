@@ -102,6 +102,9 @@ public sealed class PdfGenerationService(
                 .OrderByDescending(signature => signature.Created)
                 .FirstOrDefaultAsync(cancellationToken);
             
+            if (signature is null)
+                continue;
+            
             result[key] = new SignatureStamp(
                 signature.EncryptedBlob,
                 $"{response.Reviewer?.FirstName} {response.Reviewer?.LastName}".Trim(),
