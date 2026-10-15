@@ -406,4 +406,36 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
         await context.SaveChangesAsync(cancellationToken);
         return Result<Guid>.Success(document.Id);
     }
+
+    public async Task<Result<(Stream Content, string FileName)>> DownloadDocumentTemplateAsync(Guid processId, CancellationToken cancellationToken = default)
+    {
+        if (currentUserService.UserId is null)
+            return Result<(Stream Content, string FileName)>.Failure("USER_NOT_FOUND", "User not found.");
+
+        if (processId == Guid.Empty)
+            return Result<(Stream Content, string FileName)>.Failure("INVALID_PROCESS_ID", "Invalid process id");
+        
+        var process = await context.Processes
+            .Include(p => p.Documents)
+            .FirstOrDefaultAsync(p => p.Id == processId, cancellationToken);
+
+        if (process is null)
+            return Result<(Stream Content, string FileName)>.Failure("PROCESS_NOT_FOUND", "Process not found.");
+        
+        var document = process.Documents.FirstOrDefault(d => !d.IsDeleted);
+        
+        if (document is null || string.IsNullOrEmpty(document.Link))
+            return Result<(Stream Content, string FileName)>.Failure("DOCUMENT_NOT_FOUND", "No template for this process.");
+
+        try
+        {
+            var content = await storageService.DownloadAsync(document.Link, cancellationToken);
+            return Result<(Stream Content, string FileName)>.Success((content, Path.GetFileName(document.Link)));
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            // TODO: Log the error
+            return Result<(Stream Content, string FileName)>.Failure("DOCUMENT_NOT_FOUND", "No template for this process.");
+        }
+    }
 }

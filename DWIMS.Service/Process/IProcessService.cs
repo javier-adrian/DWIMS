@@ -58,4 +58,8 @@ public interface IProcessService
         Guid processId,
         UploadDocumentRequest request,
         CancellationToken cancellationToken = default);
+    
+    Task<Result<(Stream Content, string FileName)>> DownloadDocumentTemplateAsync(
+        Guid processId,
+        CancellationToken cancellationToken = default);
 }

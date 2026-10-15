@@ -40,6 +40,10 @@ public static class ProcessEndpoints
             .WithSummary("Add a document to a process")
             .RequireAuthorization(DwimsPolicies.Administrator);
 
+        group.MapGet("/{processId:guid}/document", GetDocumentTemplate)
+            .WithDisplayName("Get Document Template")
+            .WithSummary("Download the blank document template of a process");
+
         group.MapPost("/{processId:guid}/step", CreateStep)
             .WithDisplayName("Add Step")
             .WithSummary("Add a step to a process")
@@ -67,6 +71,21 @@ public static class ProcessEndpoints
         //     .RequireAuthorization(DwimsPolicies.Administrator);
         
         return app;
+    }
+
+    private static async Task<IResult> GetDocumentTemplate(
+        Guid processId,
+        IProcessService processService,
+        CancellationToken cancellationToken)
+    {
+        var result = await processService.DownloadDocumentTemplateAsync(processId, cancellationToken);
+        
+        if (!result.IsSuccess)
+            return Results.NotFound(new { Error = result.Error, ErrorDescription = result.ErrorDescription });
+        
+        var (content, fileName) = result.Data!;
+
+        return Results.File(content, "application/pdf", fileName);
     }
 
     private static async Task<IResult> CreateDocument(
