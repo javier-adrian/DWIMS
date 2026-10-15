@@ -178,15 +178,9 @@ public sealed class PdfGenerationService(
 
             var bandHeight = stamp.CompletedOn is null ? 12f : 20f;
             
-            var imageRect = new Rectangle(
-                rectangle.GetX(),
-                rectangle.GetY() + bandHeight,
-                rectangle.GetWidth(),
-                rectangle.GetHeight() - bandHeight);
-
             canvas
                 .SaveState()
-                .AddImageFittedIntoRectangle(imageData, imageRect, true);
+                .AddImageFittedIntoRectangle(imageData, rectangle, true);
             
             canvas.RestoreState();
             
