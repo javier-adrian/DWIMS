@@ -502,6 +502,12 @@ namespace DWIMS.Data.Migrations
                     b.Property<Guid>("ProcessId")
                         .HasColumnType("char(36)");
 
+                    b.Property<string>("ResultLink")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("ResultLinkGeneratedOn")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 

@@ -12,6 +12,7 @@ using iText.Kernel.Pdf.Canvas;
 using iText.Layout.Element;
 using iText.Layout.Properties;
 using System.Globalization;
+using DWIMS.Service.Logs;
 using iText.Forms.Fields;
 using Microsoft.EntityFrameworkCore;
 using SkiaSharp;
@@ -22,6 +23,7 @@ namespace DWIMS.Service.Services;
 public sealed class PdfGenerationService(
     ICurrentUserService currentUser,
     AppDbContext context,
+    ILogService logService,
     IStorageService storageService) : IPdfGenerationService
 {
     public async Task<Stream> GenerateAsync(Guid submissionId, CancellationToken cancellationToken = default)
@@ -47,6 +49,21 @@ public sealed class PdfGenerationService(
             !currentUser.isSuperAdministrator &&
             !submission.Responses.Any(r => r.ReviewerId == currentUser.UserId || r.AssigneeId == currentUser.UserId))
             throw new UnauthorizedAccessException("You are not authorized to access this submission.");
+        
+        if (!string.IsNullOrEmpty(submission.ResultLink))
+            try
+            {
+                return await storageService.DownloadAsync(submission.ResultLink, cancellationToken);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                logService.LogAsync(
+                    "Result Snapshot Download Failed", 
+                    "Submission", 
+                    submissionId, 
+                    e.ToString(), 
+                    cancellationToken);
+            }
 
         var template = await storageService.DownloadAsync(document.Link, cancellationToken);
         

@@ -17,6 +17,7 @@ public class SubmissionService(
     ICurrentUserService currentUser,
     INotificationService notificationService,
     IRoutingService routingService,
+    IPdfGenerationService pdfGenerationService,
     IStorageService storageService,
     ILogService logService) 
     : ISubmissionService
@@ -340,6 +341,9 @@ public class SubmissionService(
             submission.CompletedOn = DateTime.UtcNow;
 
         await context.SaveChangesAsync(cancellationToken);
+        
+        if (result.outcome == RouteOutcome.Completed)
+            await TryPersistResultPdfAsync(submission, cancellationToken);
 
         await logService.LogAsync("Submission Responded", "Submission", submissionId, cancellationToken: cancellationToken);
         
@@ -587,5 +591,33 @@ public class SubmissionService(
         var stream = await storageService.DownloadAsync(attachment.Link, cancellationToken);
         
         return Result<AttachmentDownloadDto>.Success(new AttachmentDownloadDto(stream, attachment.Title, attachment.Type));
+    }
+    
+    private async Task TryPersistResultPdfAsync(Data.Submission submission, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var pdf = await pdfGenerationService.GenerateAsync(submission.Id, cancellationToken);
+            
+            var key = await storageService.UploadAsync(
+                pdf, 
+                $"{submission.Id:N}/result.pdf", 
+                "application/pdf", 
+                Prefix.Output, 
+                cancellationToken);
+            
+            submission.ResultLink = key;
+            submission.ResultLinkGeneratedOn = DateTime.UtcNow;
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            logService.LogAsync(
+                "Result PDF Persist Failed", 
+                "Submission", 
+                submission.Id, 
+                e.ToString(), 
+                cancellationToken);
+        }
     }
 }
