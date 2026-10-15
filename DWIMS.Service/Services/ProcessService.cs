@@ -90,6 +90,7 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
                     f.AcroFormKey,
                     f.Type,
                     f.Required,
+                    f.Options,
                     f.Order)).ToList()
             ))
             .FirstOrDefaultAsync(cancellationToken);
@@ -412,8 +413,9 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
                 ProcessId = processId,
                 Title = acroField.Title,
                 AcroFormKey = acroField.Name,
-                Type = InputTypes.Text,
-                Required = true,
+                Type = acroField.Type,
+                Options = acroField.Options,
+                Required = acroField.Type != InputTypes.Checkbox,
                 DocumentId = document.Id,
                 Order = order,
             };

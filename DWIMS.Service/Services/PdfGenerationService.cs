@@ -66,10 +66,11 @@ public sealed class PdfGenerationService(
             }
 
         var template = await storageService.DownloadAsync(document.Link, cancellationToken);
-        
+
         var fields = submission.Inputs
             .Where(input => input.Value is not null && !input.Field.IsDeleted)
-            .ToDictionary(input => input.Field.AcroFormKey, input => input.Value!);
+            .Select(input => (input.Field, Value: input.Value!))
+            .ToList();
         
         var signatures = await BuildSignaturesAsync(submission.Responses, cancellationToken);
         
@@ -116,7 +117,7 @@ public sealed class PdfGenerationService(
 
     private static MemoryStream RenderPdf(
         Stream template,
-        Dictionary<string, string> fields,
+        IReadOnlyList<(Field Field, string Value)> fields,
         Dictionary<string, SignatureStamp> signatures)
     {
         var output = new MemoryStream();
@@ -151,11 +152,11 @@ public sealed class PdfGenerationService(
 
     private static void FillFields(
         PdfAcroForm form,
-        Dictionary<string, string> fields)
+        IReadOnlyList<(Field Field, string Value)> fields)
     {
         foreach (var (key, value) in fields)
         {
-            var field = form.GetField(key);
+            var field = form.GetField(key.AcroFormKey);
 
             if (field is null)
                 continue;
@@ -167,8 +168,17 @@ public sealed class PdfGenerationService(
                     mk.Remove(PdfName.BG);
             }
 
-            field.SetJustification(TextAlignment.CENTER);
-            field.SetValue(value);
+            if (key.Type == InputTypes.Checkbox)
+            {
+                if (value.Length > 0)
+                    field.SetValue(value);
+            }
+            else
+            {
+                field.SetJustification(TextAlignment.CENTER);
+                field.SetValue(value);
+            }
+            
             field.SetReadOnly(true);
         }
     }

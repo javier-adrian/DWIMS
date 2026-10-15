@@ -6,5 +6,7 @@ public enum InputTypes
     Number = 1,
     Date = 2,
     Boolean = 3,
-    Signature = 4
+    Signature = 4,
+    Checkbox = 5,
+    Dropdown = 6
 }

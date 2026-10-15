@@ -1,4 +1,5 @@
-﻿using DWIMS.Data;
+﻿using System.Text.Json;
+using DWIMS.Data;
 using DWIMS.Service.Common;
 using DWIMS.Service.Logs;
 using DWIMS.Service.Routing;
@@ -22,6 +23,12 @@ public class SubmissionService(
     ILogService logService) 
     : ISubmissionService
 {
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    
+    private record CheckBoxOptions(string On);
+
+    private record FieldOptions(string Value, string Label);
+    
     public async Task<Result<IReadOnlyList<SubmissionSummaryDto>>> GetMySubmissionsAsync(Status? statusFilter, int page, int pageSize, CancellationToken cancellationToken = default)
     {
         if (currentUser.UserId is null)
@@ -249,9 +256,32 @@ public class SubmissionService(
 
         foreach (var fieldInput in request.Fields)
         {
-            var fieldExists = process.Fields.Any(f => f.Id == fieldInput.FieldId);
-            if (!fieldExists)
+            var field = process.Fields.FirstOrDefault(f => f.Id == fieldInput.FieldId);
+            
+            if (field is null)
                 return Result<Guid>.Failure("INVALID_FIELD", $"Field {fieldInput.FieldId} does not belong to this process.");
+            
+            var value = fieldInput.FieldValue ?? "";
+
+            if (field.Type == InputTypes.Checkbox)
+            {
+                var on = field.Options is null ?
+                    null : 
+                    JsonSerializer.Deserialize<CheckBoxOptions>(field.Options, Json)?.On;
+
+                if (value != "" && value != on)
+                    return Result<Guid>.Failure("INVALID_FIELD_VALUE",
+                        $"Invalid value for field {fieldInput.FieldId}");
+            } else if (field.Type == InputTypes.Dropdown && field.Options is not null)
+            {
+                var allowed = JsonSerializer.Deserialize<List<FieldOptions>>(field.Options, Json)!
+                    .Select(o => o.Value)
+                    .ToHashSet();
+                
+                if (value != "" && !allowed.Contains(value))
+                    return Result<Guid>.Failure("INVALID_FIELD_VALUE",
+                        $"Invalid value for field {fieldInput.FieldId}");
+            }
 
             context.Inputs.Add(new Input
             {
