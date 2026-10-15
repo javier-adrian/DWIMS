@@ -195,12 +195,16 @@ public sealed class PdfGenerationService(
             nameCanvas.Add(new Paragraph(stamp.Name)
                 .SetFont(font)
                 .SetFontSize(8)
+                .SetMargin(0)
+                .SetMultipliedLeading(1)
                 .SetTextAlignment(TextAlignment.CENTER));
 
             if (stamp.CompletedOn is { } completedOn)
                 nameCanvas.Add(new Paragraph(completedOn.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture))
                     .SetFont(font)
                     .SetFontSize(7)
+                    .SetMargin(0)
+                    .SetMultipliedLeading(1)
                     .SetTextAlignment(TextAlignment.CENTER));
             
             nameCanvas.Close();
