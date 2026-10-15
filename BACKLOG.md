@@ -99,16 +99,19 @@ date — refine when scheduled):
     (store which version each user accepted and when); given the institutional context,
     alignment with the Philippine Data Privacy Act is likely required.
 
-16. **Signature required before approving** *(added 2026-10-13)*. A reviewer can approve
-    a step without ever registering a signature (`UserService.RegisterSignatureAsync`,
-    `Signature` entity with `isCurrent`), but `PdfGenerationService.BuildSignaturesAsync`
-    stamps every approver's latest signature into the final PDF and dereferences it
-    unconditionally (`signature.EncryptedBlob`, PdfGenerationService.cs:74 — already a
-    CS8602 warning) — so one signature-less approver makes the generated-document
-    endpoint throw NullReferenceException. Enforce in `RespondToStepAsync`: an Approve
-    outcome requires a current signature for the reviewer, returning a distinct error
-    code (e.g. `SIGNATURE_REQUIRED`) the frontend can route to signature upload. Reject
-    outcomes don't get stamped, so they can stay ungated.
+16. ~~**Signature required before approving**~~ *(done 2026-10-15: an Approve outcome in
+    `RespondToStepAsync` (SubmissionService.cs:310) now requires the current user to
+    have a signature row — `AnyAsync` on `Signatures`, since
+    `RegisterSignatureAsync` keeps exactly one row per user — and returns
+    `SIGNATURE_REQUIRED` through the standard 422 `{Error, ErrorDescription}` envelope.
+    Reject/OnHold stay ungated; super-admins are gated too because they're stamped as
+    reviewers. `BuildSignaturesAsync` (PdfGenerationService.cs:105) now `continue`s
+    past approvers with no signature, so legacy pre-gate approvals render without a
+    stamp instead of NRE-ing result-PDF generation. Build green; not smoke-tested.
+    Frontend deliberately left as-is: `client.js` surfaces only the human-readable
+    message and doesn't branch on the code (no routing to Settings, no proactive
+    `hasSignature` gating of the Approve button) — acceptable degradation, revisit if
+    the guided flow is wanted.)*
 
 17. ~~**Ordering of fields**~~ *(done 2026-10-14: `Field.Order` added via the
     `AddFieldOrder` migration, which backfills existing rows by parsing the numeric
