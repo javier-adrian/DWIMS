@@ -65,4 +65,9 @@ public interface ISubmissionService
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
+    
+    Task<Result> RedirectSubmissionAsync(
+        Guid submissionId,
+        RedirectSubmissionRequest request,
+        CancellationToken cancellationToken = default);
 }

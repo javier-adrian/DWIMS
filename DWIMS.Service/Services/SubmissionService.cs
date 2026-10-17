@@ -455,6 +455,61 @@ public class SubmissionService(
         return Result<IReadOnlyList<SubmissionSummaryDto>>.Success(submissions);
     }
 
+    public async Task<Result> RedirectSubmissionAsync(Guid submissionId, RedirectSubmissionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Result.Failure("UNAUTHORIZED", "User is not authenticated.");
+
+        var submission = await context.Submissions
+            .Include(s => s.Responses)
+            .FirstOrDefaultAsync(s => s.Id == submissionId, cancellationToken);
+        
+        if (submission is null)
+            return Result.Failure("SUBMISSION_NOT_FOUND", "Submission not found.");
+
+        if (submission.Status != Status.Review)
+            return Result.Failure("INVALID_STATUS", "Submission is not in pending review.");
+        
+        var response = submission.Responses
+            .FirstOrDefault(r => r.StepId == submission.StepId && r.CompletedOn == null);
+
+        if (response is null)
+            return Result.Failure("RESPONSE_NOT_FOUND", "Response not found.");
+
+        if (response.AssigneeId != currentUser.UserId && !currentUser.isSuperAdministrator)
+            return Result.Failure("FORBIDDEN", "User is not authorized to perform this action.");
+        
+        var reviewer = await context.Users
+            .FirstOrDefaultAsync(u => u.Email == request.NewReviewerEmail, cancellationToken);
+        
+        if (reviewer is null)
+            return Result.Failure("INVALID_REVIEWER", "Reviewer not found.");
+        
+        if (reviewer.Id == submission.SubmitterId)
+            return Result.Failure("FORBIDDEN", "Cannot assign reviewer to be the submitter.");
+        
+        if (reviewer.Id == response.AssigneeId)
+            return Result.Failure("SAME_ASSIGNEE", "Cannot reassign to the same assignee.");
+        
+        var previousAssigneeId = response.AssigneeId;
+        
+        response.AssigneeId = reviewer.Id;
+        response.Assignee = reviewer;
+
+        await context.SaveChangesAsync(cancellationToken);
+        
+        await logService.LogAsync(
+            "Submission Redirected", 
+            "Submission", 
+            submissionId, 
+            metadata: $"from user {previousAssigneeId} to {reviewer.Id}", 
+            cancellationToken: cancellationToken);
+
+        return Result.Success();
+
+    }
+
     public async Task<Result> CancelSubmissionAsync(Guid id, CancellationToken cancellationToken = default)
     {
         if (currentUser.UserId is null)

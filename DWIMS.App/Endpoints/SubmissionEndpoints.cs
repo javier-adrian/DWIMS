@@ -46,6 +46,9 @@ public static class SubmissionEndpoints
         group.MapPost("/{id:guid}/resume", ResumeSubmission)
             .WithDisplayName("Resume Submission")
             .WithSummary("Resume a submission");
+        group.MapPost("/{id:guid}/redirect", RedirectSubmission)
+            .WithDisplayName("Redirect Submission")
+            .WithSummary("Redirect a submission to another reviewer");
         group.MapGet("/{id:guid}/pdf", GetDocument)
             .WithDisplayName("Get Result Document")
             .WithSummary("Get the result document of a submission");
@@ -67,6 +70,23 @@ public static class SubmissionEndpoints
             .WithSummary("Delete a submission's attachment.");
         
         return app;
+    }
+
+    private static async Task<IResult> RedirectSubmission(
+        Guid id,
+        RedirectSubmissionRequest request,
+        ISubmissionService submissionService, 
+        CancellationToken cancellationToken)
+    {
+        var result = await submissionService.RedirectSubmissionAsync(id, request, cancellationToken);
+        
+        return result.IsSuccess
+            ? Results.Ok()
+            : Results.UnprocessableEntity(new
+            {
+                result.Error,
+                result.ErrorDescription
+            });
     }
 
     private static async Task<IResult> GetSubmissionsReviewed(
