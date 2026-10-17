@@ -75,9 +75,10 @@ date — refine when scheduled):
 8. **Categorization of users** (departments, institutions, programs, sections, etc.) —
    departments already exist (`Department` entity + `Step.DepartmentId` reviewer routing);
    this extends the model to the wider academic org structure.
-9. **Support more types of entries.** `InputTypes` currently covers Text, Number, Date,
-   Boolean, and Signature. Enumerate what real forms need beyond that (dropdowns,
-   multi-line text, file/image fields, tables) and how AcroForm extraction maps them.
+9. ~~**Support more types of entries.**~~ *(done 2026-10-15 by item 25 below: checkbox
+   and dropdown widgets are now extracted, validated, and stamped end-to-end; radios,
+   list boxes, multi-line/file/image fields, and tables remain future work if a real
+   form needs them.)*
 10. **Tests.** No test project exists today. Start at the service layer — the
     `SubmissionService` Result/ownership logic is the highest-value target — using an
     EF in-memory or SQLite provider; also gives the CI item something to run.
@@ -286,6 +287,52 @@ date — refine when scheduled):
     multi-megabyte images. Item 16's approve-time gate is format-agnostic (any current
     signature satisfies it) and item 18's name/date band is drawn independently of the
     image, so neither needs rework.
+
+25. ~~**AcroForm checkboxes and dropdowns**~~ *(added 2026-10-15; rescoped the same day from
+    the full five-widget design — radio groups and list boxes deferred)*. Templates can
+    only carry text boxes today: `AcroFormField` (IAcroFormService.cs:3) keeps just
+    name/title/isSignature, so checkbox and combo-box widgets enumerated by
+    `AcroFormService.ExtractFieldsAsync` are all stamped `Type = InputTypes.Text` at upload
+    (ProcessService.cs:415), rendered as text inputs (NewSubmission.js:226-244), accepted
+    with no validation (SubmissionService.cs:250-263), and filled via `SetValue(string)`
+    (PdfGenerationService.cs:152-174) — which renders nothing for a checkbox unless the
+    value is the field's actual on-state. Extend end-to-end: append `Checkbox = 5,
+    Dropdown = 6` to `InputTypes` (don't renumber — the frontend compares numeric values)
+    and add a nullable `Field.Options` JSON column (no backfill; existing rows stay Text).
+    In extraction, branch on the widget class (iText 9.6.0): `PdfButtonFormField` →
+    Checkbox unless `IsPushButton()` (on-state = the widget's `/AP /D` appearance key that
+    isn't `Off`; store `{"on":"Yes"}` — export names are arbitrary, never hardcode);
+    `PdfChoiceFormField.IsCombo()` → Dropdown (options from the `/Opt` array — items are
+    either a `PdfString` or an `[export, label]` pair). Radios and list boxes keep today's
+    text behavior. Map `Type`/`Options` at upload (ProcessService.cs:415; consider
+    `Required = false` for checkboxes — HTML `required` on a checkbox means "must be
+    ticked", a stronger claim than "fill this field"), validate `FieldValue` on submit
+    (checkbox: `""` or the on-state; dropdown: `""` or an option value — new
+    `INVALID_FIELD_VALUE`; skip option validation when `Options` is null, which covers
+    manual `AddFieldRequest` fields), and make `FillFields` type-aware — pass Field
+    entities instead of the key→string dict (PdfGenerationService.cs:70-72); checked box →
+    `SetValue(onState)` (skip when unchecked — widgets default Off; skip
+    `SetJustification`, it's text-only), dropdown → `SetValue(optionValue)`; `SetValue
+    (String)` regenerates appearances in iText 9.6.0, so `FlattenFields` keeps working.
+    The `/MK /BG` background strip is type-agnostic and stays. Frontend: `FieldDto` gains
+    `Options` (only projection site: ProcessService.cs:87); NewSubmission.js renders
+    `type === 5` as a checkbox (collect `checked ? onValue : ""` — the `.value` read at
+    NewSubmission.js:271-274 returns "on", not the export name) and `type === 6` as a
+    `<select>`. Deploy backend first — the old frontend renders new fields as text inputs,
+    which the new server validation rejects rather than corrupting. A template re-upload
+    that changes a checkbox's export name strands old Input values (same family as item
+    23). Deferred: radio groups (kid on-states as options; labels live outside the PDF as
+    page text) and list boxes (incl. multi-select value format).
+    *(DONE 2026-10-15: implemented and review-clean on the backend, build green —
+    extraction stores `{"on":…}` / `[{value,label},…]` in `Field.Options` with the
+    on-state read via `GetValue() != "Off"` (no `PdfName.Off` static exists in iText
+    9.6.0 — `PdfName.OFF` is the unrelated OCG state), submit rejects invalid values
+    as `INVALID_FIELD_VALUE` with `JsonSerializerDefaults.Web` binding, `FillFields`
+    stamps checkboxes with their on-state and skips empty ones, and radios/push
+    buttons are excluded by `IsRadio()`/`IsPushButton()`. Outstanding at strike time:
+    frontend renderers (`type === 5/6`, collect `checked ? onValue : ""`) and the
+    template smoke test; uncommitted — stage the untracked `AddFieldOptions`
+    migration pair with the modified sources.)*
 
 ## Suggested during review (by ZCode, 2026-09-18)
 
