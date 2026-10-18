@@ -200,34 +200,31 @@ date — refine when scheduled):
     explicit download button anymore, saving from the PDF viewer toolbar suggests
     the blob UUID rather than the real filename.)*
 
-22. **Reviewer redirect of a misrouted step** *(added 2026-10-15)*. Item 3 lets the
-    submitter name the first responder and each reviewer name the next, but a
-    reviewer who receives a submission **by mistake** has no way to pass it to the
-    right person without acting on it. Every path through `RespondToStepAsync`
-    (SubmissionService.cs:290-347) records an outcome: Approve stamps them in as the
-    step's `ReviewerId` (whose signature later lands in the generated PDF), Reject
-    kills the whole submission, OnHold freezes it — and the pending `Response` row's
-    `AssigneeId` (SubmissionService.cs:301-307) is otherwise immutable, so their only
-    real option today is to approve-and-forward or bother a super-admin. Add a
-    redirect action, e.g. `POST /submission/{id:guid}/redirect` mirroring the
-    `/resume` shape: find the open response for the current step and rewrite only its
-    `AssigneeId` to the named reviewer, leaving `Result`/`ReviewerId`/`CompletedOn`
-    untouched, reusing the `StartRoute` target guards (user must exist, must not be
-    the submitter — RoutingService.cs:18-26) so the misroute can't be "fixed" into a
-    worse one. Policy decisions to make alongside: who may redirect (at minimum the
-    current assignee, matching the respond guard at SubmissionService.cs:306;
-    super-admins naturally, and arguably the *submitter* for a botched
-    first-reviewer pick, since `StartRoute` already trusts their choice); whether the
-    target must belong to the step's `Step.DepartmentId` (the dept/role barrier is
-    the same undecided question item 3 left open); and access for the mistaken
-    assignee afterward — under the item-6 participant model their visibility comes
-    from the `AssigneeId` match on the response row (SubmissionService.cs:110), which
-    a redirect rewrites away, so decide whether they should keep it and make the
-    bounce traceable either way (audit-log entry via `LogService`, and/or record the
-    original assignee in `Remarks`). Notify the new assignee by email — blocked on
-    review item 13 (`SendStepActivatedAsync` still never called); the frontend
-    redirect picker is blocked on the same DepartmentEndpoints `GetMembers`
-    route-param fix the item-3 pickers are.
+22. ~~**Reviewer redirect of a misrouted step**~~ *(added 2026-10-15; DONE and struck
+    2026-10-18)*. Implemented as `POST /submission/{id:guid}/redirect` →
+    `SubmissionService.RedirectSubmissionAsync` (SubmissionService.cs:458), which
+    finds the open response for the current step (`StepId == submission.StepId &&
+    CompletedOn == null`, so the duplicate rows a hold→resume cycle leaves behind
+    can't be mis-targeted) and rewrites only its `AssigneeId`/`Assignee` —
+    `Result`/`ReviewerId`/`CompletedOn` stay untouched, which is what makes it a
+    redirect rather than a response. Guards in order: `Status.Review` only
+    (`INVALID_STATUS`), current assignee or super-admin (mirrors the respond guard at
+    SubmissionService.cs:306), target must exist (`INVALID_REVIEWER`, same code as
+    `RoutingService`), must not be the submitter, and must differ from the response's
+    current `AssigneeId` (`SAME_ASSIGNEE`, checked against the response — not the
+    caller — so a super-admin can't no-op onto the sitting assignee either). The
+    bounce is traceable via an awaited `LogService.LogAsync` call whose `metadata`
+    records from→to user IDs; the mistaken assignee deliberately loses read access
+    (the item-6 participant model grants it via the `AssigneeId` match at
+    SubmissionService.cs:110, which the rewrite removes) — the log is the record. No
+    department barrier (matches `Advance`'s assign-anyone-by-email) and no email in
+    v1 (consistent with `Advance` being silent; folds into review item 13 if step
+    notifications ever get wired). Reviewed clean over three rounds, build green.
+    Outstanding: smoke test (new reviewer's `/review` queue picks it up, old assignee
+    loses the queue entry and respond rights) and the frontend half
+    (`redirectSubmission` in client.js + redirect UI near the respond form in
+    ReviewerDetail.js — a plain email input like `nextReviewerEmailInput`, no picker
+    dependency).
 
 23. **Template versioning** *(added 2026-10-15)*. A template re-upload is a destructive
     overwrite today: `UploadDocumentAsync` reuses the process's single `Document` row and
