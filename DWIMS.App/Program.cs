@@ -5,6 +5,7 @@ using Azure.Storage.Blobs;
 using DWIMS.Controllers;
 using DWIMS.Data;
 using DWIMS.Service;
+using DWIMS.Service.Admin;
 using DWIMS.Service.Analytics;
 using DWIMS.Service.Auth;
 using DWIMS.Service.Common;
@@ -113,6 +114,7 @@ namespace DWIMS
             builder.Services.AddScoped<INotificationService, NotificationService>();
             builder.Services.AddScoped<ILogService, LogService>();
             builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+            builder.Services.AddScoped<IUserAdministrationService, UserAdministrationService>();
             
             builder.Services.AddDbContext<AppDbContext>(options =>
                 {

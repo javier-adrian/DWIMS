@@ -1,4 +1,6 @@
 using DWIMS.Data;
+using DWIMS.Service.Admin;
+using DWIMS.Service.Admin.Requests;
 using DWIMS.Service.Auth;
 using DWIMS.Service.CurrentUser;
 using DWIMS.Service.CurrentUser.Requests;
@@ -27,6 +29,16 @@ public static class UserEndpoints
         group.MapPut("/me/signature", UploadSignature)
             .WithDisplayName("Upload Signature")
             .WithSummary("Upload a signature for the current user");
+        
+        group.MapGet("", GetUsers)
+            .WithDisplayName("Get Users")
+            .WithSummary("Get a list of users")
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
+        
+        group.MapGet("/{userId:guid}", GetUser)
+            .WithDisplayName("Get User")
+            .WithSummary("Get a user by ID")
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
 
         var roleGroup = app.MapGroup("roles")
             .WithTags("Roles")
@@ -46,6 +58,26 @@ public static class UserEndpoints
             .WithSummary("Assign a Super Administrator role to a user");
 
         return app;
+    }
+
+    private static async Task<IResult> GetUser(
+        Guid userId,
+        IUserAdministrationService userAdministrationService, 
+        CancellationToken cancellationToken)
+    {
+        var result = await userAdministrationService.GetUserAsync(userId, cancellationToken);
+
+        return result.ToOkResult();
+    }
+
+    private static async Task<IResult> GetUsers(
+        [AsParameters] UserFilterRequest request, 
+        IUserAdministrationService userAdministrationService, 
+        CancellationToken cancellationToken)
+    {
+        var result = await userAdministrationService.GetUsersAsync(request, cancellationToken);
+        
+        return result.ToOkResult();
     }
 
     private static async Task<IResult> UploadSignature(RegisterSignatureRequest request, IUserService userService, CancellationToken cancellationToken)
