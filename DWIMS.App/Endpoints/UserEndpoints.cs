@@ -119,9 +119,14 @@ public static class UserEndpoints
             : Results.UnprocessableEntity(new { result.Error, result.ErrorDescription });
     }
 
-    private static Task UpdateCurrentuser(HttpContext context)
+    private static async Task<IResult> UpdateCurrentuser(
+        UpdateProfileRequest request,
+        IUserService userService,
+        CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = await userService.UpdateProfileAsync(request, cancellationToken);
+        
+        return result.ToOkResult();
     }
 
     private static async Task<IResult> GetCurrentuser(IUserService userService, CancellationToken cancellationToken)

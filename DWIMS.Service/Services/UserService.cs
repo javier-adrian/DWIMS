@@ -34,9 +34,33 @@ public class UserService(
         return Result<UserProfileDto>.Success(user);
     }
 
-    public Task<Result> UpdateProfileAsync(UpdateProfileRequest request, CancellationToken cancellationToken = default)
+    public async Task<Result> UpdateProfileAsync(UpdateProfileRequest request, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        if (currentUser.UserId is not { } userId)
+            return Result.Failure("UNAUTHORIZED", "User is not authenticated.");
+            
+        var user = await context.Users
+            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        
+        if (user is null)
+            return Result.Failure("USER_NOT_FOUND", "User not found.");
+        
+        if (!string.Equals(user.Email, request.Email, StringComparison.OrdinalIgnoreCase) &&
+            await context.Users.IgnoreQueryFilters().AnyAsync(u => u.Email == request.Email && u.Id != userId, cancellationToken))
+            return Result.Failure("EMAIL_TAKEN", "An account with this email already exists.");
+        
+        user.FirstName = request.FirstName;
+        user.MiddleName = request.MiddleName ?? "";
+        user.LastName = request.LastName;
+        user.Email = request.Email;
+        user.ContactNumber = request.ContactNumber;
+        
+        if (request.BirthDate.HasValue)
+            user.BirthDate = request.BirthDate.Value;
+        
+        await context.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
     }
 
     public async Task<Result> RegisterSignatureAsync(RegisterSignatureRequest request, CancellationToken cancellationToken = default)
