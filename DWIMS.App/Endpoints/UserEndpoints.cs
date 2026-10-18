@@ -26,6 +26,16 @@ public static class UserEndpoints
             .WithDisplayName("Update Current User")
             .WithSummary("Update the current user's profile");
         
+        group.MapDelete("/{userId:guid}", DeleteUser)
+            .WithDisplayName("Delete User")
+            .WithSummary("Delete a user by ID")
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
+        
+        group.MapPost("/{userId:guid}/restore", ReactivateUser)
+            .WithDisplayName("Reactivate User")
+            .WithSummary("Reactivate a deleted user by ID")
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
+        
         group.MapPut("/me/signature", UploadSignature)
             .WithDisplayName("Upload Signature")
             .WithSummary("Upload a signature for the current user");
@@ -58,6 +68,26 @@ public static class UserEndpoints
             .WithSummary("Assign a Super Administrator role to a user");
 
         return app;
+    }
+
+    private static async Task<IResult> ReactivateUser(
+        Guid userId,
+        IUserAdministrationService userAdministrationService, 
+        CancellationToken cancellationToken)
+    {
+        var result = await userAdministrationService.ReactivateUserAsync(userId, cancellationToken);
+
+        return result.ToOkResult();
+    }
+
+    private static async Task<IResult> DeleteUser(
+        Guid userId,
+        IUserAdministrationService userAdministrationService,
+        CancellationToken cancellationToken)
+    {
+        var result = await userAdministrationService.DeleteUserAsync(userId, cancellationToken);
+
+        return result.ToOkResult();
     }
 
     private static async Task<IResult> GetUser(

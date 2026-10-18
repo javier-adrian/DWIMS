@@ -51,7 +51,7 @@ public class AuthService(
         CancellationToken cancellationToken = default)
     {
         var user = await context.Users
-            .FirstOrDefaultAsync(
+            .IgnoreQueryFilters().FirstOrDefaultAsync(
                 x => x.Email == request.Email,
                 cancellationToken);
 
@@ -59,6 +59,10 @@ public class AuthService(
             return Result<AuthResponse>.Failure(
                 "INVALID_CREDENTIALS",
                 "Invalid email or password.");
+        
+        if (user.IsDeleted)
+            return Result<AuthResponse>.Failure(
+                "USER_DELETED", "User is deleted.");
 
         return Result<AuthResponse>.Success(await BuildAuthResponseAsync(user, cancellationToken));
     }
@@ -71,10 +75,11 @@ public class AuthService(
 
         var refreshToken = await context.RefreshTokens
             .Include(rt => rt.User)
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(rt => rt.Token == hashedToken && !rt.Revoked && rt.Expires > DateTime.UtcNow,
                 cancellationToken);
 
-        if (refreshToken is null)
+        if (refreshToken is null || refreshToken.User?.IsDeleted == true)
             return Result<AuthResponse>.Failure("INVALID_REFRESH_TOKEN", "Refresh token is invalid or expired.");
 
         return Result<AuthResponse>.Success(await BuildAuthResponseAsync(refreshToken.User, cancellationToken));
@@ -164,6 +169,7 @@ public class AuthService(
 
         var externalLogin = await context.ExternalLogins
             .Include(login => login.User)
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(login =>
                     login.Provider == ExternalLoginProvider.Google &&
                     login.ProviderSubject == payload.Subject,
@@ -174,10 +180,16 @@ public class AuthService(
         if (externalLogin is not null)
         {
             user = externalLogin.User;
+
+            if (user.IsDeleted)
+                return Result<AuthResponse>.Failure(
+                    "USER_DELETED",
+                    "The account has been deleted.");
         }
         else
         {
             user = await context.Users
+                       .IgnoreQueryFilters()
                        .FirstOrDefaultAsync(user =>
                                user.Email == payload.Email,
                            cancellationToken)
@@ -185,6 +197,11 @@ public class AuthService(
                        payload,
                        payload.Email,
                        cancellationToken);
+
+            if (user.IsDeleted)
+                return Result<AuthResponse>.Failure(
+                    "USER_DELETED",
+                    "The account has been deleted.");
 
             context.ExternalLogins.Add(new ExternalLogin
             {
@@ -197,11 +214,6 @@ public class AuthService(
 
             await context.SaveChangesAsync(cancellationToken);
         }
-
-        if (user.IsDeleted)
-            return Result<AuthResponse>.Failure(
-                "ACCOUNT_DELETED",
-                "The account has been deleted.");
 
         return Result<AuthResponse>.Success(
             await BuildAuthResponseAsync(user, cancellationToken));
