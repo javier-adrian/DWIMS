@@ -80,7 +80,7 @@ public sealed class PdfGenerationService(
         
         var signatures = await BuildSignaturesAsync(submission.Responses, cancellationToken);
         
-        var verificationLink = $"{_appBaseUrl.TrimEnd('/')}/#/public/status/{submission.Id}";
+        var verificationLink = $"{_appBaseUrl.TrimEnd('/')}/#/public/verify/{submission.Id}";
         
         return RenderPdf(template, fields, signatures, verificationLink, submission.Id);
 
@@ -209,7 +209,7 @@ public sealed class PdfGenerationService(
             .Rectangle(
                 x,
                 qrBoxY,
-                qrBoxWidth,
+                qrSize,
                 qrSize)
             .Fill()
             .RestoreState();
