@@ -192,7 +192,7 @@ public sealed class PdfGenerationService(
         var idText = submissionId.ToString().ToUpperInvariant();
         var font = PdfFontFactory.CreateFont(StandardFonts.COURIER_BOLD);
         var idWidth = font.GetWidth(idText, idFontSize);
-        var boxWidth = Math.Max(qrSize + 2 * qrPad, idWidth + 2 * textPad);
+        var boxWidth = qrSize + 2 * qrPad;
         
         // TOP RIGHT
         // var textX = x + qrSize - font.GetWidth(idText, idFontSize);
