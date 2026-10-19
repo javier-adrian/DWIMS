@@ -80,7 +80,7 @@ public sealed class PdfGenerationService(
         
         var signatures = await BuildSignaturesAsync(submission.Responses, cancellationToken);
         
-        var verificationLink = $"{_appBaseUrl.TrimEnd('/')}/#/public/verify/{submission.Id}";
+        var verificationLink = $"{_appBaseUrl.TrimEnd('/')}/#/verify/{submission.Id}";
         
         return RenderPdf(template, fields, signatures, verificationLink, submission.Id);
 
