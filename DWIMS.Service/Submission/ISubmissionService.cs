@@ -70,4 +70,8 @@ public interface ISubmissionService
         Guid submissionId,
         RedirectSubmissionRequest request,
         CancellationToken cancellationToken = default);
+    
+    Task<Result<PublicSubmissionStatusDto>> GetPublicSubmissionStatusAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
 }

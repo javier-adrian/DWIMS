@@ -510,6 +510,65 @@ public class SubmissionService(
 
     }
 
+    public async Task<Result<PublicSubmissionStatusDto>> GetPublicSubmissionStatusAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var submission = await context.Submissions
+            .Include(s => s.Process).ThenInclude(p => p.Steps)
+            .Include(s => s.Step)
+            .Include(s => s.Responses).ThenInclude(r => r.Reviewer)
+            .Include(s => s.Responses).ThenInclude(r => r.Assignee)
+            .FirstOrDefaultAsync(s => s.Id == id && !s.IsDeleted, cancellationToken);
+
+        if (submission is null)
+            return Result<PublicSubmissionStatusDto>.Failure("SUBMISSION_NOT_FOUND", "Submission not found.");
+        
+        static string? Name(Data.User? u) => u is null ? null : $"{u.FirstName} {u.LastName}";
+
+        var steps = submission.Process.Steps
+            .Where(step => !step.IsDeleted)
+            .OrderBy(step => step.Order)
+            .Select(step =>
+            {
+                var latest = submission.Responses
+                    .Where(r => !r.IsDeleted && r.StepId == step.Id)
+                    .OrderByDescending(r => r.ActivatedOn)
+                    .FirstOrDefault();
+
+                string state;
+                string? reviewer;
+                DateTime? completedAt = null;
+
+                if (latest is { CompletedOn: not null })
+                {
+                    state = latest.Result?.ToString() ?? "Done";
+                    reviewer = Name(latest.Reviewer);
+                    completedAt = latest.CompletedOn;
+                }
+                else if (latest is not null || step.Id == submission.StepId)
+                {
+                    state = submission.Status == Status.OnHold ? "OnHold" : "Current";
+                    reviewer = Name(latest?.Assignee);
+                }
+                else
+                {
+                    state = "Pending";
+                    reviewer = null;
+                }
+
+                return new PublicStepStatusDto(step.Order, step.Title, state, reviewer, completedAt);
+            }).ToList();
+        
+        return Result<PublicSubmissionStatusDto>
+            .Success(new PublicSubmissionStatusDto(
+                submission.Id,
+                submission.Process.Title,
+                submission.Status,
+                submission.SubmittedOn,
+                submission.CompletedOn,
+                submission.Step.Title,
+                steps));
+    }
+
     public async Task<Result> CancelSubmissionAsync(Guid id, CancellationToken cancellationToken = default)
     {
         if (currentUser.UserId is null)

@@ -206,6 +206,7 @@ namespace DWIMS
             app.MapSubmissionEndpoints();
             app.MapLogEndpoints();
             app.MapAnalyticsEndpoints();
+            app.MapPublicEndpoints();
 
             if (app.Environment.IsProduction())
             {
