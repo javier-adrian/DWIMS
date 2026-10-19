@@ -172,11 +172,39 @@ public sealed class PdfGenerationService(
         const float margin = 24f;
         const float gap = 4f;
         const float idFontSize = 6f;
+        const float pad = 6f;
 
-        var x = pageSize.GetWidth() - margin - qrSize;
-        var y = pageSize.GetHeight() - margin - qrSize;
+        // TOP RIGHT
+        // var x = pageSize.GetWidth() - margin - qrSize;
+        // var y = pageSize.GetHeight() - margin - qrSize;
+        
+        // BOTTOM LEFT
+        var x = margin;
+        var y = margin;
 
         var canvas = new PdfCanvas(page);
+        
+        var idText = submissionId.ToString().ToUpperInvariant();
+        var font = PdfFontFactory.CreateFont(StandardFonts.COURIER_BOLD);
+        var idWidth = font.GetWidth(idText, idFontSize);
+        
+        // TOP RIGHT
+        // var textX = x + qrSize - font.GetWidth(idText, idFontSize);
+        // var textY = y - gap - idFontSize;
+        
+        // BOTTOM LEFT
+        var textX = x;
+        var textY = y + qrSize + gap;
+
+        canvas.SaveState()
+            .SetFillColor(ColorConstants.WHITE)
+            .Rectangle(
+                x - pad,
+                y - pad,
+                Math.Max(qrSize, idWidth) + 2 * pad,
+                qrSize + gap + idFontSize + 2 * pad)
+            .Fill()
+            .RestoreState();
         
         var form = new BarcodeQRCode(link).CreateFormXObject(document);
         var bbox = form.GetBBox().ToRectangle();
@@ -185,11 +213,7 @@ public sealed class PdfGenerationService(
             qrSize / bbox.GetWidth(), 0, 
             0, qrSize / bbox.GetHeight(), 
             x, y);
-
-        var idText = submissionId.ToString().ToUpperInvariant();
-        var font = PdfFontFactory.CreateFont(StandardFonts.COURIER_BOLD);
-        var textX = x + qrSize - font.GetWidth(idText, idFontSize);
-        var textY = y - gap - idFontSize;
+        
         canvas.SaveState()
             .BeginText()
             .SetFillColor(ColorConstants.BLACK)
