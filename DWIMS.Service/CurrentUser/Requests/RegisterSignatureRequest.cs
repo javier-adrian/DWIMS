@@ -2,5 +2,6 @@
 
 public sealed class RegisterSignatureRequest
 {
-    public required string SvgContent { get; set; }
+    public string? SvgContent { get; set; }
+    public string? ImageBase64 { get; set; }
 }

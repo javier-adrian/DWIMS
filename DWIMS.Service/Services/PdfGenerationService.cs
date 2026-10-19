@@ -116,6 +116,7 @@ public sealed class PdfGenerationService(
             
             result[key] = new SignatureStamp(
                 signature.EncryptedBlob,
+                signature.MimeType,
                 $"{response.Reviewer?.FirstName} {response.Reviewer?.LastName}".Trim(),
                 response.CompletedOn);
         }
@@ -298,8 +299,8 @@ public sealed class PdfGenerationService(
             var pageNumber = document.GetPageNumber(widget.GetPage());
             var page = document.GetPage(pageNumber);
             var canvas = new PdfCanvas(page);
-            var pngBytes = ConvertSvgToPng(stamp.Svg);
-            var imageData = ImageDataFactory.Create(pngBytes);
+            var imageBytes = stamp.MimeType == "image/svg+xml" ? ConvertSvgToPng(stamp.Blob) : stamp.Blob;
+            var imageData = ImageDataFactory.Create(imageBytes);
             var font = PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
 
             var bandHeight = stamp.CompletedOn is null ? 12f : 20f;

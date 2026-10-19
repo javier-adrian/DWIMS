@@ -5,6 +5,7 @@ using DWIMS.Service.CurrentUser.Dtos;
 using DWIMS.Service.CurrentUser.Requests;
 using DWIMS.Service.User;
 using Microsoft.EntityFrameworkCore;
+using SkiaSharp;
 
 namespace DWIMS.Service.Services;
 
@@ -68,17 +69,79 @@ public class UserService(
         if (currentUser.UserId is not { } userId)
             return Result.Failure("UNAUTHORIZED", "User is not authenticated.");
 
-        if (string.IsNullOrWhiteSpace(request.SvgContent) || !request.SvgContent.TrimStart().StartsWith("<svg", StringComparison.OrdinalIgnoreCase))
-            return Result.Failure("INVALID_SIGNATURE", "A valid SVG signature is required.");
-
         var existing = await context.Signatures
             .Where(x => x.UserId == userId)
             .FirstOrDefaultAsync(cancellationToken);
+        
+        var blob = default(byte[]);
+        var mimeType = default(string);
 
+        if (request.SvgContent is { } svg)
+        {
+            if (!svg.TrimStart().StartsWith("<svg", StringComparison.OrdinalIgnoreCase))
+                return Result.Failure("INVALID_SIGNATURE", "A valid SVG signature is required.");
+            
+            mimeType = "image/svg+xml";
+            blob = System.Text.Encoding.UTF8.GetBytes(request.SvgContent);
+        } else if (request.ImageBase64 is { } b64)
+        {
+            var prefix = "data:image";
+            var comma = b64.IndexOf(',');
+            if (b64.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && comma >= 0)
+                b64 = b64[(comma + 1)..];
+
+            byte[] bytes;
+            try
+            {
+                bytes = Convert.FromBase64String(b64);
+            }
+            catch (FormatException)
+            {
+                return Result.Failure("INVALID_SIGNATURE", "A valid base64 image is required.");
+            }
+
+            if (bytes.Length is < 100 or > 3_000_000)
+                return Result.Failure(
+                    "INVALID_SIGNATURE",
+                    "The image must be between 100 bytes and 3 Megabytes in size.");
+
+            bool isPng = bytes.Length > 8 &&
+                         bytes[0] == 0x89 &&
+                         bytes[1] == 0x50 &&
+                         bytes[2] == 0x4E &&
+                         bytes[3] == 0x47 &&
+                         bytes[4] == 0x0D &&
+                         bytes[5] == 0x0A &&
+                         bytes[6] == 0x1A &&
+                         bytes[7] == 0x0A;
+
+            bool isJpeg = bytes.Length > 3 &&
+                          bytes[0] == 0xFF &&
+                          bytes[1] == 0xD8 &&
+                          bytes[2] == 0xFF;
+
+            if (!isPng && !isJpeg)
+                return Result.Failure("INVALID_SIGNATURE", "The image must be a PNG or JPEG.");
+
+            using var bitmap = SKBitmap.Decode(bytes);
+
+            if (bitmap is null || bitmap.Width == 0 || bitmap.Height == 0 || bitmap.Width > 4000 ||
+                bitmap.Height > 4000)
+                return Result.Failure("INVALID_SIGNATURE", "Image has invalid dimensions.");
+
+            using var normalized = new MemoryStream();
+
+            bitmap.Encode(normalized, SKEncodedImageFormat.Png, 100);
+            blob = normalized.ToArray();
+            mimeType = "image/png";
+        }
+        else
+            return Result.Failure("INVALID_SIGNATURE", "The image must be a SVG, PNG or JPEG.");
+        
         if (existing is not null)
         {
-            existing.MimeType = "image/svg+xml";
-            existing.EncryptedBlob = System.Text.Encoding.UTF8.GetBytes(request.SvgContent);
+            existing.MimeType = mimeType;
+            existing.EncryptedBlob = blob;
             existing.Created = DateTime.UtcNow;
         }
         else
@@ -87,8 +150,8 @@ public class UserService(
             {
                 Id = Guid.NewGuid(),
                 UserId = userId,
-                MimeType = "image/svg+xml",
-                EncryptedBlob = System.Text.Encoding.UTF8.GetBytes(request.SvgContent),
+                MimeType = mimeType,
+                EncryptedBlob = blob,
                 Created = DateTime.UtcNow,
                 isCurrent = true
             });
