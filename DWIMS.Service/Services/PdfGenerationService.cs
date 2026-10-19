@@ -210,7 +210,7 @@ public sealed class PdfGenerationService(
                 x,
                 qrBoxY,
                 qrBoxWidth,
-                qrSize + 2 * qrPad)
+                qrSize)
             .Fill()
             .RestoreState();
         
