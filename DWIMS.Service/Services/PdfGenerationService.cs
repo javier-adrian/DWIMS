@@ -192,7 +192,9 @@ public sealed class PdfGenerationService(
         var idText = submissionId.ToString().ToUpperInvariant();
         var font = PdfFontFactory.CreateFont(StandardFonts.COURIER_BOLD);
         var idWidth = font.GetWidth(idText, idFontSize);
-        var boxWidth = qrSize + 2 * qrPad;
+        var qrBoxWidth = qrSize + 2;
+        var textBoxWidth = idWidth + 2 * textPad;
+        
         
         // TOP RIGHT
         // var textX = x + qrSize - font.GetWidth(idText, idFontSize);
@@ -207,7 +209,7 @@ public sealed class PdfGenerationService(
             .Rectangle(
                 x - qrPad,
                 qrBoxY,
-                boxWidth,
+                qrBoxWidth,
                 qrSize + 2 * qrPad)
             .Fill()
             .RestoreState();
@@ -225,7 +227,7 @@ public sealed class PdfGenerationService(
             .Rectangle(
                 x - qrPad,
                 captionBoxY,
-                boxWidth,
+                textBoxWidth,
                 captionBoxHeight)
             .Fill()
             .RestoreState();
