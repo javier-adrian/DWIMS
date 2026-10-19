@@ -44,6 +44,10 @@ public static class UserEndpoints
             .WithDisplayName("Get Users")
             .WithSummary("Get a list of users")
             .RequireAuthorization(DwimsPolicies.SuperAdministrator);
+
+        group.MapGet("/search", SearchUsers)
+            .WithDisplayName("Search Users")
+            .WithSummary("Search for users by name or email");
         
         group.MapGet("/{userId:guid}", GetUser)
             .WithDisplayName("Get User")
@@ -68,6 +72,16 @@ public static class UserEndpoints
             .WithSummary("Assign a Super Administrator role to a user");
 
         return app;
+    }
+
+    private static async Task<IResult> SearchUsers(
+        string? query,
+        IUserService userService,
+        CancellationToken cancellationToken)
+    {
+        var result = await userService.SearchUsersAsync(query ?? string.Empty, cancellationToken);
+
+        return result.ToOkResult();
     }
 
     private static async Task<IResult> ReactivateUser(

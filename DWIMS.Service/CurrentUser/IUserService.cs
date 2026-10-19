@@ -13,4 +13,8 @@ public interface IUserService
     Task<Result> RegisterSignatureAsync(
         RegisterSignatureRequest request, 
         CancellationToken cancellationToken = default);
+    
+    Task<Result<IReadOnlyList<UserSearchResultDto>>> SearchUsersAsync(
+        string query, 
+        CancellationToken cancellationToken = default);
 }

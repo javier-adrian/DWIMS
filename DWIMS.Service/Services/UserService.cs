@@ -160,4 +160,21 @@ public class UserService(
         await context.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
+
+    public async Task<Result<IReadOnlyList<UserSearchResultDto>>> SearchUsersAsync(string query, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(query) || query.Trim().Length < 2)
+            return Result<IReadOnlyList<UserSearchResultDto>>.Success(Array.Empty<UserSearchResultDto>());
+
+        var term = query.Trim();
+        
+        var users = await context.Users
+            .Where(x => x.FirstName.Contains(term) || x.LastName.Contains(term) || x.Email.Contains(term))
+            .OrderBy(x => x.LastName).ThenBy(x => x.FirstName)
+            .Take(10)
+            .Select(x => new UserSearchResultDto(x.Id, x.FirstName, x.LastName, x.Email))
+            .ToListAsync(cancellationToken);
+
+        return Result<IReadOnlyList<UserSearchResultDto>>.Success(users);
+    }
 }
