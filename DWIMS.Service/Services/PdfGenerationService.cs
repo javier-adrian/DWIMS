@@ -11,21 +11,27 @@ using iText.Kernel.Pdf;
 using iText.Kernel.Pdf.Canvas;
 using iText.Layout.Element;
 using iText.Layout.Properties;
+using iText.Kernel.Colors;
+using iText.Barcodes;
 using System.Globalization;
 using DWIMS.Service.Logs;
 using iText.Forms.Fields;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using SkiaSharp;
 using Svg.Skia;
 
 namespace DWIMS.Service.Services;
 
 public sealed class PdfGenerationService(
+    IConfiguration configuration,
     ICurrentUserService currentUser,
     AppDbContext context,
     ILogService logService,
     IStorageService storageService) : IPdfGenerationService
 {
+    private readonly string _appBaseUrl = configuration["App:BaseUrl"] ?? "http://localhost:5244";
+    
     public async Task<Stream> GenerateAsync(Guid submissionId, CancellationToken cancellationToken = default)
     {
         var submission = await context.Submissions
@@ -74,7 +80,9 @@ public sealed class PdfGenerationService(
         
         var signatures = await BuildSignaturesAsync(submission.Responses, cancellationToken);
         
-        return RenderPdf(template, fields, signatures);
+        var verificationLink = $"{_appBaseUrl.TrimEnd('/')}/#/public/status/{submission.Id}";
+        
+        return RenderPdf(template, fields, signatures, verificationLink, submission.Id);
 
         // return await storageService.DownloadAsync(document.Link, cancellationToken);
     }
@@ -118,7 +126,9 @@ public sealed class PdfGenerationService(
     private static MemoryStream RenderPdf(
         Stream template,
         IReadOnlyList<(Field Field, string Value)> fields,
-        Dictionary<string, SignatureStamp> signatures)
+        Dictionary<string, SignatureStamp> signatures,
+        string verificationLink,
+        Guid submissionId)
     {
         var output = new MemoryStream();
 
@@ -130,6 +140,9 @@ public sealed class PdfGenerationService(
         writer.SetCloseStream(false);
 
         using var result = new PdfDocument(reader, writer);
+        
+        StampVerification(result, verificationLink, submissionId);
+        
         var document = PdfAcroForm.GetAcroForm(result, createIfNotExist: false);
 
         if (document is null)
@@ -148,6 +161,45 @@ public sealed class PdfGenerationService(
         output.Position = 0;
         
         return output;
+    }
+    
+    private static void StampVerification(PdfDocument document, string link, Guid submissionId)
+    {
+        var page = document.GetFirstPage();
+        var pageSize = page.GetPageSize();
+
+        const float qrSize = 64f;
+        const float margin = 24f;
+        const float gap = 4f;
+        const float idFontSize = 6f;
+
+        var x = pageSize.GetWidth() - margin - qrSize;
+        var y = pageSize.GetHeight() - margin - qrSize;
+
+        var canvas = new PdfCanvas(page);
+        
+        var form = new BarcodeQRCode(link).CreateFormXObject(document);
+        var bbox = form.GetBBox().ToRectangle();
+        canvas.AddXObjectWithTransformationMatrix(
+            form, 
+            qrSize / bbox.GetWidth(), 0, 
+            0, qrSize / bbox.GetHeight(), 
+            x, y);
+
+        var idText = submissionId.ToString().ToUpperInvariant();
+        var font = PdfFontFactory.CreateFont(StandardFonts.COURIER_BOLD);
+        var textX = x + qrSize - font.GetWidth(idText, idFontSize);
+        var textY = y - gap - idFontSize;
+        canvas.SaveState()
+            .BeginText()
+            .SetFillColor(ColorConstants.BLACK)
+            .SetFontAndSize(font, idFontSize)
+            .SetTextMatrix(textX, textY)
+            .ShowText(idText)
+            .EndText()
+            .RestoreState();
+        
+        canvas.Release();
     }
 
     private static void FillFields(
