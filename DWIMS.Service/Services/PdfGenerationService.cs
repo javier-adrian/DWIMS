@@ -207,7 +207,7 @@ public sealed class PdfGenerationService(
         canvas.SaveState()
             .SetFillColor(ColorConstants.WHITE)
             .Rectangle(
-                x - qrPad,
+                x,
                 qrBoxY,
                 qrBoxWidth,
                 qrSize + 2 * qrPad)
