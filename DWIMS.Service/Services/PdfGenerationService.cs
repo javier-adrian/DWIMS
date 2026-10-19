@@ -185,7 +185,7 @@ public sealed class PdfGenerationService(
         var captionBoxY = margin - textPad;
         var captionBoxHeight = idFontSize + 2 * textPad;
         var qrBoxY = captionBoxY + captionBoxHeight + gap;
-        var qrY = qrBoxY + qrPad;
+        var qrY = qrBoxY;
 
         var canvas = new PdfCanvas(page);
         
