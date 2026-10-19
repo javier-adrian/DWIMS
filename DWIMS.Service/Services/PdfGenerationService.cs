@@ -172,7 +172,8 @@ public sealed class PdfGenerationService(
         const float margin = 24f;
         const float gap = 4f;
         const float idFontSize = 6f;
-        const float pad = 6f;
+        const float qrPad = 6f;
+        const float textPad = 3f;
 
         // TOP RIGHT
         // var x = pageSize.GetWidth() - margin - qrSize;
@@ -180,29 +181,34 @@ public sealed class PdfGenerationService(
         
         // BOTTOM LEFT
         var x = margin;
-        var y = margin;
+
+        var captionBoxY = margin - textPad;
+        var captionBoxHeight = idFontSize + 2 * textPad;
+        var qrBoxY = captionBoxY + captionBoxHeight + gap;
+        var qrY = qrBoxY + qrPad;
 
         var canvas = new PdfCanvas(page);
         
         var idText = submissionId.ToString().ToUpperInvariant();
         var font = PdfFontFactory.CreateFont(StandardFonts.COURIER_BOLD);
         var idWidth = font.GetWidth(idText, idFontSize);
+        var boxWidth = Math.Max(qrSize + 2 * qrPad, idWidth + 2 * textPad);
         
         // TOP RIGHT
         // var textX = x + qrSize - font.GetWidth(idText, idFontSize);
         // var textY = y - gap - idFontSize;
         
         // BOTTOM LEFT
-        var textX = x;
-        var textY = y + qrSize + gap;
+        // var textX = x;
+        // var textY = y + qrSize + gap;
 
         canvas.SaveState()
             .SetFillColor(ColorConstants.WHITE)
             .Rectangle(
-                x - pad,
-                y - pad,
-                Math.Max(qrSize, idWidth) + 2 * pad,
-                qrSize + gap + idFontSize + 2 * pad)
+                x - qrPad,
+                qrBoxY,
+                boxWidth,
+                qrSize + 2 * qrPad)
             .Fill()
             .RestoreState();
         
@@ -212,13 +218,23 @@ public sealed class PdfGenerationService(
             form, 
             qrSize / bbox.GetWidth(), 0, 
             0, qrSize / bbox.GetHeight(), 
-            x, y);
+            x, qrY);
+        
+        canvas.SaveState()
+            .SetFillColor(ColorConstants.WHITE)
+            .Rectangle(
+                x - qrPad,
+                captionBoxY,
+                boxWidth,
+                captionBoxHeight)
+            .Fill()
+            .RestoreState();
         
         canvas.SaveState()
             .BeginText()
             .SetFillColor(ColorConstants.BLACK)
             .SetFontAndSize(font, idFontSize)
-            .SetTextMatrix(textX, textY)
+            .SetTextMatrix(x, captionBoxY + textPad + 1f)
             .ShowText(idText)
             .EndText()
             .RestoreState();
