@@ -53,7 +53,7 @@ namespace DWIMS.Data.Migrations
 
                     b.HasIndex("SubmissionId");
 
-                    b.ToTable("attachments", (string)null);
+                    b.ToTable("attachments");
                 });
 
             modelBuilder.Entity("DWIMS.Data.Department", b =>
@@ -74,7 +74,7 @@ namespace DWIMS.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("departments", (string)null);
+                    b.ToTable("departments");
                 });
 
             modelBuilder.Entity("DWIMS.Data.Document", b =>
@@ -100,7 +100,7 @@ namespace DWIMS.Data.Migrations
 
                     b.HasIndex("ProcessId");
 
-                    b.ToTable("documents", (string)null);
+                    b.ToTable("documents");
                 });
 
             modelBuilder.Entity("DWIMS.Data.ExternalLogin", b =>
@@ -126,7 +126,7 @@ namespace DWIMS.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("externallogins", (string)null);
+                    b.ToTable("externallogins");
                 });
 
             modelBuilder.Entity("DWIMS.Data.Field", b =>
@@ -173,7 +173,7 @@ namespace DWIMS.Data.Migrations
 
                     b.HasIndex("ProcessId");
 
-                    b.ToTable("fields", (string)null);
+                    b.ToTable("fields");
                 });
 
             modelBuilder.Entity("DWIMS.Data.Input", b =>
@@ -204,7 +204,7 @@ namespace DWIMS.Data.Migrations
 
                     b.HasIndex("SubmissionId");
 
-                    b.ToTable("inputs", (string)null);
+                    b.ToTable("inputs");
                 });
 
             modelBuilder.Entity("DWIMS.Data.Log", b =>
@@ -239,7 +239,7 @@ namespace DWIMS.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("logs", (string)null);
+                    b.ToTable("logs");
                 });
 
             modelBuilder.Entity("DWIMS.Data.PasswordResetToken", b =>
@@ -268,7 +268,7 @@ namespace DWIMS.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("passwordresettokens", (string)null);
+                    b.ToTable("passwordresettokens");
                 });
 
             modelBuilder.Entity("DWIMS.Data.Process", b =>
@@ -294,7 +294,7 @@ namespace DWIMS.Data.Migrations
 
                     b.HasIndex("DepartmentId");
 
-                    b.ToTable("processes", (string)null);
+                    b.ToTable("processes");
                 });
 
             modelBuilder.Entity("DWIMS.Data.RefreshToken", b =>
@@ -323,7 +323,7 @@ namespace DWIMS.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("refreshtokens", (string)null);
+                    b.ToTable("refreshtokens");
                 });
 
             modelBuilder.Entity("DWIMS.Data.Response", b =>
@@ -373,7 +373,7 @@ namespace DWIMS.Data.Migrations
 
                     b.HasIndex("SubmissionId");
 
-                    b.ToTable("responses", (string)null);
+                    b.ToTable("responses");
                 });
 
             modelBuilder.Entity("DWIMS.Data.Role", b =>
@@ -411,7 +411,7 @@ namespace DWIMS.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("roles", (string)null);
+                    b.ToTable("roles");
                 });
 
             modelBuilder.Entity("DWIMS.Data.Signature", b =>
@@ -442,7 +442,7 @@ namespace DWIMS.Data.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("signatures", (string)null);
+                    b.ToTable("signatures");
                 });
 
             modelBuilder.Entity("DWIMS.Data.Step", b =>
@@ -484,7 +484,7 @@ namespace DWIMS.Data.Migrations
 
                     b.HasIndex("ProcessId");
 
-                    b.ToTable("steps", (string)null);
+                    b.ToTable("steps");
                 });
 
             modelBuilder.Entity("DWIMS.Data.Submission", b =>
@@ -531,7 +531,33 @@ namespace DWIMS.Data.Migrations
 
                     b.HasIndex("SubmitterId");
 
-                    b.ToTable("submissions", (string)null);
+                    b.ToTable("submissions");
+                });
+
+            modelBuilder.Entity("DWIMS.Data.SubmissionRoute", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("AssigneeId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("StepId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("SubmissionId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssigneeId");
+
+                    b.HasIndex("StepId");
+
+                    b.HasIndex("SubmissionId");
+
+                    b.ToTable("submissionroutes");
                 });
 
             modelBuilder.Entity("DWIMS.Data.User", b =>
@@ -576,7 +602,7 @@ namespace DWIMS.Data.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("users", (string)null);
+                    b.ToTable("users");
                 });
 
             modelBuilder.Entity("DepartmentUser", b =>
@@ -591,7 +617,7 @@ namespace DWIMS.Data.Migrations
 
                     b.HasIndex("UsersId");
 
-                    b.ToTable("departmentuser", (string)null);
+                    b.ToTable("departmentuser");
                 });
 
             modelBuilder.Entity("DWIMS.Data.Attachment", b =>
@@ -812,6 +838,33 @@ namespace DWIMS.Data.Migrations
                     b.Navigation("Step");
 
                     b.Navigation("Submitter");
+                });
+
+            modelBuilder.Entity("DWIMS.Data.SubmissionRoute", b =>
+                {
+                    b.HasOne("DWIMS.Data.User", "Assignee")
+                        .WithMany()
+                        .HasForeignKey("AssigneeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DWIMS.Data.Step", "Step")
+                        .WithMany()
+                        .HasForeignKey("StepId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DWIMS.Data.Submission", "Submission")
+                        .WithMany()
+                        .HasForeignKey("SubmissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Assignee");
+
+                    b.Navigation("Step");
+
+                    b.Navigation("Submission");
                 });
 
             modelBuilder.Entity("DepartmentUser", b =>

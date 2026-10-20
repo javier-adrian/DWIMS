@@ -1,10 +1,11 @@
-﻿using DWIMS.Service.Submission.Dtos;
+﻿using DWIMS.Service.Routing.Dtos;
+using DWIMS.Service.Submission.Dtos;
 
 namespace DWIMS.Service.Submission.Requests;
 
 public sealed class CreateSubmissionRequest
 {
     public required Guid ProcessId { get; init; }
-    public required string FirstReviewerEmail { get; init; }
+    public required IReadOnlyList<RouteEntryDto> Route { get; init; }
     public required IReadOnlyList<FieldValueInputDto> Fields { get; init; }
 }

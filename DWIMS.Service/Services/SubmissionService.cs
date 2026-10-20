@@ -238,7 +238,7 @@ public class SubmissionService(
 
         if (process is null)
             return Result<Guid>.Failure("PROCESS_NOT_FOUND", "Process not found.");
-
+        
         var submission = new Data.Submission
         {
             Id = Guid.NewGuid(),
@@ -246,8 +246,46 @@ public class SubmissionService(
             SubmittedOn = DateTime.UtcNow,
             SubmitterId = currentUser.UserId.Value,
         };
+
+        var requestSteps = request.Route.Select(r => r.StepId).ToHashSet();
+        var processSteps = process.Steps.Where(s => !s.IsDeleted).Select(s => s.Id).ToHashSet();
+
+        if (!requestSteps.SetEquals(processSteps))
+            return Result<Guid>.Failure("INVALID_ROUTE", "Route does not match process steps.");
+
+        IEnumerable<SubmissionRoute> routes = [];
         
-        var start = await routingService.StartRoute(submission, process, request.FirstReviewerEmail);
+        foreach (var step in request.Route)
+        {
+            if (string.IsNullOrWhiteSpace(step.AssigneeEmail))
+                return Result<Guid>.Failure("INVALID_REVIEWER", $"Assignee email for step {step.StepId} is empty.");
+            
+            var assignee = await context.Users.FirstOrDefaultAsync(u => u.Email == step.AssigneeEmail, cancellationToken: cancellationToken);
+            
+            if (assignee is null)
+                    return Result<Guid>.Failure("INVALID_REVIEWER", $"Assignee email for step {step.StepId} does not exist.");
+            
+            if (assignee.Id == currentUser.UserId)
+                return Result<Guid>.Failure("FORBIDDEN", $"Assignee email for step {step.StepId} cannot be the current user.");
+            
+            var submissionRoute = new SubmissionRoute
+            {
+                Id = Guid.NewGuid(),
+                StepId = step.StepId,
+                AssigneeId = assignee.Id,
+                SubmissionId = submission.Id,
+            };
+            
+            routes = routes.Append(submissionRoute);
+            
+            context.SubmissionRoutes.Add(submissionRoute);
+        }
+        
+        if (!processSteps.Any())
+            return Result<Guid>.Failure("INVALID_PROCESS", "Process has no steps.");
+
+        var firstStep = process.Steps.First(s => !s.IsDeleted);
+        var start = await routingService.StartRoute(submission, process, routes.First(r => r.StepId == firstStep.Id));
         
         if (!start.IsSuccess)
             return Result<Guid>.Failure(start.Error!, start.ErrorDescription!);
@@ -355,19 +393,13 @@ public class SubmissionService(
             
             return Result.Success();
         }
-        
-        var hasNextStep = submission.Process.Steps.Any(step => step.Order > currentStep.Order);
-
-        if (request.Outcome == Status.Approve && hasNextStep && request.NextReviewerEmail is null)
-            return Result.Failure("NEXT_RESPONDER_REQUIRED",
-                "You must select the responder for the next step.");
 
         response.ReviewerId = currentUser.UserId.Value;
         response.Result = request.Outcome;
         response.Remarks = request.Remarks ?? "";
         response.CompletedOn = DateTime.UtcNow;
         
-        var route = await routingService.Advance(submission, currentStep, request.Outcome, request.NextReviewerEmail);
+        var route = await routingService.Advance(submission, currentStep, request.Outcome);
         
         if (!route.IsSuccess)
             return Result.Failure(route.Error!, route.ErrorDescription!);

@@ -7,23 +7,19 @@ namespace DWIMS.Service.Services;
 
 public class RoutingService(AppDbContext context) : IRoutingService
 {
-    public async Task<Result<Guid>> StartRoute(Data.Submission submission, Data.Process process, string firstReviewerEmail)
+    public async Task<Result<Guid>> StartRoute(Data.Submission submission, Data.Process process, SubmissionRoute route)
     {
         var firstStep = process.Steps.FirstOrDefault(step => !step.IsDeleted) 
                     ?? throw new InvalidOperationException("Process has no steps");
         
         var reviewer = await context.Users
-            .FirstOrDefaultAsync(reviewer => reviewer.Email == firstReviewerEmail);
+            .FirstOrDefaultAsync(reviewer => reviewer.Id == route.AssigneeId);
 
         if (reviewer is null)
-        {
-            return Result<Guid>.Failure("INVALID_REVIEWER", "No user with such email.");
-        }
+            return Result<Guid>.Failure("INVALID_REVIEWER", "Assigned reviewer no longer exists.");
         
         if (submission.SubmitterId == reviewer.Id)
-        {
             return Result<Guid>.Failure("FORBIDDEN", "Cannot Assign to yourself.");
-        }
 
         submission.StepId = firstStep.Id;
         submission.Status = Status.Review;
@@ -42,7 +38,7 @@ public class RoutingService(AppDbContext context) : IRoutingService
         return Result<Guid>.Success(responseId);
     }
 
-    public async Task<Result<RouteResult>> Advance(Data.Submission submission, Step currentStep, Status outcome, string nextReviewerEmail)
+    public async Task<Result<RouteResult>> Advance(Data.Submission submission, Step currentStep, Status outcome)
     {
         if (outcome == Status.Reject)
         {
@@ -62,18 +58,23 @@ public class RoutingService(AppDbContext context) : IRoutingService
             return Result<RouteResult>.Success(new RouteResult(RouteOutcome.Completed, null));
         }
         
+        var nextRoute = await context.SubmissionRoutes.FirstOrDefaultAsync(route => route.SubmissionId == submission.Id && route.StepId == nextStep.Id);
+        
+        if (nextRoute is null)
+            return Result<RouteResult>.Failure("ROUTE_INCOMPLETE", "Route for next step is missing.");
+        
         var reviewer = await context.Users
-            .FirstOrDefaultAsync(reviewer => reviewer.Email == nextReviewerEmail);
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(reviewer => reviewer.Id == nextRoute.AssigneeId);
 
         if (reviewer is null)
-        {
-            return Result<RouteResult>.Failure("INVALID_REVIEWER", "No user with such email.");
-        }
+            return Result<RouteResult>.Failure("INVALID_REVIEWER", "Assigned reviewer no longer exists.");
+        
+        if (reviewer.IsDeleted)
+            return Result<RouteResult>.Failure("DEACTIVATED_REVIEWER", "Reviewer is a deactivated user.");
         
         if (submission.SubmitterId == reviewer.Id)
-        {
             return Result<RouteResult>.Failure("FORBIDDEN", "Cannot Assign to submitter.");
-        }
 
         submission.StepId = nextStep.Id;
         submission.Status = Status.Review;
