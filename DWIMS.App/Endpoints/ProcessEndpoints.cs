@@ -16,7 +16,7 @@ public static class ProcessEndpoints
         group.MapPost("/", CreateProcess)
             .WithDisplayName("Create Process")
             .WithSummary("Create a new process in a department")
-            .RequireAuthorization(DwimsPolicies.Administrator);
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
         group.MapGet("/", GetProcesses)
             .WithDisplayName("Get Processes")
             .WithSummary("Get all processes");
@@ -29,16 +29,16 @@ public static class ProcessEndpoints
         group.MapPut("/{processId:guid}", UpdateProcess)
             .WithDisplayName("Update Process")
             .WithSummary("Update an existing process")
-            .RequireAuthorization(DwimsPolicies.Administrator);
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
         group.MapDelete("/{processId:guid}", DeleteProcess)
             .WithDisplayName("Delete Process")
             .WithSummary("Delete a process")
-            .RequireAuthorization(DwimsPolicies.Administrator);
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
         
         group.MapPost("/{processId:guid}/document", CreateDocument)
             .WithDisplayName("Add Document")
             .WithSummary("Add a document to a process")
-            .RequireAuthorization(DwimsPolicies.Administrator);
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
 
         group.MapGet("/{processId:guid}/document", GetDocumentTemplate)
             .WithDisplayName("Get Document Template")
@@ -47,7 +47,7 @@ public static class ProcessEndpoints
         group.MapPost("/{processId:guid}/step", CreateStep)
             .WithDisplayName("Add Step")
             .WithSummary("Add a step to a process")
-            .RequireAuthorization(DwimsPolicies.Administrator);
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
         group.MapGet("/{processId:guid}/step", GetSteps)
             .WithDisplayName("Get Steps")
             .WithSummary("Get all steps of a process");
@@ -60,7 +60,7 @@ public static class ProcessEndpoints
         group.MapPost("/{processId:guid}/field", CreateField)
             .WithDisplayName("Add Field")
             .WithSummary("Add a field to a process")
-            .RequireAuthorization(DwimsPolicies.Administrator);
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
         group.MapGet("/{id:guid}/field", GetFields)
             .WithDisplayName("Get Fields")
             .WithSummary("Get all fields of a process");

@@ -41,6 +41,15 @@ public class AuthService(
 
         context.Users.Add(user);
 
+        context.Roles.Add(new Role
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            GeneralRole = GeneralRole.Submitter,
+            Title = "Submitter",
+            Description = "Default role: A user who can submit forms for review.",
+        });
+
         await context.SaveChangesAsync(cancellationToken);
 
         return Result<AuthResponse>.Success(await BuildAuthResponseAsync(user, cancellationToken));

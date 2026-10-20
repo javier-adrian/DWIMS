@@ -114,9 +114,42 @@ public class DepartmentService(AppDbContext context, ICurrentUserService current
             await context.SaveChangesAsync(cancellationToken);
             return Result.Success();
         }
-        
+
         if (departmentId == Guid.Empty)
-            return Result.Failure("DEPARTMENT_NOT_FOUND", "Department not found.");
+        {
+            // return Result.Failure("DEPARTMENT_NOT_FOUND", "Department not found.");
+            if (!currentUserService.isSuperAdministrator)
+                return Result.Failure("FORBIDDEN", "Only a super administrator can assign global roles.");
+            
+            if (request.GeneralRole != GeneralRole.Reviewer)
+                return Result.Failure("INVALID_ROLE", "Only a reviewer role can be assigned without a department.");
+            
+            var existingGlobal = await context.Roles
+                .FirstOrDefaultAsync(x => 
+                    x.UserId == user.Id &&
+                    x.DepartmentId == null &&
+                    x.GeneralRole == GeneralRole.Reviewer, cancellationToken);
+
+            if (existingGlobal is not null)
+            {
+                existingGlobal.IsDeleted = false;
+                existingGlobal.DeletedOn = null;
+            }
+            else
+            {
+                context.Roles.Add(new Role
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user.Id,
+                    GeneralRole = GeneralRole.Reviewer,
+                    Title = "Reviewer",
+                    Description = "Global reviewer assigned by a super administrator."
+                });
+            }
+            
+            await context.SaveChangesAsync(cancellationToken);
+            return Result.Success();
+        }
 
         if (!currentUserService.HasRoleInDepartment(departmentId, GeneralRole.Administrator) &&
             !currentUserService.isSuperAdministrator)

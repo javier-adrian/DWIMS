@@ -32,7 +32,8 @@ public sealed class CurrentUserService (IHttpContextAccessor httpContextAccessor
             {
                 if (Enum.TryParse<GeneralRole>(claim.Value, out var globalRole))
                 {
-                    result[Guid.Empty] = globalRole;
+                    if (!result.TryGetValue(Guid.Empty, out var existingGlobal) || existingGlobal < globalRole) 
+                        result[Guid.Empty] = globalRole;
                     continue;
                 }
 

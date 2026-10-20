@@ -11,7 +11,7 @@ public static class LogEndpoints
     {
         var group = app.MapGroup("logs")
             .WithTags("Logs")
-            .RequireAuthorization(DwimsPolicies.Administrator);
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
 
         group.MapGet("/", GetLogs)
             .WithDisplayName("Get Logs")

@@ -190,6 +190,7 @@ public class UserAdministrationService(
             u.Roles
                 .Where(r => !r.IsDeleted)
                 .Select(r => new RoleDto(
+                    r.Id,
                     r.Title,
                     r.GeneralRole,
                     r.Department != null ? r.Department.Title : null)),

@@ -36,7 +36,7 @@ public static class DepartmentEndpoints
         group.MapGet("/{departmentId:guid}/members", GetMembers)
             .WithDisplayName("Get Department Members")
             .WithSummary("Get all members of a department")
-            .RequireAuthorization(DwimsPolicies.Administrator);
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
         
         return app;
     }

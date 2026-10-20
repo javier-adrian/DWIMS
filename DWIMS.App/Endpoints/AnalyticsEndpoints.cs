@@ -11,7 +11,7 @@ public static class AnalyticsEndpoints
     {
         var group = app.MapGroup("analytics")
             .WithTags("Analytics")
-            .RequireAuthorization(DwimsPolicies.Administrator);
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
 
         group.MapGet("/summary", GetSummary)
             .WithDisplayName("Get Summary")

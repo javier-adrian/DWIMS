@@ -169,6 +169,7 @@ public class UserService(
         var term = query.Trim();
         
         var users = await context.Users
+            .Where(x => x.Roles.Any(r => !r.IsDeleted && r.GeneralRole >= GeneralRole.Reviewer))
             .Where(x => x.FirstName.Contains(term) || x.LastName.Contains(term) || x.Email.Contains(term))
             .OrderBy(x => x.LastName).ThenBy(x => x.FirstName)
             .Take(10)
