@@ -13,7 +13,7 @@ namespace DWIMS.Service.Services;
 public class AuthService(
     AppDbContext context,
     ITokenService tokenService,
-    INotificationService notificationService,
+    EmailQueue emailQueue,
     IOptions<GoogleOptions> googleOptions
 ) : IAuthService
 {
@@ -38,15 +38,8 @@ public class AuthService(
         
         await context.SaveChangesAsync(cancellationToken);
         
-        try
-        { 
-            await notificationService.SendEmailVerificationAsync(user.Id, code, cancellationToken);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw;
-        }
+        emailQueue.Enqueue(new EmailJob(EmailNotificationKind.VerificationCodeSent, UserId: user.Id, VerificationCode: code));
+        
     }
     
     public async Task<Result<string>> RegisterAsync(
@@ -241,15 +234,8 @@ public class AuthService(
         });
 
         await context.SaveChangesAsync(cancellationToken);
-        try
-        { 
-            await notificationService.SendPasswordResetAsync(user.Id, token, cancellationToken);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw;
-        }
+        
+        emailQueue.Enqueue(new EmailJob(EmailNotificationKind.PasswordReset, UserId: user.Id, ResetToken: token));
     }
 
     public async Task<Result> ResetPasswordAsync(

@@ -115,6 +115,8 @@ namespace DWIMS
             builder.Services.AddScoped<ILogService, LogService>();
             builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
             builder.Services.AddScoped<IUserAdministrationService, UserAdministrationService>();
+            builder.Services.AddSingleton<EmailQueue>();
+            builder.Services.AddHostedService<EmailWorker>();
             
             builder.Services.AddDbContext<AppDbContext>(options =>
                 {

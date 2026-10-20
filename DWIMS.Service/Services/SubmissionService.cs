@@ -16,7 +16,7 @@ namespace DWIMS.Service.Services;
 public class SubmissionService(
     AppDbContext context, 
     ICurrentUserService currentUser,
-    INotificationService notificationService,
+    EmailQueue emailQueue,
     IRoutingService routingService,
     IPdfGenerationService pdfGenerationService,
     IStorageService storageService,
@@ -334,7 +334,7 @@ public class SubmissionService(
 
         await logService.LogAsync("Submission Created", "Submission", submission.Id);
         
-        await notificationService.SendSubmissionReceivedAsync(submission.Id, cancellationToken);
+        emailQueue.Enqueue(new EmailJob(EmailNotificationKind.SubmissionReceived, SubmissionId: submission.Id));
         
         return Result<Guid>.Success(submission.Id);
     }
