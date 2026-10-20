@@ -7,5 +7,6 @@ public interface IEmailSender
         string name,
         string subject,
         string htmlMessage,
+        EmailAttachment? attachment = null,
         CancellationToken cancellationToken = default);
 }

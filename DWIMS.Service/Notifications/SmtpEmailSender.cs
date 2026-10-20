@@ -16,15 +16,26 @@ public class SmtpEmailSender(
         string email, 
         string name, 
         string subject, 
-        string htmlMessage, 
+        string htmlMessage,
+        EmailAttachment? attachment = null,
         CancellationToken cancellationToken = default)
     {
         var message = new MimeMessage();
         message.From.Add(new MailboxAddress(_emailOptions.FromName, _emailOptions.From));
         message.To.Add(new MailboxAddress(name, email));
         message.Subject = subject;
+        
+        var builder = new BodyBuilder{HtmlBody = htmlMessage};
+        
+        if (attachment is not null)
+        {
+            builder.Attachments.Add(
+                attachment.FileName, 
+                new MemoryStream(attachment.Content), 
+                ContentType.Parse(attachment.ContentType));
+        }
 
-        message.Body = new BodyBuilder { HtmlBody = htmlMessage }.ToMessageBody();
+        message.Body = builder.ToMessageBody();
 
         using var client = new SmtpClient();
 

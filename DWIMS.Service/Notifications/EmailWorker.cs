@@ -29,6 +29,9 @@ public sealed class EmailWorker(
                     case EmailNotificationKind.VerificationCodeSent:
                         await notifications.SendEmailVerificationAsync(job.UserId, job.VerificationCode!, stoppingToken);
                         break;
+                    case EmailNotificationKind.SubmissionCompleted:
+                        await notifications.SendSubmissionCompletedAsync(job.SubmissionId, stoppingToken);
+                        break;
                     default:
                         logger.LogWarning("No handler for email job {Kind}", job.Kind);
                         break;

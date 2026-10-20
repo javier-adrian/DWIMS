@@ -51,7 +51,8 @@ public sealed class PdfGenerationService(
         var document = submission?.Process?.Documents.FirstOrDefault()
             ?? throw new KeyNotFoundException("Document not found for this submission.");
         
-        if (currentUser.UserId != submission.SubmitterId && 
+        if (currentUser.UserId is not null &&
+            currentUser.UserId != submission.SubmitterId && 
             !currentUser.isSuperAdministrator &&
             !submission.Responses.Any(r => r.ReviewerId == currentUser.UserId || r.AssigneeId == currentUser.UserId))
             throw new UnauthorizedAccessException("You are not authorized to access this submission.");
@@ -63,7 +64,7 @@ public sealed class PdfGenerationService(
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {
-                logService.LogAsync(
+                await logService.LogAsync(
                     "Result Snapshot Download Failed", 
                     "Submission", 
                     submissionId, 

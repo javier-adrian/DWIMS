@@ -410,9 +410,12 @@ public class SubmissionService(
             submission.CompletedOn = DateTime.UtcNow;
 
         await context.SaveChangesAsync(cancellationToken);
-        
+
         if (result.outcome == RouteOutcome.Completed)
+        {
             await TryPersistResultPdfAsync(submission, cancellationToken);
+            emailQueue.Enqueue(new EmailJob(EmailNotificationKind.SubmissionCompleted, SubmissionId: submissionId));
+        }
 
         await logService.LogAsync("Submission Responded", "Submission", submissionId, cancellationToken: cancellationToken);
         
@@ -795,7 +798,7 @@ public class SubmissionService(
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
-            logService.LogAsync(
+            await logService.LogAsync(
                 "Result PDF Persist Failed", 
                 "Submission", 
                 submission.Id, 
