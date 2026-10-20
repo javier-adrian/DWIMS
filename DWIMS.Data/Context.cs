@@ -54,4 +54,5 @@ public class AppDbContext : DbContext
     public DbSet<Log> Logs { get; set; }
     public DbSet<ExternalLogin> ExternalLogins { get; set; }
     public DbSet<SubmissionRoute> SubmissionRoutes { get; set; }
+    public DbSet<EmailVerificationCode> EmailVerificationCodes { get; set; }
 }

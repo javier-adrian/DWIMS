@@ -103,6 +103,38 @@ namespace DWIMS.Data.Migrations
                     b.ToTable("documents");
                 });
 
+            modelBuilder.Entity("DWIMS.Data.EmailVerificationCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("Expires")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("Used")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("emailverificationcodes");
+                });
+
             modelBuilder.Entity("DWIMS.Data.ExternalLogin", b =>
                 {
                     b.Property<Guid>("Id")
@@ -579,6 +611,9 @@ namespace DWIMS.Data.Migrations
                         .IsRequired()
                         .HasColumnType("varchar(255)");
 
+                    b.Property<bool>("EmailVerified")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -640,6 +675,17 @@ namespace DWIMS.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Process");
+                });
+
+            modelBuilder.Entity("DWIMS.Data.EmailVerificationCode", b =>
+                {
+                    b.HasOne("DWIMS.Data.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("DWIMS.Data.ExternalLogin", b =>

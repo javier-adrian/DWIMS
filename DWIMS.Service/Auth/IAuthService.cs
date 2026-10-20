@@ -6,7 +6,7 @@ namespace DWIMS.Service.Auth;
 
 public interface IAuthService
 {
-    Task<Result<AuthResponse>> RegisterAsync(
+    Task<Result<string>> RegisterAsync(
         RegisterRequest request,
         CancellationToken cancellationToken = default);
     
@@ -28,5 +28,13 @@ public interface IAuthService
 
     Task<Result<AuthResponse>> GoogleOAuthAsync(
         GoogleOAuthRequest request,
+        CancellationToken cancellationToken = default);
+    
+    Task<Result<AuthResponse>> VerifyEmailAsync(
+        VerifyEmailRequest request,
+        CancellationToken cancellationToken = default);
+    
+    Task<Result<string>> ResendVerificationAsync(
+        ResendVerificationRequest request,
         CancellationToken cancellationToken = default);
 }

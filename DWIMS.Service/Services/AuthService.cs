@@ -19,12 +19,42 @@ public class AuthService(
 {
     private readonly GoogleOptions _googleOptions = googleOptions.Value;
     
-    public async Task<Result<AuthResponse>> RegisterAsync(
+    private static string GenerateCode() => RandomNumberGenerator.GetInt32(0, 1000000).ToString("D6");
+
+    private async Task IssueAndSendCodeAsync(Data.User user, CancellationToken cancellationToken)
+    {
+        var code = GenerateCode();
+
+        context.EmailVerificationCodes.Add(new EmailVerificationCode
+        {
+            Attempts = 0,
+            Code = code,
+            Created = DateTime.UtcNow,
+            Expires = DateTime.UtcNow + new TimeSpan(0, 15, 0),
+            Id = Guid.NewGuid(),
+            Used = false,
+            UserId = user.Id
+        });
+        
+        await context.SaveChangesAsync(cancellationToken);
+        
+        try
+        { 
+            await notificationService.SendEmailVerificationAsync(user.Id, code, cancellationToken);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+    
+    public async Task<Result<string>> RegisterAsync(
         RegisterRequest request,
         CancellationToken cancellationToken = default)
     {
         if (await context.Users.AnyAsync(u => u.Email == request.Email, cancellationToken))
-            return Result<AuthResponse>.Failure(
+            return Result<string>.Failure(
                 "EMAIL_TAKEN",
                 "An account with this email already exists.");
 
@@ -37,6 +67,7 @@ public class AuthService(
             Email = request.Email,
             ContactNumber = request.ContactNumber,
             Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
+            EmailVerified = false,
         };
 
         context.Users.Add(user);
@@ -52,7 +83,94 @@ public class AuthService(
 
         await context.SaveChangesAsync(cancellationToken);
 
+        await IssueAndSendCodeAsync(user, cancellationToken);
+
+        return Result<string>.Success("Verification code sent.");
+    }
+
+    public async Task<Result<AuthResponse>> VerifyEmailAsync(
+        VerifyEmailRequest request, 
+        CancellationToken cancellationToken = default)
+    {
+        if (request.Email is null)
+            return Result<AuthResponse>.Failure(
+                "INVALID_EMAIL",
+                "Email is required.");
+        
+        if (request.Code is null)
+            return Result<AuthResponse>.Failure(
+                "INVALID_CODE",
+                "Code is required.");
+        
+        var user = await context.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(
+                x => x.Email == request.Email && !x.IsDeleted,
+                cancellationToken);
+        
+        if (user is null)
+            return Result<AuthResponse>.Failure(
+                "INVALID_EMAIL",
+                "Invalid email.");
+        
+        var code = await context.EmailVerificationCodes
+            .Where(c => c.UserId == user.Id && !c.Used && c.Expires > DateTime.UtcNow)
+            .OrderByDescending(c => c.Created)
+            .FirstOrDefaultAsync(cancellationToken);
+        
+        if (code is null)
+            return Result<AuthResponse>.Failure(
+                "CODE_EXPIRED",
+                "Invalid code.");
+
+        if (code.Code != request.Code)
+        {
+            code.Attempts++;
+            
+            if (code.Attempts >= 5)
+                code.Used = true;
+            
+            await context.SaveChangesAsync(cancellationToken);
+            
+            return Result<AuthResponse>.Failure(
+                "INVALID_CODE",
+                "Invalid code.");
+        }
+        
+        code.Used = true;
+        user.EmailVerified = true;
+
+        await context.SaveChangesAsync(cancellationToken);
+
         return Result<AuthResponse>.Success(await BuildAuthResponseAsync(user, cancellationToken));
+    }
+
+    public async Task<Result<string>> ResendVerificationAsync(
+        ResendVerificationRequest request, 
+        CancellationToken cancellationToken = default)
+    {
+        if (request.Email is null)
+            return Result<string>.Failure("INVALID_EMAIL", "Invalid email.");
+        
+        var user = await context.Users
+            .FirstOrDefaultAsync(
+                u => 
+                    u.Email == request.Email, cancellationToken);
+
+        if (user is null || user.EmailVerified)
+            return Result<string>.Success("Verification code sent.");
+        
+        var code = await context.EmailVerificationCodes
+            .Where(c => c.UserId == user.Id && !c.Used)
+            .OrderByDescending(c => c.Created)
+            .FirstOrDefaultAsync(cancellationToken);
+        
+        if (code is not null && DateTime.UtcNow - code.Created < TimeSpan.FromSeconds(60))
+            return Result<string>.Failure("CODE_ON_COOLDOWN", "Please wait 60 seconds before resending the verification code.");
+        
+        await IssueAndSendCodeAsync(user, cancellationToken);
+
+        return Result<string>.Success("Verification code sent.");
     }
 
     public async Task<Result<AuthResponse>> LoginAsync(
@@ -72,6 +190,13 @@ public class AuthService(
         if (user.IsDeleted)
             return Result<AuthResponse>.Failure(
                 "USER_DELETED", "User is deleted.");
+
+        if (!user.EmailVerified)
+        {
+            await IssueAndSendCodeAsync(user, cancellationToken);
+            return Result<AuthResponse>.Failure(
+                "EMAIL_NOT_VERIFIED", "Please verify your email. A new code has been sent to your email.");
+        }
 
         return Result<AuthResponse>.Success(await BuildAuthResponseAsync(user, cancellationToken));
     }
@@ -206,6 +331,8 @@ public class AuthService(
                        payload,
                        payload.Email,
                        cancellationToken);
+            
+            user.EmailVerified = true;
 
             if (user.IsDeleted)
                 return Result<AuthResponse>.Failure(

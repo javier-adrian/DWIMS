@@ -22,4 +22,9 @@ public interface INotificationService
         Guid userId,
         string resetToken,
         CancellationToken cancellationToken = default);
+    
+    Task SendEmailVerificationAsync(
+        Guid userId,
+        string verificationCode,
+        CancellationToken cancellationToken = default);
 }

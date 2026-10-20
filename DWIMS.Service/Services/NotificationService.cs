@@ -90,4 +90,19 @@ public class NotificationService(
             $"{model.ResetUrl}{Environment.NewLine}{model.ExpiresIn}",
             cancellationToken);
     }
+
+    public async Task SendEmailVerificationAsync(Guid userId, string verificationCode, CancellationToken cancellationToken = default)
+    {
+        var user = await context.Users
+            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        
+        if (user is null) return;
+        
+        await emailSender.SendAsync(
+            user.Email,
+            user.FirstName + " " + user.LastName,
+            $"Verify Your DWIMS Account",
+            $"Your DWIMS verification code is {verificationCode}. It expires in 15 minutes.",
+            cancellationToken);
+    }
 }

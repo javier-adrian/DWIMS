@@ -13,7 +13,7 @@ public static class AuthEndpoints
             .AllowAnonymous();
         
         group.MapPost("/register", Register)
-            .Produces(StatusCodes.Status201Created)
+            .Produces(StatusCodes.Status200OK)
             .ProducesValidationProblem()
             .WithDisplayName("Register")
             .WithSummary("Register a new user");
@@ -39,11 +39,43 @@ public static class AuthEndpoints
             .WithDisplayName("Reset Password")
             .WithSummary("Reset a user's password");
         
+        group.MapPost("/verify-email", VerifyEmail)
+            .ProducesValidationProblem()
+            .Produces(StatusCodes.Status200OK)
+            .WithDisplayName("Verify Email")
+            .WithSummary("Verify a user's email with a code");
+        
+        group.MapPost("/resend-verification", ResendVerification)
+            .ProducesValidationProblem()
+            .Produces(StatusCodes.Status200OK)
+            .WithDisplayName("Resend Verification Code")
+            .WithSummary("Resend a verification code to a user's email");
+        
         group.MapPost("oauth/google", GoogleOAuth)
             .WithDisplayName("Google OAuth")
             .WithSummary("Authenticate with Google");
         
         return app;
+    }
+
+    private static async Task<IResult> ResendVerification(
+        ResendVerificationRequest request,
+        IAuthService authService,
+        CancellationToken cancellationToken)
+    {
+        var result = await authService.ResendVerificationAsync(request, cancellationToken);
+        
+        return result.ToOkResult();
+    }
+
+    private static async Task<IResult> VerifyEmail(
+        VerifyEmailRequest request, 
+        IAuthService authService, 
+        CancellationToken cancellationToken)
+    {
+        var result = await authService.VerifyEmailAsync(request, cancellationToken);
+        
+        return result.ToOkResult();
     }
 
     private static async Task<IResult> GoogleOAuth(
@@ -58,7 +90,7 @@ public static class AuthEndpoints
     private static async Task<IResult> Register(RegisterRequest request, IAuthService authService, CancellationToken cancellationToken)
     {
         var result = await authService.RegisterAsync(request, cancellationToken);
-        return result.ToCreatedResult("/users/me");
+        return result.ToOkResult();
     }
 
     private static async Task<IResult> Login(LoginRequest request, IAuthService authService, CancellationToken cancellationToken)

@@ -22,6 +22,7 @@ public class User : ISoftDeletable
     
     public Signature? Signature { get; set; }
     public ICollection<Submission> Submissions { get; set; }
+    public bool EmailVerified { get; set; }
     
     public bool IsDeleted { get; set; }
     public DateTime? DeletedOn { get; set; }
