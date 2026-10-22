@@ -43,7 +43,7 @@ public class SubmissionService(
         var categories = (await query
             .GroupBy(s => new { s.ProcessId, s.Process.Title })
             .Select(g => new SubmissionsCategoryDto(g.Key.ProcessId, g.Key.Title, g.Count()))
-            .ToListAsync())
+            .ToListAsync(cancellationToken))
             .OrderByDescending(c => c.Count)
             .ToList();
         
@@ -487,7 +487,7 @@ public class SubmissionService(
         var categories = (await query
             .GroupBy(s => new { s.ProcessId, s.Process.Title })
             .Select(g => new SubmissionsCategoryDto(g.Key.ProcessId, g.Key.Title, g.Count()))
-            .ToListAsync())
+            .ToListAsync(cancellationToken))
             .OrderByDescending(c => c.Count)
             .ToList();
         
