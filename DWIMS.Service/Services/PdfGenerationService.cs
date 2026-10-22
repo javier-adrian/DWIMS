@@ -182,7 +182,7 @@ public sealed class PdfGenerationService(
         // var y = pageSize.GetHeight() - margin - qrSize;
         
         // BOTTOM RIGHT, lifted a bit above the bottom margin
-        const float lift = 24f;
+        const float lift = 28f;
         var x = pageSize.GetWidth() - margin - qrSize;
 
         var captionBoxY = margin - textPad + lift;
@@ -228,7 +228,7 @@ public sealed class PdfGenerationService(
         canvas.SaveState()
             .SetFillColor(ColorConstants.WHITE)
             .Rectangle(
-                x - qrSize - textBoxWidth,
+                x + qrSize - textBoxWidth,
                 captionBoxY,
                 textBoxWidth,
                 captionBoxHeight)
