@@ -29,17 +29,25 @@ public class SubmissionService(
 
     private record FieldOptions(string Value, string Label);
     
-    public async Task<Result<IReadOnlyList<SubmissionSummaryDto>>> GetMySubmissionsAsync(Status? statusFilter, int page, int pageSize, CancellationToken cancellationToken = default)
+    public async Task<Result<SubmissionsPageDto>> GetMySubmissionsAsync(Status? statusFilter, Guid? processId, int page, int pageSize, CancellationToken cancellationToken = default)
     {
         if (currentUser.UserId is null)
-            return Result<IReadOnlyList<SubmissionSummaryDto>>.Failure("UNAUTHORIZED", "User is not authenticated.");
+            return Result<SubmissionsPageDto>.Failure("UNAUTHORIZED", "User is not authenticated.");
 
         var query = context.Submissions
-            .Include(s => s.Step)
             .Where(s => s.SubmitterId == currentUser.UserId.Value);
 
         if (statusFilter.HasValue)
             query = query.Where(s => s.Status == statusFilter.Value);
+        
+        var categories = await query
+            .GroupBy(s => new { s.ProcessId, s.Process.Title })
+            .Select(g => new SubmissionsCategoryDto(g.Key.ProcessId, g.Key.Title, g.Count()))
+            .OrderByDescending(c => c.Count)
+            .ToListAsync(cancellationToken);
+        
+        if (processId.HasValue)
+            query = query.Where(s => s.ProcessId == processId.Value);
 
         var submissions = await query
             .OrderByDescending(s => s.SubmittedOn)
@@ -50,11 +58,12 @@ public class SubmissionService(
                 s.Process.Title,
                 s.Status,
                 s.SubmittedOn,
-                s.Step.Title
+                s.Step.Title,
+                s.ProcessId
             ))
             .ToListAsync(cancellationToken);
 
-        return Result<IReadOnlyList<SubmissionSummaryDto>>.Success(submissions);
+        return Result<SubmissionsPageDto>.Success(new SubmissionsPageDto(submissions, categories));
     }
 
     public async Task<Result<IReadOnlyList<PendingReviewDto>>> GetPendingReviewAsync(CancellationToken cancellationToken = default)
@@ -462,10 +471,10 @@ public class SubmissionService(
         return Result.Success();
     }
 
-    public async Task<Result<IReadOnlyList<SubmissionSummaryDto>>> GetSubmissionsReviewedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+    public async Task<Result<SubmissionsPageDto>> GetSubmissionsReviewedAsync(Guid? processId, int page, int pageSize, CancellationToken cancellationToken = default)
     {
         if (currentUser.UserId is null)
-            return Result<IReadOnlyList<SubmissionSummaryDto>>.Failure("UNAUTHORIZED", "User is not authenticated.");
+            return Result<SubmissionsPageDto>.Failure("UNAUTHORIZED", "User is not authenticated.");
 
         var query = context.Submissions
             .Include(s => s.Step)
@@ -473,6 +482,15 @@ public class SubmissionService(
             .Include(s => s.Process)
             .Where(s => s.Responses.Any(r => 
                 (r.ReviewerId == currentUser.UserId || r.AssigneeId == currentUser.UserId || currentUser.isSuperAdministrator) && r.CompletedOn != null));
+        
+        var categories = await query
+            .GroupBy(s => new { s.ProcessId, s.Process.Title })
+            .Select(g => new SubmissionsCategoryDto(g.Key.ProcessId, g.Key.Title, g.Count()))
+            .OrderByDescending(c => c.Count)
+            .ToListAsync(cancellationToken);
+        
+        if (processId.HasValue)
+            query = query.Where(s => s.ProcessId == processId.Value);
 
         var submissions = await query
             .OrderByDescending(s => s.SubmittedOn)
@@ -483,11 +501,12 @@ public class SubmissionService(
                 s.Process.Title,
                 s.Status,
                 s.SubmittedOn,
-                s.Step.Title
+                s.Step.Title,
+                s.ProcessId
             ))
             .ToListAsync(cancellationToken);
 
-        return Result<IReadOnlyList<SubmissionSummaryDto>>.Success(submissions);
+        return Result<SubmissionsPageDto>.Success( new SubmissionsPageDto(submissions, categories));
     }
 
     public async Task<Result> RedirectSubmissionAsync(Guid submissionId, RedirectSubmissionRequest request,

@@ -7,5 +7,6 @@ public sealed record SubmissionSummaryDto(
     string Name,
     Status Status,
     DateTime CreatedAt,
-    string? CurrentStep
+    string? CurrentStep,
+    Guid ProcessId
     );

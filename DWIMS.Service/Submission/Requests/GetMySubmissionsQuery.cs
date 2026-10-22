@@ -4,5 +4,6 @@ namespace DWIMS.Service.Submission.Requests;
 
 public sealed record GetMySubmissionsQuery(
     Status? Status = null,
+    Guid? ProcessId = null,
     int Page = 1,
     int PageSize = 10);

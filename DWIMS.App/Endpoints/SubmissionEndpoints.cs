@@ -94,7 +94,7 @@ public static class SubmissionEndpoints
         ISubmissionService submissionService, 
         CancellationToken cancellationToken)
     {
-        var result = await submissionService.GetSubmissionsReviewedAsync(query.Page, query.PageSize, cancellationToken);
+        var result = await submissionService.GetSubmissionsReviewedAsync(query.ProcessId, query.Page, query.PageSize, cancellationToken);
         return result.IsSuccess
             ? Results.Ok(result.Data)
             : Results.UnprocessableEntity(new
@@ -223,7 +223,13 @@ public static class SubmissionEndpoints
         ISubmissionService submissionService,
         CancellationToken cancellationToken)
     {
-        var result = await submissionService.GetMySubmissionsAsync(query.Status, query.Page, query.PageSize, cancellationToken);
+        var result = await submissionService.GetMySubmissionsAsync(
+            query.Status, 
+            query.ProcessId, 
+            query.Page, 
+            query.PageSize, 
+            cancellationToken);
+        
         return result.IsSuccess
             ? Results.Ok(result.Data)
             : Results.UnprocessableEntity(new

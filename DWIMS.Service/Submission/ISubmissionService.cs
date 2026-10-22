@@ -7,8 +7,9 @@ namespace DWIMS.Service.Submission;
 
 public interface ISubmissionService
 {
-    Task<Result<IReadOnlyList<SubmissionSummaryDto>>> GetMySubmissionsAsync(
+    Task<Result<SubmissionsPageDto>> GetMySubmissionsAsync(
         Status? statusFilter,
+        Guid? processId,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
@@ -61,7 +62,8 @@ public interface ISubmissionService
         Guid submissionId,
         CancellationToken cancellationToken = default);
     
-    Task<Result<IReadOnlyList<SubmissionSummaryDto>>> GetSubmissionsReviewedAsync(
+    Task<Result<SubmissionsPageDto>> GetSubmissionsReviewedAsync(
+        Guid? processId,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
