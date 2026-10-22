@@ -639,6 +639,9 @@ namespace DWIMS.Data.Migrations
                     b.Property<DateTime?>("DeletedOn")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("Department")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("varchar(255)");
@@ -652,6 +655,9 @@ namespace DWIMS.Data.Migrations
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("JobTitle")
+                        .HasColumnType("longtext");
 
                     b.Property<string>("LastName")
                         .IsRequired()

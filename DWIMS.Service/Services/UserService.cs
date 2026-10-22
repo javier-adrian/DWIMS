@@ -26,6 +26,8 @@ public class UserService(
                 x.LastName,
                 x.Email,
                 x.ContactNumber,
+                x.JobTitle,
+                x.Department,
                 context.Signatures.Any(y => y.UserId == id)))
             .FirstOrDefaultAsync(cancellationToken);
         
@@ -55,6 +57,8 @@ public class UserService(
         user.LastName = request.LastName;
         user.Email = request.Email;
         user.ContactNumber = request.ContactNumber;
+        user.JobTitle = request.JobTitle;
+        user.Department = request.Department;
         
         if (request.BirthDate.HasValue)
             user.BirthDate = request.BirthDate.Value;
@@ -170,10 +174,16 @@ public class UserService(
         
         var users = await context.Users
             .Where(x => x.Roles.Any(r => !r.IsDeleted && r.GeneralRole >= GeneralRole.Reviewer))
-            .Where(x => x.FirstName.Contains(term) || x.LastName.Contains(term) || x.Email.Contains(term))
+            .Where(x => 
+                x.FirstName.Contains(term) || 
+                x.LastName.Contains(term) || 
+                x.Email.Contains(term) ||
+                (x.JobTitle != null && x.JobTitle.Contains(term)) ||
+                (x.Department != null && x.Department.Contains(term))
+                )
             .OrderBy(x => x.LastName).ThenBy(x => x.FirstName)
             .Take(10)
-            .Select(x => new UserSearchResultDto(x.Id, x.FirstName, x.LastName, x.Email))
+            .Select(x => new UserSearchResultDto(x.Id, x.FirstName, x.LastName, x.Email, x.JobTitle, x.Department))
             .ToListAsync(cancellationToken);
 
         return Result<IReadOnlyList<UserSearchResultDto>>.Success(users);

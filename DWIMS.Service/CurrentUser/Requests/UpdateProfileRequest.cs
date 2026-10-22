@@ -8,5 +8,7 @@ public class UpdateProfileRequest
     
     public required string Email { get; set; }
     public string? ContactNumber { get; set; }
+    public string? JobTitle { get; set; }
+    public string? Department { get; set; }
     public DateTime? BirthDate { get; set; }
 }

@@ -4,4 +4,6 @@ public sealed record UserSearchResultDto(
     Guid Id,
     string FirstName,
     string LastName,
-    string Email);
+    string Email,
+    string? JobTitle,
+    string? Department);

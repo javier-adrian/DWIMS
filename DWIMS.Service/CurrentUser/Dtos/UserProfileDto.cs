@@ -7,4 +7,6 @@ public sealed record UserProfileDto(
     string LastName,
     string Email,
     string? ContactNumber, 
+    string? JobTitle,
+    string? Department,
     bool hasSignature);

@@ -47,7 +47,7 @@ public static class UserEndpoints
 
         group.MapGet("/search", SearchUsers)
             .WithDisplayName("Search Users")
-            .WithSummary("Search for users by name or email");
+            .WithSummary("Search for users by name, email, job title, or department");
         
         group.MapGet("/{userId:guid}", GetUser)
             .WithDisplayName("Get User")
