@@ -47,9 +47,6 @@ public sealed class PdfGenerationService(
                 .ThenInclude(r => r.Reviewer)
             .FirstOrDefaultAsync(s => s.Id == submissionId, cancellationToken)
             ?? throw new KeyNotFoundException("Submission not found.");
-
-        var document = submission?.Process?.Documents.FirstOrDefault()
-            ?? throw new KeyNotFoundException("Document not found for this submission.");
         
         if (currentUser.UserId is not null &&
             currentUser.UserId != submission.SubmitterId && 
@@ -72,27 +69,41 @@ public sealed class PdfGenerationService(
                     cancellationToken);
             }
 
-        var template = await storageService.DownloadAsync(document.Link, cancellationToken);
+        var signatures = await BuildSignaturesAsync(submission.Responses, cancellationToken);
+        
+        var verificationLink = $"{_appBaseUrl.TrimEnd('/')}/#/verify/KLD-{submission.VerificationCode}";
 
         var fields = submission.Inputs
             .Where(input => input.Value is not null && !input.Field.IsDeleted)
             .Select(input => (input.Field, Value: input.Value!))
             .ToList();
         
-        var signatures = await BuildSignaturesAsync(submission.Responses, cancellationToken);
+        if (submission.Process.Kind == ProcessKind.FreeDocument)
+        {
+            var bytes = await storageService.DownloadAsync(submission.SourceLink, cancellationToken);
+            
+            var routes = await context.SubmissionRoutes
+                .Where(r => r.SubmissionId == submission.Id)
+                .ToListAsync(cancellationToken);
+            
+            return RenderDocumentPdf(bytes, signatures, routes, verificationLink, submission.VerificationCode);
+        }
+
+        var document = submission?.Process?.Documents.FirstOrDefault()
+                       ?? throw new KeyNotFoundException("Document not found for this submission.");
         
-        var verificationLink = $"{_appBaseUrl.TrimEnd('/')}/#/verify/KLD-{submission.VerificationCode}";
-        
+        var template = await storageService.DownloadAsync(document.Link, cancellationToken);
+
         return RenderPdf(template, fields, signatures, verificationLink, submission.VerificationCode);
 
         // return await storageService.DownloadAsync(document.Link, cancellationToken);
     }
 
-    private async Task<Dictionary<string, SignatureStamp>> BuildSignaturesAsync(
+    private async Task<IReadOnlyList<SignaturePlacement>> BuildSignaturesAsync(
         IEnumerable<Response> responses,
         CancellationToken cancellationToken = default)
     {
-        var result = new Dictionary<string, SignatureStamp>();
+        var result = new List<SignaturePlacement>();
 
         var approved = responses
             .Where(response =>
@@ -115,11 +126,16 @@ public sealed class PdfGenerationService(
             if (signature is null)
                 continue;
             
-            result[key] = new SignatureStamp(
-                signature.EncryptedBlob,
-                signature.MimeType,
-                $"{response.Reviewer?.FirstName} {response.Reviewer?.LastName}".Trim(),
-                response.CompletedOn);
+            result.Add(
+                new SignaturePlacement(
+                    response, 
+                    new SignatureStamp(
+                        signature.EncryptedBlob, 
+                        signature.MimeType, 
+                        $"{response.Reviewer?.FirstName} {response.Reviewer?.LastName}".Trim(), 
+                        response.CompletedOn)
+                    )
+                );
         }
         
         return result;
@@ -128,7 +144,7 @@ public sealed class PdfGenerationService(
     private static MemoryStream RenderPdf(
         Stream template,
         IReadOnlyList<(Field Field, string Value)> fields,
-        Dictionary<string, SignatureStamp> signatures,
+        IReadOnlyList<SignaturePlacement> signatures,
         string verificationLink,
         string verificationCode)
     {
@@ -162,6 +178,47 @@ public sealed class PdfGenerationService(
         result.Close();
         output.Position = 0;
         
+        return output;
+    }
+    
+    private static MemoryStream RenderDocumentPdf(
+        Stream source,
+        IReadOnlyList<SignaturePlacement> placements,
+        IReadOnlyList<SubmissionRoute> routes,
+        string verificationLink,
+        string verificationCode)
+    {
+        var output = new MemoryStream();
+        using var reader = new PdfReader(source);
+        using var writer = new PdfWriter(output, new WriterProperties().SetPdfVersion(PdfVersion.PDF_1_7));
+        writer.SetCloseStream(false);
+        using var result = new PdfDocument(reader, writer);
+
+        StampVerification(result, verificationLink, verificationCode);   // always
+
+        foreach (var placement in placements)
+        {
+            var slot = routes.FirstOrDefault(r => r.StepId == placement.Response.StepId);
+            if (slot?.SignaturePage is not { } pageNo ||
+                slot.SignatureX is null || slot.SignatureY is null ||
+                slot.SignatureWidth is null || slot.SignatureHeight is null)
+                continue;                                                // defensive skip
+
+            var page = result.GetPage(pageNo);                           // 1-based
+            var size = page.GetPageSize();                               // THIS page's size
+            var rect = new Rectangle(
+                (float)(slot.SignatureX.Value * size.GetWidth()),
+                (float)((1 - slot.SignatureY.Value - slot.SignatureHeight.Value) * size.GetHeight()),
+                (float)(slot.SignatureWidth.Value * size.GetWidth()),
+                (float)(slot.SignatureHeight.Value * size.GetHeight()));
+
+            StampSignature(page, rect, placement.Stamp);
+        }
+
+        PdfAcroForm.GetAcroForm(result, createIfNotExist: false)?.FlattenFields();  // flatten without fill, at the end
+
+        result.Close();
+        output.Position = 0;
         return output;
     }
     
@@ -279,67 +336,68 @@ public sealed class PdfGenerationService(
             field.SetReadOnly(true);
         }
     }
+    
+    private static void StampSignature(PdfPage page, Rectangle rectangle, SignatureStamp stamp)
+    {
+        var canvas = new PdfCanvas(page);
+        var imageBytes = stamp.MimeType == "image/svg+xml" ? ConvertSvgToPng(stamp.Blob) : stamp.Blob;
+        var imageData = ImageDataFactory.Create(imageBytes);
+        var font = PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
+
+        var bandHeight = stamp.CompletedOn is null ? 12f : 20f;
+        
+        canvas
+            .SaveState()
+            .AddImageFittedIntoRectangle(imageData, rectangle, true);
+        
+        canvas.RestoreState();
+        
+        var nameRect = new Rectangle(
+            rectangle.GetX(),
+            rectangle.GetY(),
+            rectangle.GetWidth(),
+            bandHeight);
+        
+        var nameCanvas = new iText.Layout.Canvas(canvas, nameRect);
+        
+        nameCanvas.Add(new Paragraph(stamp.Name)
+            .SetFont(font)
+            .SetFontSize(8)
+            .SetMargin(0)
+            .SetMultipliedLeading(1)
+            .SetTextAlignment(TextAlignment.CENTER));
+
+        if (stamp.CompletedOn is { } completedOn)
+            nameCanvas.Add(new Paragraph(completedOn.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture))
+                .SetFont(font)
+                .SetFontSize(7)
+                .SetMargin(0)
+                .SetMultipliedLeading(1)
+                .SetTextAlignment(TextAlignment.CENTER));
+        
+        nameCanvas.Close();
+        
+        canvas.Release();
+    }
 
     private static void FillSignatures(
         PdfAcroForm form,
         PdfDocument document,
-        Dictionary<string, SignatureStamp> signatures)
+        IReadOnlyList<SignaturePlacement> placements)
     {
-        foreach (var (key, stamp) in signatures)
+        foreach (var placement in placements)
         {
+            var key = $"{placement.Response.Step.Order}: {placement.Response.Step.Title}";
             var field = form.GetField(key);
-            
-            if (field is null)
-                continue;
-            
+            if (field is null) continue;
+
             var widget = field.GetWidgets().FirstOrDefault();
-            if (widget is null)
-                continue;
-            
+            if (widget is null) continue;
 
             var rectangle = widget.GetRectangle().ToRectangle();
-            var pageNumber = document.GetPageNumber(widget.GetPage());
-            var page = document.GetPage(pageNumber);
-            var canvas = new PdfCanvas(page);
-            var imageBytes = stamp.MimeType == "image/svg+xml" ? ConvertSvgToPng(stamp.Blob) : stamp.Blob;
-            var imageData = ImageDataFactory.Create(imageBytes);
-            var font = PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
+            var page = document.GetPage(document.GetPageNumber(widget.GetPage()));
 
-            var bandHeight = stamp.CompletedOn is null ? 12f : 20f;
-            
-            canvas
-                .SaveState()
-                .AddImageFittedIntoRectangle(imageData, rectangle, true);
-            
-            canvas.RestoreState();
-            
-            var nameRect = new Rectangle(
-                rectangle.GetX(),
-                rectangle.GetY(),
-                rectangle.GetWidth(),
-                bandHeight);
-            
-            var nameCanvas = new iText.Layout.Canvas(canvas, nameRect);
-            
-            nameCanvas.Add(new Paragraph(stamp.Name)
-                .SetFont(font)
-                .SetFontSize(8)
-                .SetMargin(0)
-                .SetMultipliedLeading(1)
-                .SetTextAlignment(TextAlignment.CENTER));
-
-            if (stamp.CompletedOn is { } completedOn)
-                nameCanvas.Add(new Paragraph(completedOn.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture))
-                    .SetFont(font)
-                    .SetFontSize(7)
-                    .SetMargin(0)
-                    .SetMultipliedLeading(1)
-                    .SetTextAlignment(TextAlignment.CENTER));
-            
-            nameCanvas.Close();
-            
-            canvas.Release();
-            
+            StampSignature(page, rectangle, placement.Stamp);
             field.SetReadOnly(true);
         }
     }

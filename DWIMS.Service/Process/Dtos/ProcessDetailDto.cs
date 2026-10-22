@@ -1,4 +1,6 @@
-﻿namespace DWIMS.Service.Process.Dtos;
+﻿using DWIMS.Data;
+
+namespace DWIMS.Service.Process.Dtos;
 
 public sealed record ProcessDetailDto(
     Guid Id,
@@ -6,5 +8,6 @@ public sealed record ProcessDetailDto(
     string? Description,
     Guid DepartmentId,
     string DepartmentName,
+    ProcessKind Kind,
     IReadOnlyList<StepDto> Steps,
     IReadOnlyList<FieldDto> Fields);

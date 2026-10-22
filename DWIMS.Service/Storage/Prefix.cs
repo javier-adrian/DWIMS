@@ -5,4 +5,5 @@ public enum Prefix
     Template,
     Output,
     Attachment,
+    Document
 }

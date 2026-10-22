@@ -10,6 +10,8 @@ public record SubmissionDetailDto(
     DateTime SubmittedAt,
     DateTime? CompletedAt,
     string? CurrentStep,
+    ProcessKind Kind,
+    string? SourceTitle,
     IReadOnlyList<SubmissionStepResponseDto> StepResponses,
     IReadOnlyList<SubmissionFieldValueDto> FieldValues,
     IReadOnlyList<AttachmentDto> Attachments

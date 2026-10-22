@@ -318,6 +318,9 @@ namespace DWIMS.Data.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -543,6 +546,12 @@ namespace DWIMS.Data.Migrations
                     b.Property<DateTime?>("ResultLinkGeneratedOn")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("SourceLink")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("SourceTitle")
+                        .HasColumnType("longtext");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -582,6 +591,21 @@ namespace DWIMS.Data.Migrations
 
                     b.Property<Guid>("AssigneeId")
                         .HasColumnType("char(36)");
+
+                    b.Property<double?>("SignatureHeight")
+                        .HasColumnType("double");
+
+                    b.Property<int?>("SignaturePage")
+                        .HasColumnType("int");
+
+                    b.Property<double?>("SignatureWidth")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("SignatureX")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("SignatureY")
+                        .HasColumnType("double");
 
                     b.Property<Guid>("StepId")
                         .HasColumnType("char(36)");

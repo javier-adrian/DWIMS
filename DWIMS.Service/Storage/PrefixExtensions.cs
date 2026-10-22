@@ -9,6 +9,7 @@ public static class PrefixExtensions
         Prefix.Template => options.TemplatePrefix,
         Prefix.Output => options.OutputPrefix,
         Prefix.Attachment => options.AttachmentPrefix,
+        Prefix.Document => options.DocumentPrefix,
         _ => throw new ArgumentOutOfRangeException(
             nameof(prefix), 
             prefix, 

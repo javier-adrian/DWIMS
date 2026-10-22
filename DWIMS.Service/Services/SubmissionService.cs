@@ -2,13 +2,18 @@
 using System.Text.Json;
 using DWIMS.Data;
 using DWIMS.Service.Common;
+using DWIMS.Service.Common.Models;
 using DWIMS.Service.Logs;
+using DWIMS.Service.Process.Dtos;
+using DWIMS.Service.Process.Requests;
 using DWIMS.Service.Routing;
+using DWIMS.Service.Routing.Dtos;
 using DWIMS.Service.Storage;
 using DWIMS.Service.Submission;
 using DWIMS.Service.Submission.Dtos;
 using DWIMS.Service.Submission.Requests;
 using DWIMS.Service.User;
+using iText.Kernel.Pdf;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
@@ -40,6 +45,60 @@ public class SubmissionService(
                 for (var i = 0; i < chars.Length; i++)
                     chars[i] = CodeAlphabet[RandomNumberGenerator.GetInt32(CodeAlphabet.Length)];
             });
+    }
+
+    private async Task<Result<IEnumerable<SubmissionRoute>>> ValidateRouteAsync(IReadOnlyList<RouteEntryDto> route, IReadOnlyList<SlotEntryDto> slots, Guid submissionId, int pages, CancellationToken cancellationToken)
+    {
+        IEnumerable<SubmissionRoute> routes = new List<SubmissionRoute>();
+        
+        foreach (var step in route)
+        {
+            var slot = slots.FirstOrDefault(s => s.stepId == step.StepId);
+            
+            if (slot is null)
+                return Result<IEnumerable<SubmissionRoute>>.Failure("INVALID_SLOT", $"No signature slot found for step {step.StepId}.");
+            
+            if (pages < slot.Page || slot.Page < 1)
+                return Result<IEnumerable<SubmissionRoute>>.Failure("INVALID_SLOT", $"Page {slot.Page} for step {step.StepId} is invalid.");
+            
+            if (0 > slot.SignatureX || 
+                0 > slot.SignatureY || 
+                0 >= slot.SignatureWidth || 
+                0 >= slot.SignatureHeight ||
+                slot.SignatureWidth + slot.SignatureX > 1.02 ||
+                slot.SignatureHeight + slot.SignatureY > 1.02)
+                return Result<IEnumerable<SubmissionRoute>>.Failure("INVALID_SLOT", $"Signature slot dimensions for step {step.StepId} is invalid.");
+            
+            if (string.IsNullOrWhiteSpace(step.AssigneeEmail))
+                return Result<IEnumerable<SubmissionRoute>>.Failure("INVALID_REVIEWER", $"Assignee email for step {step.StepId} is empty.");
+            
+            var assignee = await context.Users.FirstOrDefaultAsync(u => u.Email == step.AssigneeEmail, cancellationToken: cancellationToken);
+            
+            if (assignee is null)
+                return Result<IEnumerable<SubmissionRoute>>.Failure("INVALID_REVIEWER", $"Assignee email for step {step.StepId} does not exist.");
+            
+            if (assignee.Id == currentUser.UserId)
+                return Result<IEnumerable<SubmissionRoute>>.Failure("FORBIDDEN", $"Assignee email for step {step.StepId} cannot be the current user.");
+            
+            var submissionRoute = new SubmissionRoute
+            {
+                Id = Guid.NewGuid(),
+                StepId = step.StepId,
+                AssigneeId = assignee.Id,
+                SubmissionId = submissionId,
+                SignatureHeight = slot.SignatureHeight,
+                SignatureWidth = slot.SignatureWidth,
+                SignatureX = slot.SignatureX,
+                SignatureY = slot.SignatureY,
+                SignaturePage = slot.Page
+            };
+            
+            routes = routes.Append(submissionRoute);
+            
+            context.SubmissionRoutes.Add(submissionRoute);
+        }
+        
+        return Result<IEnumerable<SubmissionRoute>>.Success(routes);
     }
     
     public async Task<Result<SubmissionsPageDto>> GetMySubmissionsAsync(Status? statusFilter, Guid? processId, int page, int pageSize, CancellationToken cancellationToken = default)
@@ -178,6 +237,8 @@ public class SubmissionService(
             submission.SubmittedOn,
             submission.CompletedOn,
             submission.Step.Title,
+            submission.Process.Kind,
+            submission.SourceTitle,
             stepResponses,
             fieldValues,
             attachmentDtos
@@ -243,6 +304,8 @@ public class SubmissionService(
             submission.SubmittedOn,
             submission.CompletedOn,
             submission.Step.Title,
+            submission.Process.Kind,
+            submission.SourceTitle,
             stepResponses,
             fieldValues,
             attachmentDtos
@@ -261,6 +324,9 @@ public class SubmissionService(
 
         if (process is null)
             return Result<Guid>.Failure("PROCESS_NOT_FOUND", "Process not found.");
+        
+        if (process.Kind == ProcessKind.FreeDocument)
+            return Result<Guid>.Failure("WRONG_PROCESS_KIND", "Memorandums and letters must be submitted via the document submission endpoint.");
         
         var verificationCode = GenerateVerificationCode();
         
@@ -653,6 +719,149 @@ public class SubmissionService(
                 submission.CompletedOn,
                 submission.Step.Title,
                 steps));
+    }
+
+    public async Task<Result<Guid>> CreateDocumentSubmissionAsync(
+        CreateDocumentSubmissionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Result<Guid>.Failure("UNAUTHORIZED", "User is not authenticated.");
+
+        var hasProcessId = Guid.TryParse(request.ProcessId, out var processId);
+        
+        if (!hasProcessId)
+            return Result<Guid>.Failure("INVALID_PROCESS_ID", "Process ID is invalid.");
+        
+        var process = await context.Processes
+            .Include(p => p.Steps)
+            .FirstOrDefaultAsync(p => p.Id == processId, cancellationToken);
+        
+        if (process is null)
+            return Result<Guid>.Failure("PROCESS_NOT_FOUND", "Process not found.");
+        
+        if (process.Kind != ProcessKind.FreeDocument)
+            return Result<Guid>.Failure("INVALID_PROCESS_KIND", "Process kind must be FreeDocument.");
+        
+        var liveSteps = process.Steps.Where(s => !s.IsDeleted).ToList();
+        
+        if (liveSteps.Count == 0)
+            return Result<Guid>.Failure("INVALID_PROCESS", "Process has no steps.");
+        
+        if (request.Slots is null)
+            return Result<Guid>.Failure("INVALID_SLOTS", "Slots are required.");
+        
+        if (request.Route is null)
+            return Result<Guid>.Failure("INVALID_ROUTE", "Route is required.");
+        
+        if (liveSteps.Count != request.Slots.Count)
+            return Result<Guid>.Failure("INVALID_SLOTS_COUNT", "Slots count does not match process steps count.");
+        
+        if (request.Route.Count != request.Slots.Count)
+            return Result<Guid>.Failure("INVALID_ROUTE_COUNT", "Route count does not match slots count.");
+        
+        var submissionId = Guid.NewGuid();
+        
+        if (request.File is null || request.File.Length == 0)
+            return Result<Guid>.Failure("INVALID_FILE", "A PDF file is required.");
+        if (request.File.Length > 10_000_000)
+            return Result<Guid>.Failure("INVALID_FILE_SIZE", "File exceeds the 10 MB limit.");
+        
+        await using var stream = request.File.OpenReadStream();
+
+        byte[] header = new byte[5];
+        if (await stream.ReadAsync(header.AsMemory(0, 5), cancellationToken) != 5 ||
+            header[0] != '%' || header[1] != 'P' || header[2] != 'D' || header[3] != 'F' || header[4] != '-')
+            return Result<Guid>.Failure("INVALID_FILE_TYPE", "File is not a PDF.");
+
+        stream.Position = 0;
+
+        int pageCount;
+        try
+        {
+            using var pdf = new PdfDocument(new PdfReader(stream));
+            pageCount = pdf.GetNumberOfPages();
+        }
+        catch (Exception)
+        {
+            return Result<Guid>.Failure("INVALID_FILE_TYPE", "File is not a readable PDF (corrupt or password-protected).");
+        }
+
+        var validated = await ValidateRouteAsync(request.Route, request.Slots, submissionId, pageCount, cancellationToken);
+        
+        if (!validated.IsSuccess)
+            return Result<Guid>.Failure(validated.Error, validated.ErrorDescription);
+
+        stream.Position = 0;
+
+        var path = $"{submissionId:N}/source/{Path.GetFileName(request.File.FileName)}";
+        
+        var verificationCode = GenerateVerificationCode();
+        
+        while (await context.Submissions.AnyAsync(s => s.VerificationCode == verificationCode, cancellationToken))
+            verificationCode = GenerateVerificationCode();
+
+        var submission = new Data.Submission
+        {
+            Id = submissionId,
+            SubmitterId = currentUser.UserId.Value,
+            ProcessId = processId,
+            SubmittedOn = DateTime.UtcNow,
+            SourceLink = path,
+            SourceTitle = Path.GetFileName(request.File.FileName),
+            VerificationCode = verificationCode
+        };
+        
+        var firstStep = process.Steps.OrderBy(s => s.Order).First(s => !s.IsDeleted);
+        
+        var requestSteps = request.Route.Select(r => r.StepId).ToHashSet();
+        var processSteps = process.Steps.Where(s => !s.IsDeleted).Select(s => s.Id).ToHashSet();
+
+        if (!requestSteps.SetEquals(processSteps))
+            return Result<Guid>.Failure("INVALID_ROUTE", "Route does not match process steps");
+        
+        await storageService.UploadAsync(stream, path, "application/pdf", Prefix.Document, cancellationToken);
+        
+        var start = await routingService.StartRoute(submission, process,  validated.Data.FirstOrDefault(r => r.StepId == firstStep.Id));
+        
+        if (!start.IsSuccess)
+            return Result<Guid>.Failure(start.Error!, start.ErrorDescription!);
+
+        context.Submissions.Add(submission);
+        
+        await context.SaveChangesAsync(cancellationToken);
+        
+        await logService.LogAsync("Submission Created", "Submission", submissionId);
+        
+        emailQueue.Enqueue(new EmailJob(EmailNotificationKind.SubmissionReceived, SubmissionId: submissionId));
+
+        return Result<Guid>.Success(submission.Id);
+    }
+
+    public async Task<Result<DocumentDownloadDto>> DownloadDocumentAsync(Guid submissionId, CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Result<DocumentDownloadDto>.Failure("UNAUTHORIZED", "User is not authenticated.");
+
+        var submission = await context.Submissions
+            .Include(s => s.Responses)
+            .FirstOrDefaultAsync(submission => 
+                                 submission.Id == submissionId, cancellationToken);
+        
+        if (submission is null)
+            return Result<DocumentDownloadDto>.Failure("SUBMISSION_NOT_FOUND", "Submission not found.");
+        
+        if (currentUser.UserId != submission.SubmitterId && 
+            !currentUser.isSuperAdministrator &&
+            !submission.Responses.Any(r => r.ReviewerId == currentUser.UserId || r.AssigneeId == currentUser.UserId))
+            return Result<DocumentDownloadDto>.Failure("UNAUTHORIZED", "You are not authorized to access this submission.");
+        
+        if (string.IsNullOrEmpty(submission.SourceLink))
+            return Result<DocumentDownloadDto>.Failure("NO_SOURCE_DOCUMENT", "This submission has no source document.");
+
+        var stream = await storageService.DownloadAsync(submission.SourceLink, cancellationToken);
+        
+        return Result<DocumentDownloadDto>.Success(new DocumentDownloadDto(stream, submission.SourceTitle,  "application/pdf"));
     }
 
     public async Task<Result> CancelSubmissionAsync(Guid id, CancellationToken cancellationToken = default)

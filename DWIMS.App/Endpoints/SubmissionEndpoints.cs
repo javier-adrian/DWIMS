@@ -1,5 +1,10 @@
+using System.Text.Json;
+using DWIMS.Data;
 using DWIMS.Service.Auth;
 using DWIMS.Service.Common;
+using DWIMS.Service.Process.Dtos;
+using DWIMS.Service.Process.Requests;
+using DWIMS.Service.Routing.Dtos;
 using DWIMS.Service.Services;
 using DWIMS.Service.Submission;
 using DWIMS.Service.Submission.Dtos;
@@ -9,6 +14,8 @@ namespace DWIMS.Controllers;
 
 public static class SubmissionEndpoints
 {
+    private static readonly JsonSerializerOptions Json = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+    
     public static IEndpointRouteBuilder MapSubmissionEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("submission")
@@ -69,7 +76,72 @@ public static class SubmissionEndpoints
             .WithDisplayName("Delete Attachment")
             .WithSummary("Delete a submission's attachment.");
         
+        group.MapPost("/document", CreateDocumentSubmission)
+            .WithDisplayName("Create Document Submission")
+            .WithSummary("Submit a letter or a memorandum.")
+            .DisableAntiforgery();
+        
+        group.MapGet("/{id:guid}/source", DownloadDocumentSubmission)
+            .WithDisplayName("Get Document Submission")
+            .WithSummary("Get source document of a submission.")
+            .DisableAntiforgery();
+        
         return app;
+    }
+
+    private static async Task<IResult> DownloadDocumentSubmission(
+        Guid id,
+        ISubmissionService submissionService,
+        CancellationToken cancellationToken)
+    {
+        var result = await submissionService.DownloadDocumentAsync(id, cancellationToken);
+        if (!result.IsSuccess)
+            return Results.UnprocessableEntity(new
+            {
+                result.Error
+            });
+        var dto = result.Data!;
+        return Results.File(dto.Content, dto.ContentType, dto.FileName);
+    }
+
+    private static async Task<IResult> CreateDocumentSubmission(
+        HttpRequest http,
+        ISubmissionService submissionService,
+        CancellationToken cancellationToken)
+    {
+        var form = await http.ReadFormAsync(cancellationToken);
+        
+        string? processId = form["processId"].ToString();
+        IFormFile? file = form.Files.FirstOrDefault(f => f.Name == "file");
+        string? routeJson = form["route"].ToString();
+        string? slotsJson = form["slots"].ToString();
+
+        IReadOnlyList<RouteEntryDto> route;
+        IReadOnlyList<SlotEntryDto> slots;
+
+        try
+        {
+            route = JsonSerializer.Deserialize<IReadOnlyList<RouteEntryDto>>(routeJson, Json);
+        }
+        catch (Exception e)
+        {
+            return Results.UnprocessableEntity(new {Error = "INVALID_BODY", ErrorMessage = "Unprocessable body content."});
+        }
+        
+        try
+        {
+            slots = JsonSerializer.Deserialize<IReadOnlyList<SlotEntryDto>>(slotsJson, Json);
+        }
+        catch (Exception e)
+        {
+            return Results.UnprocessableEntity(new {Error = "INVALID_BODY", ErrorMessage = "Unprocessable body content."});
+        }
+        
+        var request = new CreateDocumentSubmissionRequest(processId, file, route, slots);
+
+        var result = await submissionService.CreateDocumentSubmissionAsync(request, cancellationToken);
+
+        return result.ToOkResult();
     }
 
     private static async Task<IResult> RedirectSubmission(

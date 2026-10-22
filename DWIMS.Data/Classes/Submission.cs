@@ -16,6 +16,8 @@ public class Submission : ISoftDeletable
     public Guid SubmitterId { get; set; }
     public User Submitter { get; set; }
     public string? ResultLink { get; set; }
+    public string? SourceLink { get; set; }
+    public string? SourceTitle { get; set; }
     public DateTime? ResultLinkGeneratedOn { get; set; }
     public ICollection<Input> Inputs { get; set; }
     public ICollection<Response> Responses { get; set; }

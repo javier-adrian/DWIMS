@@ -34,7 +34,8 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
                 p.Title,
                 null,
                 p.Steps.Count,
-                context.Documents.Any(d => d.ProcessId == p.Id && !d.IsDeleted)
+                context.Documents.Any(d => d.ProcessId == p.Id && !d.IsDeleted),
+                p.Kind
             ))
             .ToListAsync(cancellationToken);
 
@@ -53,7 +54,8 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
                 p.Title,
                 null,
                 p.Steps.Count,
-                context.Documents.Any(d => d.ProcessId == p.Id && !d.IsDeleted)
+                context.Documents.Any(d => d.ProcessId == p.Id && !d.IsDeleted),
+                p.Kind
             ))
             .ToListAsync(cancellationToken);
 
@@ -74,6 +76,7 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
                 null,
                 p.DepartmentId,
                 p.Department.Title,
+                p.Kind,
                 p.Steps.Where(s => !s.IsDeleted).Select(s => new StepDto(
                     s.Id,
                     s.Order,
@@ -112,22 +115,16 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
 
         if (department is null)
             return Result<Guid>.Failure("DEPARTMENT_NOT_FOUND", "Department not found.");
+        
+        if (!Enum.IsDefined(request.Kind)) return Result<Guid>.Failure("INVALID_PROCESS_KIND", "Invalid process kind.");
 
         var process = new Data.Process
         {
             Id = Guid.NewGuid(),
             Title = request.Title,
             DepartmentId = request.DepartmentId,
+            Kind = request.Kind
         };
-
-        var document = new Document
-        {
-            Id = Guid.NewGuid(),
-            Link = "",
-            ProcessId = process.Id
-        };
-
-        context.Documents.Add(document);
         
         context.Processes.Add(process);
         
@@ -323,6 +320,9 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
 
         if (process is null)
             return Result<Guid>.Failure("PROCESS_NOT_FOUND", "Process not found.");
+        
+        if (process.Kind == ProcessKind.FreeDocument)
+            return Result<Guid>.Failure("WRONG_PROCESS_KIND", "Memorandums and letters do not use templates.");
         
         var hasPending = await context.Submissions.AnyAsync(
             submission => 

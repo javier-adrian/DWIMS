@@ -1,5 +1,6 @@
 ﻿using DWIMS.Data;
 using DWIMS.Service.Common;
+using DWIMS.Service.Process.Requests;
 using DWIMS.Service.Submission.Dtos;
 using DWIMS.Service.Submission.Requests;
 
@@ -75,5 +76,13 @@ public interface ISubmissionService
     
     Task<Result<PublicSubmissionStatusDto>> GetPublicSubmissionStatusAsync(
         string id,
+        CancellationToken cancellationToken = default);
+    
+    Task<Result<Guid>> CreateDocumentSubmissionAsync(
+        CreateDocumentSubmissionRequest request,
+        CancellationToken cancellationToken = default);
+    
+    Task<Result<DocumentDownloadDto>> DownloadDocumentAsync(
+        Guid submissionId,
         CancellationToken cancellationToken = default);
 }
