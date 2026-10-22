@@ -74,6 +74,6 @@ public interface ISubmissionService
         CancellationToken cancellationToken = default);
     
     Task<Result<PublicSubmissionStatusDto>> GetPublicSubmissionStatusAsync(
-        Guid id,
+        string id,
         CancellationToken cancellationToken = default);
 }

@@ -555,6 +555,11 @@ namespace DWIMS.Data.Migrations
                     b.Property<Guid>("SubmitterId")
                         .HasColumnType("char(36)");
 
+                    b.Property<string>("VerificationCode")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("varchar(8)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ProcessId");
@@ -562,6 +567,9 @@ namespace DWIMS.Data.Migrations
                     b.HasIndex("StepId");
 
                     b.HasIndex("SubmitterId");
+
+                    b.HasIndex("VerificationCode")
+                        .IsUnique();
 
                     b.ToTable("submissions");
                 });

@@ -5,6 +5,7 @@ namespace DWIMS.Data;
 public class Submission : ISoftDeletable
 {
     public Guid Id { get; set; }
+    public string VerificationCode { get; set; }
     public Guid ProcessId { get; set; }
     public Process Process { get; set; }
     public Guid StepId { get; set; }

@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Security.Cryptography;
+using System.Text.Json;
 using DWIMS.Data;
 using DWIMS.Service.Common;
 using DWIMS.Service.Logs;
@@ -25,9 +26,21 @@ public class SubmissionService(
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     
+    private const string CodeAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ23456789";
+    
     private record CheckBoxOptions(string On);
 
     private record FieldOptions(string Value, string Label);
+    
+    public static string GenerateVerificationCode(int length = 8)
+    {
+        return string.Create(length, 0,
+            (chars, _) =>
+            {
+                for (var i = 0; i < chars.Length; i++)
+                    chars[i] = CodeAlphabet[RandomNumberGenerator.GetInt32(CodeAlphabet.Length)];
+            });
+    }
     
     public async Task<Result<SubmissionsPageDto>> GetMySubmissionsAsync(Status? statusFilter, Guid? processId, int page, int pageSize, CancellationToken cancellationToken = default)
     {
@@ -249,9 +262,15 @@ public class SubmissionService(
         if (process is null)
             return Result<Guid>.Failure("PROCESS_NOT_FOUND", "Process not found.");
         
+        var verificationCode = GenerateVerificationCode();
+        
+        while (await context.Submissions.AnyAsync(s => s.VerificationCode == verificationCode, cancellationToken))
+            verificationCode = GenerateVerificationCode();
+        
         var submission = new Data.Submission
         {
             Id = Guid.NewGuid(),
+            VerificationCode = verificationCode,
             ProcessId = process.Id,
             SubmittedOn = DateTime.UtcNow,
             SubmitterId = currentUser.UserId.Value,
@@ -566,14 +585,24 @@ public class SubmissionService(
 
     }
 
-    public async Task<Result<PublicSubmissionStatusDto>> GetPublicSubmissionStatusAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<Result<PublicSubmissionStatusDto>> GetPublicSubmissionStatusAsync(string id, CancellationToken cancellationToken = default)
     {
+        var normalized = id.ToUpperInvariant();
+        if (normalized.StartsWith("KLD-"))
+            normalized = normalized[..^4];
+        var isGuid = Guid.TryParse(id, out var guid);
+        
         var submission = await context.Submissions
             .Include(s => s.Process).ThenInclude(p => p.Steps)
             .Include(s => s.Step)
             .Include(s => s.Responses).ThenInclude(r => r.Reviewer)
             .Include(s => s.Responses).ThenInclude(r => r.Assignee)
-            .FirstOrDefaultAsync(s => s.Id == id && !s.IsDeleted, cancellationToken);
+            .FirstOrDefaultAsync(s => 
+                !s.IsDeleted && 
+                (isGuid ? 
+                    s.Id == guid : 
+                    s.VerificationCode == normalized), 
+                cancellationToken);
 
         if (submission is null)
             return Result<PublicSubmissionStatusDto>.Failure("SUBMISSION_NOT_FOUND", "Submission not found.");

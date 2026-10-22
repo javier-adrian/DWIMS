@@ -81,9 +81,9 @@ public sealed class PdfGenerationService(
         
         var signatures = await BuildSignaturesAsync(submission.Responses, cancellationToken);
         
-        var verificationLink = $"{_appBaseUrl.TrimEnd('/')}/#/verify/{submission.Id}";
+        var verificationLink = $"{_appBaseUrl.TrimEnd('/')}/#/verify/KLD-{submission.VerificationCode}";
         
-        return RenderPdf(template, fields, signatures, verificationLink, submission.Id);
+        return RenderPdf(template, fields, signatures, verificationLink, submission.VerificationCode);
 
         // return await storageService.DownloadAsync(document.Link, cancellationToken);
     }
@@ -130,7 +130,7 @@ public sealed class PdfGenerationService(
         IReadOnlyList<(Field Field, string Value)> fields,
         Dictionary<string, SignatureStamp> signatures,
         string verificationLink,
-        Guid submissionId)
+        string verificationCode)
     {
         var output = new MemoryStream();
 
@@ -143,7 +143,7 @@ public sealed class PdfGenerationService(
 
         using var result = new PdfDocument(reader, writer);
         
-        StampVerification(result, verificationLink, submissionId);
+        StampVerification(result, verificationLink, verificationCode);
         
         var document = PdfAcroForm.GetAcroForm(result, createIfNotExist: false);
 
@@ -165,7 +165,7 @@ public sealed class PdfGenerationService(
         return output;
     }
     
-    private static void StampVerification(PdfDocument document, string link, Guid submissionId)
+    private static void StampVerification(PdfDocument document, string link, string verificationCode)
     {
         var page = document.GetFirstPage();
         var pageSize = page.GetPageSize();
@@ -173,7 +173,7 @@ public sealed class PdfGenerationService(
         const float qrSize = 64f;
         const float margin = 24f;
         const float gap = 4f;
-        const float idFontSize = 6f;
+        const float idFontSize = 7f;
         const float qrPad = 6f;
         const float textPad = 3f;
 
@@ -192,7 +192,7 @@ public sealed class PdfGenerationService(
 
         var canvas = new PdfCanvas(page);
         
-        var idText = submissionId.ToString().ToUpperInvariant();
+        var idText = $"KLD-{verificationCode}";
         var font = PdfFontFactory.CreateFont(StandardFonts.COURIER_BOLD);
         var idWidth = font.GetWidth(idText, idFontSize);
         var qrBoxWidth = qrSize + 2;

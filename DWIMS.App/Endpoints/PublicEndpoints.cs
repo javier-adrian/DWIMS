@@ -11,7 +11,7 @@ public static class PublicEndpoints
             .WithTags("Public")
             .AllowAnonymous();
         
-        group.MapGet("/submission/{id:guid}", GetPublicSubmissionStatus)
+        group.MapGet("/submission/{id}", GetPublicSubmissionStatus)
             .WithDisplayName("Get Public Submission Status")
             .WithSummary("Get the public status of a submission");
 
@@ -19,7 +19,7 @@ public static class PublicEndpoints
     }
     
     private static async Task<IResult> GetPublicSubmissionStatus(
-        Guid id,
+        string id,
         ISubmissionService submissionService,
         CancellationToken cancellationToken)
     {
