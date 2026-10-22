@@ -161,12 +161,12 @@ public static class UserEndpoints
         IDepartmentService departmentService,
         CancellationToken cancellationToken)
     {
-        if (request.GeneralRole == GeneralRole.Administrator)
-            return Results.UnprocessableEntity(new
-            {
-                Error = "ROLE_RETIRED",
-                ErrorDescription = "The administrator role is no longer used. Grant reviewer or super administrator instead."
-            });
+        // if (request.GeneralRole == GeneralRole.Administrator)
+        //     return Results.UnprocessableEntity(new
+        //     {
+        //         Error = "ROLE_RETIRED",
+        //         ErrorDescription = "The administrator role is no longer used. Grant reviewer or super administrator instead."
+        //     });
         
         if (request.GeneralRole == GeneralRole.SuperAdministrator)
             return Results.UnprocessableEntity(new

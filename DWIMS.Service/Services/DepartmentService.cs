@@ -121,14 +121,14 @@ public class DepartmentService(AppDbContext context, ICurrentUserService current
             if (!currentUserService.isSuperAdministrator)
                 return Result.Failure("FORBIDDEN", "Only a super administrator can assign global roles.");
             
-            if (request.GeneralRole != GeneralRole.Reviewer)
-                return Result.Failure("INVALID_ROLE", "Only a reviewer role can be assigned without a department.");
+            if (request.GeneralRole is not (GeneralRole.Reviewer or GeneralRole.Administrator))
+                return Result.Failure("INVALID_ROLE", "Only a reviewer or administrator role can be assigned without a department.");
             
             var existingGlobal = await context.Roles
                 .FirstOrDefaultAsync(x => 
                     x.UserId == user.Id &&
                     x.DepartmentId == null &&
-                    x.GeneralRole == GeneralRole.Reviewer, cancellationToken);
+                    x.GeneralRole == request.GeneralRole, cancellationToken);
 
             if (existingGlobal is not null)
             {
@@ -141,9 +141,9 @@ public class DepartmentService(AppDbContext context, ICurrentUserService current
                 {
                     Id = Guid.NewGuid(),
                     UserId = user.Id,
-                    GeneralRole = GeneralRole.Reviewer,
-                    Title = "Reviewer",
-                    Description = "Global reviewer assigned by a super administrator."
+                    GeneralRole = request.GeneralRole,
+                    Title = request.GeneralRole.ToString(),
+                    Description = $"Global {request.GeneralRole.ToString()} assigned by a super administrator."
                 });
             }
             

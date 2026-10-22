@@ -15,7 +15,7 @@ public class AnalyticsService(
 {
     public async Task<Result<AnalyticsSummaryDto>> GetSummaryAsync(AnalyticsFilterDto filter, CancellationToken cancellationToken = default)
     {
-        var resolvedFilter = ResolveFilter(filter);
+        AnalyticsFilterDto resolvedFilter = filter;
         
         var submissions = BuildSubmissionsBase(resolvedFilter);
         var responses = BuildResponsesBase(resolvedFilter);
@@ -32,27 +32,27 @@ public class AnalyticsService(
         });
     }
 
-    private AnalyticsFilterDto ResolveFilter(AnalyticsFilterDto filter)
-    {
-        if (currentUser.isSuperAdministrator)
-            return filter;
+    // private AnalyticsFilterDto ResolveFilter(AnalyticsFilterDto filter)
+    // {
+    //     if (currentUser.isSuperAdministrator)
+    //         return filter;
+    //
+    //     var adminDepartmentIds = currentUser.Roles
+    //         .Where(role => role.Value == GeneralRole.Administrator)
+    //         .Select(role => role.Key)
+    //         .ToHashSet();
 
-        var adminDepartmentIds = currentUser.Roles
-            .Where(role => role.Value == GeneralRole.Administrator)
-            .Select(role => role.Key)
-            .ToHashSet();
-
-        if (filter.DepartmentId.HasValue
-            && !adminDepartmentIds.Contains(filter.DepartmentId.Value))
-        {
-            return filter with
-            {
-                DepartmentId = adminDepartmentIds.FirstOrDefault()
-            };
-        }
-        
-        return filter;
-    }
+        // if (filter.DepartmentId.HasValue
+        //     && !adminDepartmentIds.Contains(filter.DepartmentId.Value))
+        // {
+        //     return filter with
+        //     {
+        //         DepartmentId = adminDepartmentIds.FirstOrDefault()
+        //     };
+        // }
+    //     
+    //     return filter;
+    // }
 
     private IQueryable<Data.Submission> BuildSubmissionsBase(AnalyticsFilterDto filter)
     {
@@ -60,18 +60,18 @@ public class AnalyticsService(
             .Include(s => s.Process)
             .AsQueryable();
         
-        if (filter.DepartmentId.HasValue)
-            query = query.Where(s => s.Step.DepartmentId == filter.DepartmentId.Value);
-        else if (!currentUser.isSuperAdministrator)
-        {
-            var departmentIds = currentUser.Roles
-                .Where(role => role.Value >= GeneralRole.Administrator)
-                .Select(role => role.Key)
-                .ToList();
-
-            query = query.Where(
-                submission => departmentIds.Contains(submission.Process.DepartmentId));
-        }
+        // if (filter.DepartmentId.HasValue)
+        //     query = query.Where(s => s.Step.DepartmentId == filter.DepartmentId.Value);
+        // else if (!currentUser.isSuperAdministrator)
+        // {
+        //     var departmentIds = currentUser.Roles
+        //         .Where(role => role.Value >= GeneralRole.Administrator)
+        //         .Select(role => role.Key)
+        //         .ToList();
+        //
+        //     query = query.Where(
+        //         submission => departmentIds.Contains(submission.Process.DepartmentId));
+        // }
 
         if (filter.ProcessId.HasValue)
             query = query.Where(submission => submission.ProcessId == filter.ProcessId.Value);
@@ -92,19 +92,19 @@ public class AnalyticsService(
                                response.Result.HasValue)
             .AsQueryable();
         
-        if (filter.DepartmentId.HasValue)
-            query = query.Where(response => 
-                response.Submission.Process.DepartmentId == filter.DepartmentId.Value);
-        else if (!currentUser.isSuperAdministrator)
-        {
-            var departmentIds = currentUser.Roles
-                .Where(role => role.Value >= GeneralRole.Administrator)
-                .Select(role => role.Key)
-                .ToList();
-            
-            query = query.Where(response => 
-                departmentIds.Contains(response.Submission.Process.DepartmentId));
-        }
+        // if (filter.DepartmentId.HasValue)
+        //     query = query.Where(response => 
+        //         response.Submission.Process.DepartmentId == filter.DepartmentId.Value);
+        // else if (!currentUser.isSuperAdministrator)
+        // {
+        //     var departmentIds = currentUser.Roles
+        //         .Where(role => role.Value >= GeneralRole.Administrator)
+        //         .Select(role => role.Key)
+        //         .ToList();
+        //     
+        //     query = query.Where(response => 
+        //         departmentIds.Contains(response.Submission.Process.DepartmentId));
+        // }
         
         if (filter.ProcessId.HasValue)
             query = query
@@ -211,49 +211,49 @@ public class AnalyticsService(
         };   
     }
 
-    private static async Task<LeadTimeDto> GetLeadTimeAsync(
-        IQueryable<Data.Submission> submissions,
-        CancellationToken cancellationToken = default)
-    {
-        var terminal = await submissions
-            .Where(submission =>
-                submission.CompletedOn.HasValue &&
-                (submission.Status == Status.Approve ||
-                 submission.Status == Status.Reject))
-            .Select(submission => new
-            {
-                Date = DateOnly.FromDateTime(submission.CompletedOn!.Value),
-                Minutes = EF.Functions.DateDiffMinute(
-                    submission.SubmittedOn,
-                    submission.CompletedOn!.Value)
-            })
-            .ToListAsync(cancellationToken);
-
-        if (terminal.Count == 0)
-            return new LeadTimeDto
-            {
-                AverageLeadTime = 0,
-                MinLeadTime = 0,
-                MaxLeadTime = 0,
-                ByDay = []
-            };
-        
-        var byDay = terminal
-            .GroupBy(x => x.Date)
-            .Select(y => new DailyAverageDto(
-                y.Key,
-                Math.Round(y.Average(x => x.Minutes), 2)))
-            .OrderBy(z => z.Date)
-            .ToList();
-        
-        return new LeadTimeDto
-        {
-            AverageLeadTime = Math.Round(terminal.Average(x => x.Minutes), 2),
-            MinLeadTime = terminal.Min(x => x.Minutes),
-            MaxLeadTime = terminal.Max(x => x.Minutes),
-            ByDay = byDay
-        };   
-    }
+    // private static async Task<LeadTimeDto> GetLeadTimeAsync(
+    //     IQueryable<Data.Submission> submissions,
+    //     CancellationToken cancellationToken = default)
+    // {
+    //     var terminal = await submissions
+    //         .Where(submission =>
+    //             submission.CompletedOn.HasValue &&
+    //             (submission.Status == Status.Approve ||
+    //              submission.Status == Status.Reject))
+    //         .Select(submission => new
+    //         {
+    //             Date = DateOnly.FromDateTime(submission.CompletedOn!.Value),
+    //             Minutes = EF.Functions.DateDiffMinute(
+    //                 submission.SubmittedOn,
+    //                 submission.CompletedOn!.Value)
+    //         })
+    //         .ToListAsync(cancellationToken);
+    //
+    //     if (terminal.Count == 0)
+    //         return new LeadTimeDto
+    //         {
+    //             AverageLeadTime = 0,
+    //             MinLeadTime = 0,
+    //             MaxLeadTime = 0,
+    //             ByDay = []
+    //         };
+    //     
+    //     var byDay = terminal
+    //         .GroupBy(x => x.Date)
+    //         .Select(y => new DailyAverageDto(
+    //             y.Key,
+    //             Math.Round(y.Average(x => x.Minutes), 2)))
+    //         .OrderBy(z => z.Date)
+    //         .ToList();
+    //     
+    //     return new LeadTimeDto
+    //     {
+    //         AverageLeadTime = Math.Round(terminal.Average(x => x.Minutes), 2),
+    //         MinLeadTime = terminal.Min(x => x.Minutes),
+    //         MaxLeadTime = terminal.Max(x => x.Minutes),
+    //         ByDay = byDay
+    //     };   
+    // }
 
     private static async Task<VolumeDto> GetVolumeAsync(
         IQueryable<Data.Submission> submissions,

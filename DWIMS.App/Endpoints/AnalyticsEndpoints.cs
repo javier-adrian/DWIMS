@@ -11,11 +11,11 @@ public static class AnalyticsEndpoints
     {
         var group = app.MapGroup("analytics")
             .WithTags("Analytics")
-            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
+            .RequireAuthorization(DwimsPolicies.Administrator);
 
         group.MapGet("/summary", GetSummary)
             .WithDisplayName("Get Summary")
-            .WithSummary("Get summary of department statistics");
+            .WithSummary("Get summary of DWIMS analytics");
 
         return app;
     }
