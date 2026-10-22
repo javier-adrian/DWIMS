@@ -794,23 +794,11 @@ public class SubmissionService(
 
         stream.Position = 0;
 
-        var path = $"{submissionId:N}/source/{Path.GetFileName(request.File.FileName)}";
         
         var verificationCode = GenerateVerificationCode();
         
         while (await context.Submissions.AnyAsync(s => s.VerificationCode == verificationCode, cancellationToken))
             verificationCode = GenerateVerificationCode();
-
-        var submission = new Data.Submission
-        {
-            Id = submissionId,
-            SubmitterId = currentUser.UserId.Value,
-            ProcessId = processId,
-            SubmittedOn = DateTime.UtcNow,
-            SourceLink = path,
-            SourceTitle = Path.GetFileName(request.File.FileName),
-            VerificationCode = verificationCode
-        };
         
         var firstStep = process.Steps.OrderBy(s => s.Order).First(s => !s.IsDeleted);
         
@@ -820,7 +808,19 @@ public class SubmissionService(
         if (!requestSteps.SetEquals(processSteps))
             return Result<Guid>.Failure("INVALID_ROUTE", "Route does not match process steps");
         
-        await storageService.UploadAsync(stream, path, "application/pdf", Prefix.Document, cancellationToken);
+        var path = $"{submissionId:N}/source/{Path.GetFileName(request.File.FileName)}";
+        var sourceLink = await storageService.UploadAsync(stream, path, "application/pdf", Prefix.Document, cancellationToken);
+
+        var submission = new Data.Submission
+        {
+            Id = submissionId,
+            SubmitterId = currentUser.UserId.Value,
+            ProcessId = processId,
+            SubmittedOn = DateTime.UtcNow,
+            SourceLink = path,
+            SourceTitle = sourceLink,
+            VerificationCode = verificationCode
+        };
         
         var start = await routingService.StartRoute(submission, process,  validated.Data.FirstOrDefault(r => r.StepId == firstStep.Id));
         
