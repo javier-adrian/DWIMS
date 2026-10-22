@@ -32,6 +32,9 @@ public sealed class EmailWorker(
                     case EmailNotificationKind.SubmissionCompleted:
                         await notifications.SendSubmissionCompletedAsync(job.SubmissionId, stoppingToken);
                         break;
+                    case EmailNotificationKind.StepActivated:
+                        await notifications.SendStepActivatedAsync(job.SubmissionId, job.UserId, stoppingToken);
+                        break;
                     default:
                         logger.LogWarning("No handler for email job {Kind}", job.Kind);
                         break;

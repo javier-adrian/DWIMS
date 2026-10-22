@@ -8,6 +8,7 @@ public interface INotificationService
 
     Task SendStepActivatedAsync(
         Guid submissionId,
+        Guid responderId,
         CancellationToken cancellationToken = default);
 
     Task SendSubmissionCompletedAsync(

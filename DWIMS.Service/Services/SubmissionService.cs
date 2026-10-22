@@ -486,6 +486,8 @@ public class SubmissionService(
             
             await context.SaveChangesAsync(cancellationToken);
             
+            emailQueue.Enqueue(new EmailJob(EmailNotificationKind.StepActivated, submission.Id, currentUser.UserId.Value));
+            
             return Result.Success();
         }
 
@@ -503,8 +505,11 @@ public class SubmissionService(
         
         if (result.outcome != RouteOutcome.Advanced && result.outcome != RouteOutcome.OnHold)
             submission.CompletedOn = DateTime.UtcNow;
-
+        
         await context.SaveChangesAsync(cancellationToken);
+        
+        if (result.outcome is RouteOutcome.Advanced or RouteOutcome.Rejected)
+            emailQueue.Enqueue(new EmailJob(EmailNotificationKind.StepActivated, submission.Id, currentUser.UserId.Value));
 
         if (result.outcome == RouteOutcome.Completed)
         {

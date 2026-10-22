@@ -48,11 +48,93 @@ public class NotificationService(
             cancellationToken: cancellationToken);
     }
 
-    public Task SendStepActivatedAsync(
+    public async Task SendStepActivatedAsync(
         Guid submissionId, 
+        Guid responderId,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        var submission = await context.Submissions
+            .Include(s => s.Process)
+            .Include(s => s.Submitter)
+            .Include(s => s.Responses).ThenInclude(r => r.Reviewer)
+            .Include(s => s.Responses).ThenInclude(r => r.Assignee)
+            .Include(s => s.Responses).ThenInclude(r => r.Step)
+            .FirstOrDefaultAsync(s => s.Id == submissionId, cancellationToken);
+        
+        if (submission is null) return;
+        
+        var responder = await context.Users
+            .FirstOrDefaultAsync(u => u.Id == responderId, cancellationToken);
+        
+        if (responder is null) return;
+
+        var responded = submission.Responses
+            .Where(r => r.CompletedOn != null)
+            .OrderByDescending(r => r.CompletedOn)
+            .First();
+        
+        var pending = submission.Responses
+            .Where(r => r.CompletedOn == null)
+            .OrderByDescending(r => r.ActivatedOn)
+            .FirstOrDefault();
+
+        var reviewerIds = submission.Responses
+            .Where(r => r.ReviewerId != null && r.ReviewerId != responderId)
+            .Select(r => r.ReviewerId.Value);
+        var assigneeIds = submission.Responses
+            .Where(r => r.AssigneeId != null && r.AssigneeId != responderId)
+            .Select(r => r.AssigneeId.Value);
+        
+        var recipients = await context.Users
+            .Where(u => reviewerIds.Concat(assigneeIds).Contains(u.Id) && !u.IsDeleted)
+            .ToListAsync(cancellationToken);
+        
+        if (submission.Submitter is { IsDeleted: false} && submission.SubmitterId != responderId)
+            recipients.Add(submission.Submitter);
+        
+        var outcomeText = submission.Status switch
+        {
+            Status.Review => "approved",
+            Status.Reject => "rejected",
+            Status.OnHold => "placed on hold",
+            _ => submission.Status.ToString().ToLowerInvariant()
+        };
+        
+        var subject = $"DWIMS: {submission.Process.Title} - {responded.Step.Title} {outcomeText}";
+        var nextLine = pending is not null
+            ? $"Next: step \"{pending.Step.Title}\" is now awaiting {pending.Assignee?.FirstName} {pending.Assignee?.LastName}"
+            : submission.Status == Status.OnHold
+            ? "The submission is on hold until the reviewer resumes it."
+            : "The submission was not routed further.";
+
+        foreach (var user in recipients.DistinctBy(u => u.Id))
+        {
+            var link = user.Id == submission.SubmitterId ?
+                $"{_appBaseUrl}/#/track/{submission.Id}" :
+                $"{_appBaseUrl}/#/review/{submission.Id}";
+            
+            var body = 
+                $"{responder.FirstName} {responder.LastName} {outcomeText} step \"{responded.Step.Title}\" of " +
+                $"\"{submission.Process.Title}\" on {responded.CompletedOn:yyyy-MM-dd HH:mm} UTC.\n" +
+                $"{nextLine}\n" +
+                (string.IsNullOrWhiteSpace(responded.Remarks) ? "" : $"Remarks: {responded.Remarks}\n") +
+                $"\nView the submission: \n{link}";
+
+            try
+            {
+                await emailSender.SendAsync(
+                    user.Email, 
+                    $"{user.FirstName} " +
+                    $"{user.LastName}", 
+                    subject, 
+                    body, 
+                    cancellationToken: cancellationToken);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                logger.LogError(e, "Failed to send step notification to {UserId} on submission {SubmissionId}", user.Id, submissionId);
+            }
+        }
     }
 
     public async Task SendSubmissionCompletedAsync(
