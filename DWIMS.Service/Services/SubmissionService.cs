@@ -817,8 +817,8 @@ public class SubmissionService(
             SubmitterId = currentUser.UserId.Value,
             ProcessId = processId,
             SubmittedOn = DateTime.UtcNow,
-            SourceLink = path,
-            SourceTitle = sourceLink,
+            SourceLink = sourceLink,
+            SourceTitle = Path.GetFileName(request.File.FileName),
             VerificationCode = verificationCode
         };
         
