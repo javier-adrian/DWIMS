@@ -182,7 +182,7 @@ public sealed class PdfGenerationService(
         // var y = pageSize.GetHeight() - margin - qrSize;
         
         // BOTTOM RIGHT, lifted a bit above the bottom margin
-        const float lift = 28f;
+        const float lift = 34f;
         var x = pageSize.GetWidth() - margin - qrSize;
 
         var captionBoxY = margin - textPad + lift;
