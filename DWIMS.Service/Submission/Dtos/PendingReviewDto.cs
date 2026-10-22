@@ -4,8 +4,8 @@ namespace DWIMS.Service.Submission.Dtos;
 
 public sealed record PendingReviewDto(
     Guid Id,
-    Guid ResponseId,
-    string ResponseName,
+    Guid ProcessId,
+    string ProcessName,
     string StepName,
     string SubmitterName,
     Status Status,
