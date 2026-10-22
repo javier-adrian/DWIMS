@@ -589,7 +589,7 @@ public class SubmissionService(
     {
         var normalized = id.ToUpperInvariant();
         if (normalized.StartsWith("KLD-"))
-            normalized = normalized[..^4];
+            normalized = normalized[4..];
         var isGuid = Guid.TryParse(id, out var guid);
         
         var submission = await context.Submissions
