@@ -40,11 +40,12 @@ public class SubmissionService(
         if (statusFilter.HasValue)
             query = query.Where(s => s.Status == statusFilter.Value);
         
-        var categories = await query
+        var categories = (await query
             .GroupBy(s => new { s.ProcessId, s.Process.Title })
             .Select(g => new SubmissionsCategoryDto(g.Key.ProcessId, g.Key.Title, g.Count()))
+            .ToListAsync())
             .OrderByDescending(c => c.Count)
-            .ToListAsync(cancellationToken);
+            .ToList();
         
         if (processId.HasValue)
             query = query.Where(s => s.ProcessId == processId.Value);
@@ -483,11 +484,12 @@ public class SubmissionService(
             .Where(s => s.Responses.Any(r => 
                 (r.ReviewerId == currentUser.UserId || r.AssigneeId == currentUser.UserId || currentUser.isSuperAdministrator) && r.CompletedOn != null));
         
-        var categories = await query
+        var categories = (await query
             .GroupBy(s => new { s.ProcessId, s.Process.Title })
             .Select(g => new SubmissionsCategoryDto(g.Key.ProcessId, g.Key.Title, g.Count()))
+            .ToListAsync())
             .OrderByDescending(c => c.Count)
-            .ToListAsync(cancellationToken);
+            .ToList();
         
         if (processId.HasValue)
             query = query.Where(s => s.ProcessId == processId.Value);
