@@ -590,7 +590,8 @@ public class SubmissionService(
                     reviewer = null;
                 }
 
-                return new PublicStepStatusDto(step.Order, step.Title, state, reviewer, completedAt);
+                // return new PublicStepStatusDto(step.Order, step.Title, state, reviewer, completedAt);
+                return new PublicStepStatusDto(step.Order, step.Title, state, completedAt);
             }).ToList();
         
         return Result<PublicSubmissionStatusDto>

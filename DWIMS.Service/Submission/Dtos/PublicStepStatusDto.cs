@@ -4,5 +4,5 @@ public sealed record PublicStepStatusDto(
     int Order,
     string Title,
     string State,
-    string? Reviewer,
+    // string? Reviewer,
     DateTime? CompletedAt);
