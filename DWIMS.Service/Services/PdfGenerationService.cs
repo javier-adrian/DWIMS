@@ -9,6 +9,7 @@ using iText.Kernel.Font;
 using iText.Kernel.Geom;
 using iText.Kernel.Pdf;
 using iText.Kernel.Pdf.Canvas;
+using iText.Kernel.Pdf.Xobject;
 using iText.Layout.Element;
 using iText.Layout.Properties;
 using iText.Kernel.Colors;
@@ -209,6 +210,11 @@ public sealed class PdfGenerationService(
         }
         
         FillFields(document, fields);
+
+        foreach (var (_, field) in document.GetAllFormFields())
+            if (field is PdfSignatureFormField)
+                ClearSignatureAppearance(field);
+
         FillSignatures(document, result, signatures);
         FillSubmitterSignatures(document, result, submitterSignatureFields, submitterStamp);
         
@@ -431,14 +437,6 @@ public sealed class PdfGenerationService(
             if (field is null) continue;
 
             var widget = field.GetWidgets().FirstOrDefault();
-            
-            var mk = widget.GetPdfObject().GetAsDictionary(PdfName.MK);
-            if (mk is not null)
-            {
-                mk.Remove(PdfName.BG);
-                mk.Remove(PdfName.BC);
-            }
-            
             if (widget is null) continue;
 
             var rectangle = widget.GetRectangle().ToRectangle();
@@ -465,19 +463,39 @@ public sealed class PdfGenerationService(
 
             var widget = acro.GetWidgets().FirstOrDefault();
             if (widget is null) continue;
-            
-            var mk = widget.GetPdfObject().GetAsDictionary(PdfName.MK);
-            if (mk is not null)
-            {
-                mk.Remove(PdfName.BG);
-                mk.Remove(PdfName.BC);
-            }
 
             var rectangle = widget.GetRectangle().ToRectangle();
             var page = document.GetPage(document.GetPageNumber(widget.GetPage()));
             
             StampSignature(page, rectangle, stamp);
             acro.SetReadOnly(true);
+        }
+    }
+
+    // the authoring tool paints the field border into the widget's normal appearance and
+    // FlattenFields bakes that back onto the page; the visible signature is page content
+    // (StampSignature), so the widget gets a blank appearance instead
+    private static void ClearSignatureAppearance(PdfFormField field)
+    {
+        foreach (var widget in field.GetWidgets())
+        {
+            var widgetObj = widget.GetPdfObject();
+
+            var mk = widgetObj.GetAsDictionary(PdfName.MK);
+            if (mk is not null)
+            {
+                mk.Remove(PdfName.BC);
+                mk.Remove(PdfName.BG);
+            }
+
+            widgetObj.Remove(PdfName.BS);
+
+            var blank = new PdfFormXObject(new Rectangle(
+                widget.GetRectangle().ToRectangle().GetWidth(),
+                widget.GetRectangle().ToRectangle().GetHeight()));
+            var ap = new PdfDictionary();
+            ap.Put(PdfName.N, blank.GetPdfObject());
+            widgetObj.Put(PdfName.AP, ap);
         }
     }
 
