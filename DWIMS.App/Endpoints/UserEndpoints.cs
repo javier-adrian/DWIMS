@@ -25,7 +25,11 @@ public static class UserEndpoints
         group.MapPut("/me", UpdateCurrentuser)
             .WithDisplayName("Update Current User")
             .WithSummary("Update the current user's profile");
-        
+
+        group.MapPut("/me/password", ChangePassword)
+            .WithDisplayName("Change Current User Password")
+            .WithSummary("Set or change the current user's password");
+
         group.MapDelete("/{userId:guid}", DeleteUser)
             .WithDisplayName("Delete User")
             .WithSummary("Delete a user by ID")
@@ -139,8 +143,20 @@ public static class UserEndpoints
         CancellationToken cancellationToken)
     {
         var result = await userService.UpdateProfileAsync(request, cancellationToken);
-        
+
         return result.ToOkResult();
+    }
+
+    private static async Task<IResult> ChangePassword(
+        ChangePasswordRequest request,
+        IUserService userService,
+        CancellationToken cancellationToken)
+    {
+        var result = await userService.ChangePasswordAsync(request, cancellationToken);
+
+        return result.IsSuccess
+            ? Results.Ok()
+            : Results.UnprocessableEntity(new { result.Error, result.ErrorDescription });
     }
 
     private static async Task<IResult> GetCurrentuser(IUserService userService, CancellationToken cancellationToken)

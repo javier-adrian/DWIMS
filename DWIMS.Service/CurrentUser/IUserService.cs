@@ -10,6 +10,8 @@ public interface IUserService
     
     Task<Result> UpdateProfileAsync(UpdateProfileRequest request, CancellationToken cancellationToken = default);
     
+    Task<Result> ChangePasswordAsync(ChangePasswordRequest request, CancellationToken cancellationToken = default);
+    
     Task<Result> RegisterSignatureAsync(
         RegisterSignatureRequest request, 
         CancellationToken cancellationToken = default);

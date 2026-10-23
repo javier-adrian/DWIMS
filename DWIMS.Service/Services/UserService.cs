@@ -68,6 +68,36 @@ public class UserService(
         return Result.Success();
     }
 
+    public async Task<Result> ChangePasswordAsync(ChangePasswordRequest request, CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is not { } userId)
+            return Result.Failure("UNAUTHORIZED", "User is not authenticated.");
+
+        if (request.NewPassword is null || request.NewPassword.Length < 8)
+            return Result.Failure("WEAK_PASSWORD", "Password must be at least 8 characters.");
+
+        var user = await context.Users
+            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+
+        if (user is null)
+            return Result.Failure("USER_NOT_FOUND", "User not found.");
+
+        // OAuth-only accounts have no password yet; they may set one without
+        // proving the current one. Password accounts must confirm theirs.
+        if (user.Password is not null)
+        {
+            if (string.IsNullOrWhiteSpace(request.CurrentPassword) ||
+                !BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.Password))
+                return Result.Failure("WRONG_PASSWORD", "Your current password is incorrect.");
+        }
+
+        user.Password = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
+    }
+
     public async Task<Result> RegisterSignatureAsync(RegisterSignatureRequest request, CancellationToken cancellationToken = default)
     {
         if (currentUser.UserId is not { } userId)
