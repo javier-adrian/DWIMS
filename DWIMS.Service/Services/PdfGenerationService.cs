@@ -347,7 +347,7 @@ public sealed class PdfGenerationService(
         PdfAcroForm form,
         IReadOnlyList<(Field Field, string Value)> fields)
     {
-        foreach (var (key, value) in fields)
+        foreach (var (key, value) in fields.Where(x => x.Field.Type != InputTypes.Signature))
         {
             var field = form.GetField(key.AcroFormKey);
 
