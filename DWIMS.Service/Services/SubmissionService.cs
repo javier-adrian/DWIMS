@@ -443,8 +443,8 @@ public class SubmissionService(
         if (request.Outcome is not Status.Approve and not Status.Reject and not Status.OnHold)
             return Result.Failure("INVALID_OUTCOME", "Outcome must be Approve or Reject.");
         
-        if (request.Outcome is Status.OnHold && string.IsNullOrWhiteSpace(request.Remarks))
-            return Result.Failure("REASON_REQUIRED", "Remarks must be provided when outcome is OnHold.");
+        if (request.Outcome is Status.OnHold or Status.Reject && string.IsNullOrWhiteSpace(request.Remarks))
+            return Result.Failure("REASON_REQUIRED", "Remarks must be provided when outcome is Reject or OnHold.");
 
         var submission = await context.Submissions
             .Include(s => s.Process)
