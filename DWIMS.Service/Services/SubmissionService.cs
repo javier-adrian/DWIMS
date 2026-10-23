@@ -739,7 +739,7 @@ public class SubmissionService(
             return Result<Guid>.Failure("INVALID_PROCESS_ID", "Process ID is invalid.");
         
         var process = await context.Processes
-            .Include(p => p.Steps)
+            .Include(p => p.Steps.OrderBy(s => s.Order))
             .FirstOrDefaultAsync(p => p.Id == processId, cancellationToken);
         
         if (process is null)

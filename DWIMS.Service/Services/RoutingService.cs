@@ -9,7 +9,7 @@ public class RoutingService(AppDbContext context) : IRoutingService
 {
     public async Task<Result<Guid>> StartRoute(Data.Submission submission, Data.Process process, SubmissionRoute route)
     {
-        var firstStep = process.Steps.FirstOrDefault(step => !step.IsDeleted) 
+        var firstStep = process.Steps.OrderBy(step => step.Order).FirstOrDefault(step => !step.IsDeleted) 
                     ?? throw new InvalidOperationException("Process has no steps");
         
         var reviewer = await context.Users
