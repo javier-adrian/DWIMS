@@ -46,6 +46,11 @@ public class AuthService(
         RegisterRequest request,
         CancellationToken cancellationToken = default)
     {
+        if (request.Password is null || request.Password.Length < 8)
+            return Result<string>.Failure(
+                "WEAK_PASSWORD",
+                "Password must be at least 8 characters.");
+
         if (await context.Users.AnyAsync(u => u.Email == request.Email, cancellationToken))
             return Result<string>.Failure(
                 "EMAIL_TAKEN",
@@ -242,6 +247,9 @@ public class AuthService(
         ResetPasswordRequest request,
         CancellationToken cancellationToken = default)
     {
+        if (request.NewPassword is null || request.NewPassword.Length < 8)
+            return Result.Failure("WEAK_PASSWORD", "Password must be at least 8 characters.");
+
         var resetToken = await context.PasswordResetTokens
             .Include(t => t.User)
             .FirstOrDefaultAsync(t => t.Token == request.Token && !t.Used && t.Expires > DateTime.UtcNow, cancellationToken);
