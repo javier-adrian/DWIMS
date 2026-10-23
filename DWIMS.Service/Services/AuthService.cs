@@ -313,6 +313,8 @@ public class AuthService(
                 return Result<AuthResponse>.Failure(
                     "USER_DELETED",
                     "The account has been deleted.");
+
+            await GrantDefaultSubmitterRoleAsync(user.Id, cancellationToken);
         }
         else
         {
@@ -382,9 +384,30 @@ public class AuthService(
         };
         
         context.Users.Add(user);
-        
+
         await context.SaveChangesAsync(cancellationToken);
 
+        await GrantDefaultSubmitterRoleAsync(user.Id, cancellationToken);
+
         return user;
+    }
+
+    // Google OAuth creates accounts without a role (and used to), so login
+    // grants the default Submitter role when a user has none at all.
+    private async Task GrantDefaultSubmitterRoleAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        if (await context.Roles.AnyAsync(role => role.UserId == userId, cancellationToken))
+            return;
+
+        context.Roles.Add(new Role
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            GeneralRole = GeneralRole.Submitter,
+            Title = "Submitter",
+            Description = "Default role: A user who can submit forms for review.",
+        });
+
+        await context.SaveChangesAsync(cancellationToken);
     }
 }
