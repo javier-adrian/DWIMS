@@ -431,6 +431,14 @@ public sealed class PdfGenerationService(
             if (field is null) continue;
 
             var widget = field.GetWidgets().FirstOrDefault();
+            
+            var mk = widget.GetPdfObject().GetAsDictionary(PdfName.MK);
+            if (mk is not null)
+            {
+                mk.Remove(PdfName.BG);
+                mk.Remove(PdfName.BC);
+            }
+            
             if (widget is null) continue;
 
             var rectangle = widget.GetRectangle().ToRectangle();
@@ -457,6 +465,13 @@ public sealed class PdfGenerationService(
 
             var widget = acro.GetWidgets().FirstOrDefault();
             if (widget is null) continue;
+            
+            var mk = widget.GetPdfObject().GetAsDictionary(PdfName.MK);
+            if (mk is not null)
+            {
+                mk.Remove(PdfName.BG);
+                mk.Remove(PdfName.BC);
+            }
 
             var rectangle = widget.GetRectangle().ToRectangle();
             var page = document.GetPage(document.GetPageNumber(widget.GetPage()));
