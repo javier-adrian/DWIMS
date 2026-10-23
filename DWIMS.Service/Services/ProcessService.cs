@@ -383,25 +383,47 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
         {
             if (acroField.IsSignature)
             {
-                if (int.TryParse(acroField.Name.Split(':')[0], out var stepNum) && stepNum > 0)
+                if (int.TryParse(acroField.Name.Split(':')[0], out var stepNum))
                 {
-                    var stepName = acroField.Name.Contains(':')
-                        ? acroField.Name[(acroField.Name.IndexOf(':') + 1)..].Trim()
-                        : $"Step {stepNum}";
-
-                    var step = new Step
+                    if (stepNum > 0)
                     {
-                        Id = Guid.NewGuid(),
-                        ProcessId = processId,
-                        Order = stepNum,
-                        Title = stepName,
-                        Role = GeneralRole.Reviewer,
-                        DepartmentId = process.DepartmentId,
-                    };
+                        var stepName = acroField.Name.Contains(':')
+                            ? acroField.Name[(acroField.Name.IndexOf(':') + 1)..].Trim()
+                            : $"Step {stepNum}";
 
-                    context.Steps.Add(step);
-                    newSteps.Add(step);
+                        var step = new Step
+                        {
+                            Id = Guid.NewGuid(),
+                            ProcessId = processId,
+                            Order = stepNum,
+                            Title = stepName,
+                            Role = GeneralRole.Reviewer,
+                            DepartmentId = process.DepartmentId,
+                        };
+
+                        context.Steps.Add(step);
+                        newSteps.Add(step);
+                    }
+                    else
+                    {
+                        var userSignatureField = new Field
+                        {
+                            Id = Guid.NewGuid(),
+                            ProcessId = processId,
+                            Title = acroField.Title,
+                            AcroFormKey = acroField.Name,
+                            Type = InputTypes.Signature,
+                            Options = null,
+                            Required = false,
+                            DocumentId = document.Id,
+                            Order = fallback++
+                        };
+                    
+                        context.Fields.Add(userSignatureField);
+                        newFields.Add(userSignatureField);
+                    }
                 }
+                
                 continue;
             }
             

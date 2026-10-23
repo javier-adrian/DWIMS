@@ -328,6 +328,10 @@ public class SubmissionService(
         if (process.Kind == ProcessKind.FreeDocument)
             return Result<Guid>.Failure("WRONG_PROCESS_KIND", "Memorandums and letters must be submitted via the document submission endpoint.");
         
+        if (process.Fields.Any(f => !f.IsDeleted && f.Type == InputTypes.Signature) && 
+            !await context.Signatures.AnyAsync(s => s.UserId == currentUser.UserId, cancellationToken))
+            return Result<Guid>.Failure("SIGNATURE_REQUIRED", "User must register a signature in the settings before submitting.");
+        
         var verificationCode = GenerateVerificationCode();
         
         while (await context.Submissions.AnyAsync(s => s.VerificationCode == verificationCode, cancellationToken))
@@ -393,6 +397,9 @@ public class SubmissionService(
             
             if (field is null)
                 return Result<Guid>.Failure("INVALID_FIELD", $"Field {fieldInput.FieldId} does not belong to this process.");
+            
+            if (field.Type == InputTypes.Signature)
+                continue;
             
             var value = fieldInput.FieldValue ?? "";
 

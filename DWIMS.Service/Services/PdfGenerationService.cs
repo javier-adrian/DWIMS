@@ -45,6 +45,7 @@ public sealed class PdfGenerationService(
                 .ThenInclude(r => r.Step)
             .Include(s => s.Responses)
                 .ThenInclude(r => r.Reviewer)
+            .Include(s => s.Submitter)
             .FirstOrDefaultAsync(s => s.Id == submissionId, cancellationToken)
             ?? throw new KeyNotFoundException("Submission not found.");
         
@@ -71,6 +72,41 @@ public sealed class PdfGenerationService(
 
         var signatures = await BuildSignaturesAsync(submission.Responses, cancellationToken);
         
+        SignatureStamp? submitterStamp = null;
+        IEnumerable<Field> submitterSignatureFields = new List<Field>();
+
+        if (submission.Process.Kind != ProcessKind.FreeDocument &&
+            submission.Process.Fields.Any(f => !f.IsDeleted && f.Type == InputTypes.Signature))
+        {
+            var signature = await context.Signatures
+                .IgnoreQueryFilters()
+                .Where(s => s.UserId == submission.SubmitterId)
+                .OrderByDescending(s => s.Created)
+                .FirstOrDefaultAsync(cancellationToken);
+            
+            if (signature is not null)
+                submitterStamp = new SignatureStamp(
+                    signature.EncryptedBlob,
+                    signature.MimeType,
+                    $"{submission.Submitter.FirstName} {submission.Submitter.LastName}".Trim(),
+                    submission.SubmittedOn);
+            else 
+                await logService.LogAsync(
+                    "Submitter Signature Missing", 
+                    "Submission", 
+                    submission.Id, 
+                    "Process has a 0:-prefixed signature field but the submitter has no registered signature.",
+                    cancellationToken);
+            
+            submitterSignatureFields = submission.Process.Fields
+                .Where(f => 
+                    f is
+                    {
+                        IsDeleted: false,
+                        Type: InputTypes.Signature
+                    });
+        }
+        
         var verificationLink = $"{_appBaseUrl.TrimEnd('/')}/#/verify/KLD-{submission.VerificationCode}";
 
         var fields = submission.Inputs
@@ -94,7 +130,7 @@ public sealed class PdfGenerationService(
         
         var template = await storageService.DownloadAsync(document.Link, cancellationToken);
 
-        return RenderPdf(template, fields, signatures, verificationLink, submission.VerificationCode);
+        return RenderPdf(template, fields, signatures, submitterStamp, submitterSignatureFields, verificationLink, submission.VerificationCode);
 
         // return await storageService.DownloadAsync(document.Link, cancellationToken);
     }
@@ -145,6 +181,8 @@ public sealed class PdfGenerationService(
         Stream template,
         IReadOnlyList<(Field Field, string Value)> fields,
         IReadOnlyList<SignaturePlacement> signatures,
+        SignatureStamp? submitterStamp,
+        IEnumerable<Field> submitterSignatureFields,
         string verificationLink,
         string verificationCode)
     {
@@ -172,6 +210,7 @@ public sealed class PdfGenerationService(
         
         FillFields(document, fields);
         FillSignatures(document, result, signatures);
+        FillSubmitterSignatures(document, result, submitterSignatureFields, submitterStamp);
         
         document.FlattenFields();
         
@@ -399,6 +438,31 @@ public sealed class PdfGenerationService(
 
             StampSignature(page, rectangle, placement.Stamp);
             field.SetReadOnly(true);
+        }
+    }
+
+    private static void FillSubmitterSignatures(
+        PdfAcroForm form,
+        PdfDocument document,
+        IEnumerable<Field> fields,
+        SignatureStamp? stamp)
+    {
+        if (stamp is null)
+            return;
+        
+        foreach (var field in fields)
+        {
+            var acro = form.GetField(field.AcroFormKey);
+            if (acro is null) continue;
+
+            var widget = acro.GetWidgets().FirstOrDefault();
+            if (widget is null) continue;
+
+            var rectangle = widget.GetRectangle().ToRectangle();
+            var page = document.GetPage(document.GetPageNumber(widget.GetPage()));
+            
+            StampSignature(page, rectangle, stamp);
+            acro.SetReadOnly(true);
         }
     }
 
