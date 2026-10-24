@@ -20,6 +20,42 @@ public class NotificationService(
     : INotificationService
 {
     private readonly string _appBaseUrl = configuration["App:BaseUrl"] ?? "http://localhost:5244";
+
+    private async Task AddNotificationAsync(
+        IEnumerable<Data.User> recipients,
+        NotificationKind kind,
+        Data.Submission submission,
+        string title,
+        string message,
+        CancellationToken cancellationToken)
+    {
+        var rows = recipients
+            .DistinctBy(u => u.Id)
+            .Select(u => new Notification
+            {
+                Id = Guid.NewGuid(),
+                UserId = u.Id,
+                Kind = kind,
+                SubmissionId = submission.Id,
+                Title = title,
+                Message = message,
+                Link = u.Id == submission.SubmitterId ?
+                $"#/track/{submission.Id}" :
+                $"#/review/{submission.Id}",
+                CreatedOn = DateTime.UtcNow,
+            }).ToList();
+
+        try
+        {
+            await context.Notifications.AddRangeAsync(rows, cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            logger.LogError(e, "Failed to persist notifications for {submissionId}", submission.Id);
+        }
+
+    }
     
     public async Task SendSubmissionReceivedAsync(
         Guid submissionId, 
@@ -39,6 +75,14 @@ public class NotificationService(
             Recipient = submission.Submitter.FirstName + " " + submission.Submitter.LastName,
             Timestamp = submission.SubmittedOn
         };
+
+        await AddNotificationAsync(
+            [submission.Submitter],
+            NotificationKind.Received,
+            submission,
+            $"{submission.Process.Title} received",
+            $"Your submission was received and is now in review.",
+            cancellationToken);
 
         await emailSender.SendAsync(
             submission.Submitter.Email,
@@ -106,6 +150,14 @@ public class NotificationService(
             : submission.Status == Status.OnHold
             ? "The submission is on hold until the reviewer resumes it."
             : "The submission was not routed further.";
+        
+        await AddNotificationAsync(
+            recipients,
+            NotificationKind.StepActivated,
+            submission,
+            $"{submission.Process.Title} - {responded.Step.Title} {outcomeText}",
+            nextLine,
+            cancellationToken);
 
         foreach (var user in recipients.DistinctBy(u => u.Id))
         {
@@ -175,6 +227,14 @@ public class NotificationService(
         
         if (submission.Submitter is not null)
             recipients.Add(submission.Submitter);
+
+        await AddNotificationAsync(
+            recipients,
+            NotificationKind.Completed,
+            submission,
+            $"{submission.Process.Title} approved",
+            $"Approved on {submission.CompletedOn:yyyy-MM-dd HH:mm} UTC. The signed result document is available.",
+            cancellationToken);
 
         foreach (var user in recipients.DistinctBy(u => u.Id))
         {

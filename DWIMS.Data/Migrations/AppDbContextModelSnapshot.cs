@@ -274,6 +274,46 @@ namespace DWIMS.Data.Migrations
                     b.ToTable("logs");
                 });
 
+            modelBuilder.Entity("DWIMS.Data.Notification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Link")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("ReadOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid?>("SubmissionId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "CreatedOn");
+
+                    b.ToTable("notifications");
+                });
+
             modelBuilder.Entity("DWIMS.Data.PasswordResetToken", b =>
                 {
                     b.Property<Guid>("Id")

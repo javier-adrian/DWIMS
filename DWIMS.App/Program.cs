@@ -115,6 +115,7 @@ namespace DWIMS
             builder.Services.AddScoped<ILogService, LogService>();
             builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
             builder.Services.AddScoped<IUserAdministrationService, UserAdministrationService>();
+            builder.Services.AddScoped<INotificationFeedService, NotificationFeedService>();
             builder.Services.AddSingleton<EmailQueue>();
             builder.Services.AddHostedService<EmailWorker>();
             
@@ -209,6 +210,7 @@ namespace DWIMS
             app.MapLogEndpoints();
             app.MapAnalyticsEndpoints();
             app.MapPublicEndpoints();
+            app.MapNotificationEndpoints();
 
             if (app.Environment.IsProduction())
             {
