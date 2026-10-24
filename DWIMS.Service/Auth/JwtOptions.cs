@@ -10,6 +10,6 @@ public sealed class JwtOptions
     
     public required string Audience { get; init; }
 
-    public int AccessTokenExpiry { get; init; } = 15;
+    public int AccessTokenExpiry { get; init; } = 5;
     public int RefreshTokenExpiry { get; init; } = 7 * 24 * 60 * 60;
 }
