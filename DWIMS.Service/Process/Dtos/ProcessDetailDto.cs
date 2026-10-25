@@ -8,4 +8,5 @@ public sealed record ProcessDetailDto(
     string? Description,
     ProcessKind Kind,
     IReadOnlyList<StepDto> Steps,
-    IReadOnlyList<FieldDto> Fields);
+    IReadOnlyList<FieldDto> Fields,
+    string? ControlNumber);

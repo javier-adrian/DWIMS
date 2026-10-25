@@ -9,4 +9,5 @@ public sealed record ProcessSummaryDto(
     int StepsCount,
     bool hasTemplate,
     ProcessKind Kind,
-    bool IsActive);
+    bool IsActive,
+    string? ControlNumber);

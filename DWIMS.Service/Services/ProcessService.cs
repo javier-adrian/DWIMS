@@ -47,7 +47,8 @@ public class ProcessService(
                 p.Steps.Count,
                 context.Documents.Any(d => d.ProcessId == p.Id && !d.IsDeleted),
                 p.Kind,
-                p.IsActive
+                p.IsActive,
+                p.ControlNumber
             ))
             .ToListAsync(cancellationToken);
 
@@ -65,7 +66,8 @@ public class ProcessService(
                 p.Steps.Count,
                 context.Documents.Any(d => d.ProcessId == p.Id && !d.IsDeleted),
                 p.Kind,
-                p.IsActive
+                p.IsActive,
+                p.ControlNumber
             ))
             .ToListAsync(cancellationToken);
 
@@ -98,7 +100,8 @@ public class ProcessService(
                     f.Type,
                     f.Required,
                     f.Options,
-                    f.Order)).ToList()
+                    f.Order)).ToList(),
+                p.ControlNumber
             ))
             .FirstOrDefaultAsync(cancellationToken);
 
