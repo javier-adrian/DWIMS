@@ -101,7 +101,8 @@ public class ProcessService(
                     f.Required,
                     f.Options,
                     f.Order)).ToList(),
-                p.ControlNumber
+                p.ControlNumber,
+                p.Documents.Any(d => !d.IsDeleted && d.Link != "")
             ))
             .FirstOrDefaultAsync(cancellationToken);
 

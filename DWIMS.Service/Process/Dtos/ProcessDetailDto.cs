@@ -9,4 +9,5 @@ public sealed record ProcessDetailDto(
     ProcessKind Kind,
     IReadOnlyList<StepDto> Steps,
     IReadOnlyList<FieldDto> Fields,
-    string? ControlNumber);
+    string? ControlNumber,
+    bool HasDocument);
