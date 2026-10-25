@@ -7,7 +7,7 @@ public class SubmissionConfiguration : IEntityTypeConfiguration<Data.Submission>
 {
     public void Configure(EntityTypeBuilder<Submission> builder)
     {
-        builder.Property(s => s.VerificationCode).HasMaxLength(8);
+        builder.Property(s => s.VerificationCode).HasMaxLength(128);
         builder.HasIndex(s => s.VerificationCode).IsUnique();
     }
 }

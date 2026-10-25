@@ -17,6 +17,25 @@ public class ProcessService(
     IAcroFormService acroFormService,
     ILogService logService) : IProcessService
 {
+    private static readonly System.Text.RegularExpressions.Regex ControlNumberPattern = 
+        new("^[A-Z0-9]+(-[A-Z0-9]+)+$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    private static Result<string?> NormalizeControlNumber(string? raw)
+    {
+        var value = raw?.Trim().ToUpperInvariant();
+        
+        if (string.IsNullOrEmpty(value))
+            return Result<string?>.Success(null);
+        
+        if (value.Length > 64)
+            return Result<string?>.Failure("INVALID_CONTROL_NUMBER", "Control number must be 64 characters or fewer.");
+        
+        if (!ControlNumberPattern.IsMatch(value))
+            return Result<string?>.Failure("INVALID_CONTROL_NUMBER", "Control number must be letters/digits in hyphen-separated segments. e.g. KLD-HRD-FR-0016-00.");
+
+        return Result<string?>.Success(value);
+    }
+    
     public async Task<Result<IReadOnlyList<ProcessSummaryDto>>> GetProcessesAsync(CancellationToken cancellationToken = default)
     {
         var processes = await context.Processes
@@ -92,12 +111,18 @@ public class ProcessService(
     public async Task<Result<Guid>> CreateProcessAsync(CreateProcessRequest request, CancellationToken cancellationToken = default)
     {
         if (!Enum.IsDefined(request.Kind)) return Result<Guid>.Failure("INVALID_PROCESS_KIND", "Invalid process kind.");
+        
+        var control = NormalizeControlNumber(request.ControlNumber);
+        
+        if (!control.IsSuccess) 
+            return Result<Guid>.Failure(control.Error!, control.ErrorDescription!);
 
         var process = new Data.Process
         {
             Id = Guid.NewGuid(),
             Title = request.Title,
-            Kind = request.Kind
+            Kind = request.Kind,
+            ControlNumber = control.Data,
         };
         
         context.Processes.Add(process);
@@ -105,6 +130,28 @@ public class ProcessService(
         await context.SaveChangesAsync(cancellationToken);
         
         return Result<Guid>.Success(process.Id);
+    }
+
+    public async Task<Result> SetControlNumberAsync(
+        Guid processId,
+        SetControlNumberRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var process = await context.Processes.FirstOrDefaultAsync(p => p.Id == processId, cancellationToken);
+        
+        if (process is null)
+            return Result.Failure("PROCESS_NOT_FOUND", "Process not found.");
+        
+        var control = NormalizeControlNumber(request.ControlNumber);
+        
+        if (!control.IsSuccess)
+            return Result.Failure(control.Error!, control.ErrorDescription!);
+
+        process.ControlNumber = control.Data;
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
     }
 
     public async Task<Result> UpdateProcessAsync(Guid id, UpdateProcessRequest request, CancellationToken cancellationToken = default)

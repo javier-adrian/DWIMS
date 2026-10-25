@@ -37,6 +37,11 @@ public interface IProcessService
         Guid id,
         CancellationToken cancellationToken = default);
 
+    public Task<Result> SetControlNumberAsync(
+        Guid processId,
+        SetControlNumberRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<Result<Guid>> AddStepAsync(
         Guid processId,
         AddStepRequest request,

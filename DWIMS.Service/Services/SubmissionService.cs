@@ -46,6 +46,35 @@ public class SubmissionService(
                     chars[i] = CodeAlphabet[RandomNumberGenerator.GetInt32(CodeAlphabet.Length)];
             });
     }
+    
+    private async Task<string> GenerateVerificationCodeAsync(Data.Process process, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(process.ControlNumber))
+        {
+            var legacy = GenerateVerificationCode();
+            while (await context.Submissions.AnyAsync(s => s.VerificationCode == legacy, cancellationToken))
+                legacy = GenerateVerificationCode();
+
+            return legacy;
+        }
+        
+        var baseNumber = process.ControlNumber.Trim();
+        if (baseNumber.StartsWith("KLD-", StringComparison.OrdinalIgnoreCase))
+            baseNumber = baseNumber[4..];
+
+        var serial = process.LastIssuedSerial + 1;
+        var code = $"{baseNumber}-{serial:D4}";
+
+        while (await context.Submissions.AnyAsync(s => s.VerificationCode == code, cancellationToken))
+        {
+            serial++;
+            code = $"{baseNumber}-{serial:D4}";
+        }
+        
+        process.LastIssuedSerial = serial;
+
+        return code;
+    }
 
     private async Task<Result<IEnumerable<SubmissionRoute>>> ValidateRouteAsync(IReadOnlyList<RouteEntryDto> route, IReadOnlyList<SlotEntryDto> slots, Guid submissionId, int pages, CancellationToken cancellationToken)
     {
@@ -400,10 +429,7 @@ public class SubmissionService(
             !await context.Signatures.AnyAsync(s => s.UserId == currentUser.UserId, cancellationToken))
             return Result<Guid>.Failure("SIGNATURE_REQUIRED", "User must register a signature in the settings before submitting.");
         
-        var verificationCode = GenerateVerificationCode();
-        
-        while (await context.Submissions.AnyAsync(s => s.VerificationCode == verificationCode, cancellationToken))
-            verificationCode = GenerateVerificationCode();
+        var verificationCode = await GenerateVerificationCodeAsync(process, cancellationToken);
         
         var submission = new Data.Submission
         {
@@ -878,10 +904,7 @@ public class SubmissionService(
         stream.Position = 0;
 
         
-        var verificationCode = GenerateVerificationCode();
-        
-        while (await context.Submissions.AnyAsync(s => s.VerificationCode == verificationCode, cancellationToken))
-            verificationCode = GenerateVerificationCode();
+        var verificationCode = await GenerateVerificationCodeAsync(process, cancellationToken);
         
         var firstStep = process.Steps.OrderBy(s => s.Order).First(s => !s.IsDeleted);
         

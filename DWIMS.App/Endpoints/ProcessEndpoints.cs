@@ -30,6 +30,10 @@ public static class ProcessEndpoints
             .WithDisplayName("Update Process")
             .WithSummary("Update an existing process")
             .RequireAuthorization(DwimsPolicies.SuperAdministrator);
+        group.MapPut("/{processId:guid}/control-number", SetControlNumber)
+            .WithDisplayName("Set Control Number")
+            .WithSummary("Set or clear the control number of a process")
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
         group.MapDelete("/{processId:guid}", DeleteProcess)
             .WithDisplayName("Delete Process")
             .WithSummary("Delete a process")
@@ -79,6 +83,17 @@ public static class ProcessEndpoints
         //     .RequireAuthorization(DwimsPolicies.Administrator);
         
         return app;
+    }
+
+    private static async Task<IResult> SetControlNumber(
+        Guid processId, 
+        SetControlNumberRequest request, 
+        IProcessService processService, 
+        CancellationToken cancellationToken)
+    {
+        var result = await processService.SetControlNumberAsync(processId, request, cancellationToken);
+        
+        return result.ToOkResult();
     }
 
     private static async Task<IResult> RestoreProcess(

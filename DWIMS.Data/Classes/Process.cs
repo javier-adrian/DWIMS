@@ -6,6 +6,8 @@ public class Process : ISoftDeletable
 {
     public Guid Id { get; set; }
     public string Title { get; set; }
+    public string? ControlNumber { get; set; }
+    public int LastIssuedSerial { get; set; }
     public ProcessKind Kind { get; set; }
     public ICollection<Step> Steps { get; set; }
     public ICollection<Field> Fields { get; set; }

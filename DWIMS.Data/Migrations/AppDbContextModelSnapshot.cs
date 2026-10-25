@@ -328,6 +328,9 @@ namespace DWIMS.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
+                    b.Property<string>("ControlNumber")
+                        .HasColumnType("longtext");
+
                     b.Property<DateTime?>("DeletedOn")
                         .HasColumnType("datetime(6)");
 
@@ -338,6 +341,9 @@ namespace DWIMS.Data.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<int>("LastIssuedSerial")
                         .HasColumnType("int");
 
                     b.Property<string>("Title")
@@ -573,8 +579,8 @@ namespace DWIMS.Data.Migrations
 
                     b.Property<string>("VerificationCode")
                         .IsRequired()
-                        .HasMaxLength(8)
-                        .HasColumnType("varchar(8)");
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
 
                     b.HasKey("Id");
 
