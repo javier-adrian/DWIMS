@@ -40,7 +40,6 @@ public class AppDbContext : DbContext
     public DbSet<User> Users { get; set; }
     public DbSet<Signature> Signatures { get; set; }
     public DbSet<Role> Roles { get; set; }
-    public DbSet<Department> Departments { get; set; }
     public DbSet<Submission> Submissions { get; set; }
     public DbSet<Attachment> Attachments { get; set; }
     public DbSet<Process> Processes { get; set; }

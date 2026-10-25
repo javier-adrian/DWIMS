@@ -19,7 +19,6 @@ public class User : ISoftDeletable
     public string? Password { get; set; }
 
     public ICollection<Role> Roles { get; set; } = [];
-    public ICollection<Department> Departments { get; set; }
     public ICollection<ExternalLogin> Logins { get; set; }
     
     public Signature? Signature { get; set; }

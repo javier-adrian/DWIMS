@@ -357,7 +357,6 @@ public class AuthService(
         )
     {
         var roles = await context.Roles
-            .Include(role => role.Department)
             .Where(role => role.UserId == user.Id)
             .ToListAsync(cancellationToken);
 

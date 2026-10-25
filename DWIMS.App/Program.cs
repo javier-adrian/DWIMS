@@ -10,7 +10,6 @@ using DWIMS.Service.Analytics;
 using DWIMS.Service.Auth;
 using DWIMS.Service.Common;
 using DWIMS.Service.CurrentUser;
-using DWIMS.Service.Department;
 using DWIMS.Service.Process;
 using DWIMS.Service.Services;
 using DWIMS.Service.Storage;
@@ -104,7 +103,6 @@ namespace DWIMS
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
             builder.Services.AddScoped<IAuthorizationHandler, RoleHandler>();
-            builder.Services.AddScoped<IDepartmentService, DepartmentService>();
             builder.Services.AddScoped<IProcessService, ProcessService>();
             builder.Services.AddScoped<IAcroFormService, AcroFormService>();
             builder.Services.AddScoped<ISubmissionService, SubmissionService>();
@@ -204,7 +202,6 @@ namespace DWIMS
 
             app.MapAuthEndpoints();
             app.MapUserEndpoints();
-            app.MapDepartmentEndpoints();
             app.MapProcessEndpoints();
             app.MapSubmissionEndpoints();
             app.MapLogEndpoints();

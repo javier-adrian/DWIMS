@@ -4,8 +4,8 @@ using DWIMS.Service.Admin.Requests;
 using DWIMS.Service.Auth;
 using DWIMS.Service.CurrentUser;
 using DWIMS.Service.CurrentUser.Requests;
-using DWIMS.Service.Department;
-using DWIMS.Service.Department.Requests;
+using DWIMS.Service.Roles;
+using DWIMS.Service.Roles.Requests;
 using DWIMS.Service.Services;
 
 namespace DWIMS.Controllers;
@@ -174,7 +174,7 @@ public static class UserEndpoints
 
     private static async Task<IResult> AssignRole(
         AssignRoleRequest request,
-        IDepartmentService departmentService,
+        IRoleService roleService,
         CancellationToken cancellationToken)
     {
         // if (request.GeneralRole == GeneralRole.Administrator)
@@ -191,7 +191,7 @@ public static class UserEndpoints
                 ErrorDescription = "Use /roles/super-administrator to assign Super Administrator."
             });
 
-        var result = await departmentService.AssignRoleAsync(request.DepartmentId, request, cancellationToken);
+        var result = await roleService.AssignRoleAsync(request, cancellationToken);
 
         return result.IsSuccess
             ? Results.Ok()
@@ -204,11 +204,11 @@ public static class UserEndpoints
 
     private static async Task<IResult> AssignSuperAdmin(
         AssignRoleRequest request,
-        IDepartmentService departmentService,
+        IRoleService roleService,
         CancellationToken cancellationToken)
     {
         request.GeneralRole = GeneralRole.SuperAdministrator;
-        var result = await departmentService.AssignRoleAsync(Guid.Empty, request, cancellationToken);
+        var result = await roleService.AssignRoleAsync(request, cancellationToken);
 
         return result.IsSuccess
             ? Results.Ok()
@@ -221,10 +221,10 @@ public static class UserEndpoints
 
     private static async Task<IResult> RemoveRole(
         Guid id,
-        IDepartmentService departmentService,
+        IRoleService roleService,
         CancellationToken cancellationToken)
     {
-        var result = await departmentService.RemoveRoleAsync(id, cancellationToken);
+        var result = await roleService.RemoveRoleAsync(id, cancellationToken);
 
         return result.IsSuccess
             ? Results.Ok()

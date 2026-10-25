@@ -56,27 +56,6 @@ namespace DWIMS.Data.Migrations
                     b.ToTable("attachments");
                 });
 
-            modelBuilder.Entity("DWIMS.Data.Department", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime?>("DeletedOn")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("departments");
-                });
-
             modelBuilder.Entity("DWIMS.Data.Document", b =>
                 {
                     b.Property<Guid>("Id")
@@ -352,9 +331,6 @@ namespace DWIMS.Data.Migrations
                     b.Property<DateTime?>("DeletedOn")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<Guid>("DepartmentId")
-                        .HasColumnType("char(36)");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("tinyint(1)");
 
@@ -366,8 +342,6 @@ namespace DWIMS.Data.Migrations
                         .HasColumnType("longtext");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("DepartmentId");
 
                     b.ToTable("processes");
                 });
@@ -460,9 +434,6 @@ namespace DWIMS.Data.Migrations
                     b.Property<DateTime?>("DeletedOn")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<Guid?>("DepartmentId")
-                        .HasColumnType("char(36)");
-
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -481,8 +452,6 @@ namespace DWIMS.Data.Migrations
                         .HasColumnType("char(36)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("DepartmentId");
 
                     b.HasIndex("UserId");
 
@@ -529,9 +498,6 @@ namespace DWIMS.Data.Migrations
                     b.Property<DateTime?>("DeletedOn")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<Guid>("DepartmentId")
-                        .HasColumnType("char(36)");
-
                     b.Property<Guid?>("FieldId")
                         .HasColumnType("char(36)");
 
@@ -552,8 +518,6 @@ namespace DWIMS.Data.Migrations
                         .HasColumnType("longtext");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("DepartmentId");
 
                     b.HasIndex("FieldId");
 
@@ -718,21 +682,6 @@ namespace DWIMS.Data.Migrations
                     b.ToTable("users");
                 });
 
-            modelBuilder.Entity("DepartmentUser", b =>
-                {
-                    b.Property<Guid>("DepartmentsId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("UsersId")
-                        .HasColumnType("char(36)");
-
-                    b.HasKey("DepartmentsId", "UsersId");
-
-                    b.HasIndex("UsersId");
-
-                    b.ToTable("departmentuser");
-                });
-
             modelBuilder.Entity("DWIMS.Data.Attachment", b =>
                 {
                     b.HasOne("DWIMS.Data.Submission", "Submission")
@@ -833,17 +782,6 @@ namespace DWIMS.Data.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("DWIMS.Data.Process", b =>
-                {
-                    b.HasOne("DWIMS.Data.Department", "Department")
-                        .WithMany()
-                        .HasForeignKey("DepartmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Department");
-                });
-
             modelBuilder.Entity("DWIMS.Data.RefreshToken", b =>
                 {
                     b.HasOne("DWIMS.Data.User", "User")
@@ -888,17 +826,11 @@ namespace DWIMS.Data.Migrations
 
             modelBuilder.Entity("DWIMS.Data.Role", b =>
                 {
-                    b.HasOne("DWIMS.Data.Department", "Department")
-                        .WithMany()
-                        .HasForeignKey("DepartmentId");
-
                     b.HasOne("DWIMS.Data.User", "User")
                         .WithMany("Roles")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Department");
 
                     b.Navigation("User");
                 });
@@ -916,12 +848,6 @@ namespace DWIMS.Data.Migrations
 
             modelBuilder.Entity("DWIMS.Data.Step", b =>
                 {
-                    b.HasOne("DWIMS.Data.Department", "Department")
-                        .WithMany()
-                        .HasForeignKey("DepartmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("DWIMS.Data.Field", "Field")
                         .WithMany()
                         .HasForeignKey("FieldId");
@@ -929,8 +855,6 @@ namespace DWIMS.Data.Migrations
                     b.HasOne("DWIMS.Data.Process", "Process")
                         .WithMany("Steps")
                         .HasForeignKey("ProcessId");
-
-                    b.Navigation("Department");
 
                     b.Navigation("Field");
 
@@ -989,21 +913,6 @@ namespace DWIMS.Data.Migrations
                     b.Navigation("Step");
 
                     b.Navigation("Submission");
-                });
-
-            modelBuilder.Entity("DepartmentUser", b =>
-                {
-                    b.HasOne("DWIMS.Data.Department", null)
-                        .WithMany()
-                        .HasForeignKey("DepartmentsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("DWIMS.Data.User", null)
-                        .WithMany()
-                        .HasForeignKey("UsersId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("DWIMS.Data.Process", b =>

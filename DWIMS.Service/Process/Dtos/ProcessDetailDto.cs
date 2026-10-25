@@ -6,8 +6,6 @@ public sealed record ProcessDetailDto(
     Guid Id,
     string Name,
     string? Description,
-    Guid DepartmentId,
-    string DepartmentName,
     ProcessKind Kind,
     IReadOnlyList<StepDto> Steps,
     IReadOnlyList<FieldDto> Fields);

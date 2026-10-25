@@ -1,5 +1,5 @@
 ﻿using DWIMS.Data;
-using DWIMS.Service.Department.Dtos;
+using DWIMS.Service.Roles.Dtos;
 
 namespace DWIMS.Service.Admin.Dtos;
 

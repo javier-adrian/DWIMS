@@ -32,47 +32,12 @@ public class AnalyticsService(
         });
     }
 
-    // private AnalyticsFilterDto ResolveFilter(AnalyticsFilterDto filter)
-    // {
-    //     if (currentUser.isSuperAdministrator)
-    //         return filter;
-    //
-    //     var adminDepartmentIds = currentUser.Roles
-    //         .Where(role => role.Value == GeneralRole.Administrator)
-    //         .Select(role => role.Key)
-    //         .ToHashSet();
-
-        // if (filter.DepartmentId.HasValue
-        //     && !adminDepartmentIds.Contains(filter.DepartmentId.Value))
-        // {
-        //     return filter with
-        //     {
-        //         DepartmentId = adminDepartmentIds.FirstOrDefault()
-        //     };
-        // }
-    //     
-    //     return filter;
-    // }
-
     private IQueryable<Data.Submission> BuildSubmissionsBase(AnalyticsFilterDto filter)
     {
         var query = context.Submissions
             .Include(s => s.Process)
             .AsQueryable();
         
-        // if (filter.DepartmentId.HasValue)
-        //     query = query.Where(s => s.Step.DepartmentId == filter.DepartmentId.Value);
-        // else if (!currentUser.isSuperAdministrator)
-        // {
-        //     var departmentIds = currentUser.Roles
-        //         .Where(role => role.Value >= GeneralRole.Administrator)
-        //         .Select(role => role.Key)
-        //         .ToList();
-        //
-        //     query = query.Where(
-        //         submission => departmentIds.Contains(submission.Process.DepartmentId));
-        // }
-
         if (filter.ProcessId.HasValue)
             query = query.Where(submission => submission.ProcessId == filter.ProcessId.Value);
         
@@ -91,20 +56,6 @@ public class AnalyticsService(
             .Where(response => response.CompletedOn.HasValue &&
                                response.Result.HasValue)
             .AsQueryable();
-        
-        // if (filter.DepartmentId.HasValue)
-        //     query = query.Where(response => 
-        //         response.Submission.Process.DepartmentId == filter.DepartmentId.Value);
-        // else if (!currentUser.isSuperAdministrator)
-        // {
-        //     var departmentIds = currentUser.Roles
-        //         .Where(role => role.Value >= GeneralRole.Administrator)
-        //         .Select(role => role.Key)
-        //         .ToList();
-        //     
-        //     query = query.Where(response => 
-        //         departmentIds.Contains(response.Submission.Process.DepartmentId));
-        // }
         
         if (filter.ProcessId.HasValue)
             query = query

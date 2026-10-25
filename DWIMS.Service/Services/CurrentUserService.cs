@@ -37,10 +37,10 @@ public sealed class CurrentUserService (IHttpContextAccessor httpContextAccessor
                     continue;
                 }
 
-                var parts = claim.Value.Split(':', 2);
-                if (parts.Length == 2 &&
-                    Guid.TryParse(parts[0], out var department) &&
-                    Enum.TryParse<GeneralRole>(parts[1], out var role))
+                var parts = claim.Value;
+                if (parts.Contains(':') &&
+                    Guid.TryParse(parts.Split(':')[0], out var department) &&
+                    Enum.TryParse<GeneralRole>(parts.Split(':')[1], out var role))
                 {
                     if (!result.TryGetValue(department, out var existing) ||
                         existing < role)
@@ -53,10 +53,6 @@ public sealed class CurrentUserService (IHttpContextAccessor httpContextAccessor
 
     }
     
-    public bool HasRoleInDepartment(Guid departmentId, GeneralRole role) =>
-        Roles.TryGetValue(departmentId, out var departmentRole) && 
-        departmentRole >= role;
-
     public bool isSuperAdministrator =>
         Roles.Values.Any(x => x == GeneralRole.SuperAdministrator);
 }

@@ -15,14 +15,14 @@ public static class ProcessEndpoints
 
         group.MapPost("/", CreateProcess)
             .WithDisplayName("Create Process")
-            .WithSummary("Create a new process in a department")
+            .WithSummary("Create a new process")
             .RequireAuthorization(DwimsPolicies.SuperAdministrator);
         group.MapGet("/", GetProcesses)
             .WithDisplayName("Get Processes")
             .WithSummary("Get all processes");
         group.MapGet("/all", GetAllProcesses)
             .WithDisplayName("Get All Processes")
-            .WithSummary("Get all processes without department filtering");
+            .WithSummary("Get all processes");
         group.MapGet("/{processId:guid}", GetProcess)
             .WithDisplayName("Get Process")
             .WithSummary("Get a process by ID with steps and fields");
@@ -121,10 +121,10 @@ public static class ProcessEndpoints
 
     private static async Task<IResult> CreateProcess(
         CreateProcessRequest request,
-        IProcessService departmentService,
+        IProcessService processService,
         CancellationToken cancellationToken)
     {
-        var result = await departmentService.CreateProcessAsync(request, cancellationToken);
+        var result = await processService.CreateProcessAsync(request, cancellationToken);
         return result.ToCreatedResult("/process/");
     }
 
@@ -173,10 +173,10 @@ public static class ProcessEndpoints
     private static async Task<IResult> CreateStep(
         Guid processId,
         AddStepRequest request,
-        IProcessService departmentService,
+        IProcessService processService,
         CancellationToken cancellationToken)
     {
-        var result = await departmentService.AddStepAsync(processId, request, cancellationToken);
+        var result = await processService.AddStepAsync(processId, request, cancellationToken);
         return result.ToCreatedResult("/process/step/");
     }
 

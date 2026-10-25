@@ -13,24 +13,10 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
 {
     public async Task<Result<IReadOnlyList<ProcessSummaryDto>>> GetProcessesAsync(CancellationToken cancellationToken = default)
     {
-        var departmentIds = currentUserService.isSuperAdministrator
-            ? null
-            : currentUserService.Roles
-                .Where(r => r.Key != Guid.Empty && r.Value >= GeneralRole.Administrator)
-                .Select(r => r.Key)
-                .ToList();
-
-        if (departmentIds is not null && departmentIds.Count == 0)
-            return Result<IReadOnlyList<ProcessSummaryDto>>.Success([]);
-
         var processes = await context.Processes
-            .Include(p => p.Department)
             .Where(p => !p.IsDeleted)
-            .Where(p => departmentIds == null || departmentIds.Contains(p.DepartmentId) || p.Steps.Any(s => departmentIds.Contains(s.DepartmentId)))
             .Select(p => new ProcessSummaryDto(
                 p.Id,
-                p.DepartmentId,
-                p.Department.Title,
                 p.Title,
                 null,
                 p.Steps.Count,
@@ -45,12 +31,9 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
     public async Task<Result<IReadOnlyList<ProcessSummaryDto>>> GetAllProcessesAsync(CancellationToken cancellationToken = default)
     {
         var processes = await context.Processes
-            .Include(p => p.Department)
             .Where(p => !p.IsDeleted)
             .Select(p => new ProcessSummaryDto(
                 p.Id,
-                p.DepartmentId,
-                p.Department.Title,
                 p.Title,
                 null,
                 p.Steps.Count,
@@ -65,25 +48,19 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
     public async Task<Result<ProcessDetailDto>> GetProcessAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var process = await context.Processes
-            .Include(p => p.Department)
             .Include(p => p.Steps.OrderBy(s => s.Order))
-            .ThenInclude(s => s.Department)
             .Include(p => p.Fields)
             .Where(p => p.Id == id)
             .Select(p => new ProcessDetailDto(
                 p.Id,
                 p.Title,
                 null,
-                p.DepartmentId,
-                p.Department.Title,
                 p.Kind,
                 p.Steps.Where(s => !s.IsDeleted).Select(s => new StepDto(
                     s.Id,
                     s.Order,
                     s.Title,
-                    s.Role,
-                    s.DepartmentId,
-                    s.Department.Title)).ToList(),
+                    s.Role)).ToList(),
                 p.Fields.Where(f => !f.IsDeleted)
                     .OrderBy(f => f.Order)
                     .ThenBy(f => f.Title)
@@ -106,23 +83,12 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
 
     public async Task<Result<Guid>> CreateProcessAsync(CreateProcessRequest request, CancellationToken cancellationToken = default)
     {
-        if (!currentUserService.HasRoleInDepartment(request.DepartmentId, GeneralRole.Administrator) &&
-            !currentUserService.isSuperAdministrator)
-            return Result<Guid>.Failure("FORBIDDEN", "You do not have administrator access to this department.");
-        
-        var department = await context.Departments
-            .FirstOrDefaultAsync(x => x.Id == request.DepartmentId, cancellationToken);
-
-        if (department is null)
-            return Result<Guid>.Failure("DEPARTMENT_NOT_FOUND", "Department not found.");
-        
         if (!Enum.IsDefined(request.Kind)) return Result<Guid>.Failure("INVALID_PROCESS_KIND", "Invalid process kind.");
 
         var process = new Data.Process
         {
             Id = Guid.NewGuid(),
             Title = request.Title,
-            DepartmentId = request.DepartmentId,
             Kind = request.Kind
         };
         
@@ -135,31 +101,16 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
 
     public async Task<Result> UpdateProcessAsync(Guid id, UpdateProcessRequest request, CancellationToken cancellationToken = default)
     {
-        var department = await context.Processes
-            .Where(x => x.Id == id)
-            .Select(x => x.DepartmentId)
-            .FirstOrDefaultAsync(cancellationToken);
-        
-        if (!currentUserService.HasRoleInDepartment(department, GeneralRole.Administrator) &&
-            !currentUserService.isSuperAdministrator)
-            return Result.Failure("FORBIDDEN", "You do not have administrator access to this department.");
-        
         throw new NotImplementedException();
     }
 
     public async Task<Result> DeleteProcessAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var department = await context.Processes
-            .Where(x => x.Id == id)
-            .Select(x => x.DepartmentId)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (department == Guid.Empty)
+        if (!(await context.Processes
+                .AnyAsync(p => 
+                    p.Id == id, 
+                    cancellationToken)))
             return Result.Failure("PROCESS_NOT_FOUND", "Process not found.");
-
-        if (!currentUserService.HasRoleInDepartment(department, GeneralRole.Administrator) &&
-            !currentUserService.isSuperAdministrator)
-            return Result.Failure("FORBIDDEN", "You do not have administrator access to this department.");
 
         var submissions = await context.Submissions
             .Include(s => s.Inputs)
@@ -204,20 +155,11 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
 
     public async Task<Result<Guid>> AddStepAsync(Guid processId, AddStepRequest request, CancellationToken cancellationToken = default)
     {
-        // var department = await context.Processes
-        //     .Where(x => x.Id == processId)
-        //     .Select(x => x.DepartmentId)
-        //     .FirstOrDefaultAsync(cancellationToken);
-        //
-        // if (!currentUserService.HasRoleInDepartment(department, GeneralRole.Administrator))
-        //     return Result<Guid>.Failure("FORBIDDEN", "You do not have administrator access to this department.");
-
         var step = new Step
         {
             Id = Guid.NewGuid(),
             Order = context.Steps.Count(x => x.ProcessId == processId) + 1,
             Title = request.Title,
-            DepartmentId = request.DepartmentId,
             Role = request.Role,
             ProcessId = processId
         };
@@ -238,37 +180,17 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
         if (step is null)
             return Result.Failure("STEP_NOT_FOUND", "Step not found.");
 
-        step.DepartmentId = request.DepartmentId;
-
         await context.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
 
     public async Task<Result> DeleteStepAsync(Guid processId, Guid stepId, CancellationToken cancellationToken = default)
     {
-        var department = await context.Processes
-            .Where(x => x.Id == processId)
-            .Select(x => x.DepartmentId)
-            .FirstOrDefaultAsync(cancellationToken);
-        
-        if (!currentUserService.HasRoleInDepartment(department, GeneralRole.Administrator) &&
-            !currentUserService.isSuperAdministrator)
-            return Result.Failure("FORBIDDEN", "You do not have administrator access to this department.");
-        
         throw new NotImplementedException();
     }
 
     public async Task<Result<Guid>> AddFieldAsync(Guid processId, AddFieldRequest request, CancellationToken cancellationToken = default)
     {
-        var department = await context.Processes
-            .Where(x => x.Id == processId)
-            .Select(x => x.DepartmentId)
-            .FirstOrDefaultAsync(cancellationToken);
-        
-        if (!currentUserService.HasRoleInDepartment(department, GeneralRole.Administrator) &&
-            !currentUserService.isSuperAdministrator)
-            return Result<Guid>.Failure("FORBIDDEN", "You do not have administrator access to this department.");
-
         var process = await context.Processes
             .FirstOrDefaultAsync(x => x.Id == processId, cancellationToken);
         
@@ -295,16 +217,13 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
     public async Task<Result<IReadOnlyList<StepDto>>> GetStepsAsync(Guid processId, CancellationToken cancellationToken = default)
     {
         var steps = await context.Steps
-            .Include(s => s.Department)
             .Where(s => s.ProcessId == processId && !s.IsDeleted)
             .OrderBy(s => s.Order)
             .Select(s => new StepDto(
                 s.Id,
                 s.Order,
                 s.Title,
-                s.Role,
-                s.DepartmentId,
-                s.Department.Title))
+                s.Role))
             .ToListAsync(cancellationToken);
 
         return Result<IReadOnlyList<StepDto>>.Success(steps);
@@ -398,7 +317,6 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
                             Order = stepNum,
                             Title = stepName,
                             Role = GeneralRole.Reviewer,
-                            DepartmentId = process.DepartmentId,
                         };
 
                         context.Steps.Add(step);

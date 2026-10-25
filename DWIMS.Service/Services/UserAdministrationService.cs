@@ -3,7 +3,7 @@ using DWIMS.Service.Admin;
 using DWIMS.Service.Admin.Dtos;
 using DWIMS.Service.Admin.Requests;
 using DWIMS.Service.Common;
-using DWIMS.Service.Department.Dtos;
+using DWIMS.Service.Roles.Dtos;
 using DWIMS.Service.Logs;
 using DWIMS.Service.User;
 using Microsoft.EntityFrameworkCore;
@@ -192,8 +192,7 @@ public class UserAdministrationService(
                 .Select(r => new RoleDto(
                     r.Id,
                     r.Title,
-                    r.GeneralRole,
-                    r.Department != null ? r.Department.Title : null)),
+                    r.GeneralRole)),
             context.Responses.Count(r => r.AssigneeId == u.Id && r.CompletedOn == null)
         ));
 }

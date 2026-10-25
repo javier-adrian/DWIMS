@@ -31,9 +31,7 @@ public class TokenService(
         foreach (var role in roles)
             claims.Add(new Claim(
                 DwimsClaims.Role,
-                role.DepartmentId.HasValue
-                    ? $"{role.DepartmentId.Value}:{role.GeneralRole}"
-                    : role.GeneralRole.ToString()
+                role.GeneralRole.ToString()
             ));
 
         var key = new SymmetricSecurityKey(

@@ -6,6 +6,5 @@ public interface ICurrentUserService
 {
     Guid? UserId { get; }
     IReadOnlyDictionary<Guid, GeneralRole> Roles { get; }
-    bool HasRoleInDepartment(Guid departmentId, GeneralRole role);
     bool isSuperAdministrator { get; }
 }
