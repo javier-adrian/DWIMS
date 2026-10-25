@@ -139,6 +139,71 @@ public class SubmissionService(
         return Result<SubmissionsPageDto>.Success(new SubmissionsPageDto(submissions, categories));
     }
 
+    public async Task<Result<PagedResult<AdminSubmissionDto>>> GetAllSubmissionsAsync(SubmissionFilterRequest filter, CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Result<PagedResult<AdminSubmissionDto>>.Failure("UNAUTHORIZED", "User is not authenticated.");
+        
+        if (!currentUser.isSuperAdministrator)
+            return Result<PagedResult<AdminSubmissionDto>>.Failure("UNAUTHORIZED", "Only super administrators are authorized to view all submissions.");
+        
+        var page = Math.Max(filter.Page, 1);
+
+        var query = context.Submissions
+            .Where(s => !s.IsDeleted);
+
+        if (filter.SubmitterId.HasValue)
+            query = query.Where(s => s.SubmitterId == filter.SubmitterId);
+        
+        if (filter.AssigneeId.HasValue)
+            query = query
+                .Where(s => 
+                    s.Responses.Any(r => r.AssigneeId == filter.AssigneeId && r.CompletedOn == null));
+        
+        if (filter.ProcessId.HasValue)
+            query = query
+                .Where(s => 
+                    s.ProcessId == filter.ProcessId);
+        
+        if (filter.Status.HasValue)
+            query = query
+                .Where(s => 
+                    s.Status == filter.Status);
+        
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+            query = query
+                .Where(s => 
+                    s.Process.Title.Contains(filter.Search) ||
+                    s.Submitter.FirstName.Contains(filter.Search) ||
+                    s.Submitter.LastName.Contains(filter.Search) ||
+                    s.Step.Title.Contains(filter.Search));
+        
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var submissions = await query
+            .OrderByDescending(s => s.SubmittedOn)
+            .ThenBy(s => s.Id)
+            .Skip((page - 1) * filter.PageSize)
+            .Take(filter.PageSize)
+            .Select(s => new AdminSubmissionDto(
+                s.Id,
+                s.VerificationCode,
+                s.Process.Title,
+                s.Status,
+                s.SubmittedOn,
+                s.CompletedOn,
+                $"{s.Submitter.FirstName} {s.Submitter.LastName}",
+                s.Step.Title,
+                s.Responses
+                    .Where(r => r.CompletedOn == null)
+                    .Select(r => $"{r.Assignee.FirstName} {r.Assignee.LastName}")
+                    .FirstOrDefault()
+            ))
+            .ToListAsync(cancellationToken);
+
+        return Result<PagedResult<AdminSubmissionDto>>.Success(new PagedResult<AdminSubmissionDto>(submissions, totalCount, page, filter.PageSize));
+    }
+
     public async Task<Result<IReadOnlyList<PendingReviewDto>>> GetPendingReviewAsync(CancellationToken cancellationToken = default)
     {
         if (currentUser.UserId is null)
@@ -887,7 +952,7 @@ public class SubmissionService(
         if (submission is null)
             return Result.Failure("SUBMISSION_NOT_FOUND", "Submission not found.");
 
-        if (submission.SubmitterId != currentUser.UserId.Value)
+        if (submission.SubmitterId != currentUser.UserId.Value && !currentUser.isSuperAdministrator)
             return Result.Failure("FORBIDDEN", "You can only cancel your own submissions.");
 
         if (submission.Status == Status.Approve || submission.Status == Status.Reject || submission.Status == Status.Cancel)
@@ -897,7 +962,11 @@ public class SubmissionService(
         submission.CompletedOn = DateTime.UtcNow;
         await context.SaveChangesAsync(cancellationToken);
         
-        await logService.LogAsync("Submission Cancelled", "Submission", id, cancellationToken: cancellationToken);
+        if (submission.SubmitterId != currentUser.UserId.Value && currentUser.isSuperAdministrator) 
+            await logService.LogAsync("Submission Cancelled", "Submission", id, metadata: "Cancelled by admin, not submitter", cancellationToken: cancellationToken);
+        else 
+            await logService.LogAsync("Submission Cancelled", "Submission", id, metadata: "Cancelled by submitter", cancellationToken: cancellationToken);
+        
         
         return Result.Success();
     }

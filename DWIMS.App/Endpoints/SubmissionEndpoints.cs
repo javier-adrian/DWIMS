@@ -35,6 +35,9 @@ public static class SubmissionEndpoints
         group.MapGet("/reviewed", GetSubmissionsReviewed)
             .WithDisplayName("Get Reviewed Submissions")
             .WithSummary("Get all submissions reviewed");
+        group.MapGet("/all", GetAllSubmissions)
+            .WithDisplayName("Get All Submissions")
+            .WithSummary("Get all submissions");
             // .RequireAuthorization(DwimsPolicies.Reviewer);
         group.MapGet("/review/{id:guid}", GetSubmissionToReview)
             .WithDisplayName("Get Submission to Review")
@@ -174,6 +177,16 @@ public static class SubmissionEndpoints
                 result.Error,
                 result.ErrorDescription
             });
+    }
+    
+    private static async Task<IResult> GetAllSubmissions(
+        [AsParameters] SubmissionFilterRequest request,
+        ISubmissionService submissionService, 
+        CancellationToken cancellationToken)
+    {
+        var result = await submissionService.GetAllSubmissionsAsync(request, cancellationToken);
+        
+        return result.ToOkResult();
     }
 
     private static async Task<IResult> ResumeSubmission(

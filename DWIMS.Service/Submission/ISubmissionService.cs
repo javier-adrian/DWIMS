@@ -15,6 +15,10 @@ public interface ISubmissionService
         int pageSize,
         CancellationToken cancellationToken = default);
     
+    Task<Result<PagedResult<AdminSubmissionDto>>> GetAllSubmissionsAsync(
+        SubmissionFilterRequest filter,
+        CancellationToken cancellationToken = default);
+    
     Task<Result<IReadOnlyList<PendingReviewDto>>> GetPendingReviewAsync(
         CancellationToken cancellationToken = default);
     
