@@ -9,7 +9,9 @@ public interface ITokenService
     
     Task<string> GenerateRefreshTokenAsync(
         Guid userId,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        Guid? rotatedTokenId = null,
+        bool revokeAllExisting = true);
     
     Task<RefreshToken?> ValidateRefreshTokenAsync(
         Guid userId,

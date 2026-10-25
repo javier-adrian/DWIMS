@@ -214,7 +214,9 @@ public class AuthService(
         if (refreshToken is null || refreshToken.User?.IsDeleted == true)
             return Result<AuthResponse>.Failure("INVALID_REFRESH_TOKEN", "Refresh token is invalid or expired.");
 
-        return Result<AuthResponse>.Success(await BuildAuthResponseAsync(refreshToken.User, cancellationToken));
+        return Result<AuthResponse>.Success(await BuildAuthResponseAsync(
+            refreshToken.User, cancellationToken,
+            rotatedTokenId: refreshToken.Id, revokeAllExisting: false));
     }
 
     public async Task ForgotPasswordAsync(
@@ -353,7 +355,9 @@ public class AuthService(
 
     private async Task<AuthResponse> BuildAuthResponseAsync(
         Data.User user,
-        CancellationToken cancellationToken = default
+        CancellationToken cancellationToken = default,
+        Guid? rotatedTokenId = null,
+        bool revokeAllExisting = true
         )
     {
         var roles = await context.Roles
@@ -361,8 +365,9 @@ public class AuthService(
             .ToListAsync(cancellationToken);
 
         var accessToken = tokenService.GenerateAccessToken(user, roles);
-        var refreshToken = await tokenService.GenerateRefreshTokenAsync(user.Id, cancellationToken);
-        
+        var refreshToken = await tokenService.GenerateRefreshTokenAsync(
+            user.Id, cancellationToken, rotatedTokenId, revokeAllExisting);
+
         return new AuthResponse(accessToken, refreshToken);
     }
 

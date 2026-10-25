@@ -52,15 +52,23 @@ public class TokenService(
     }
 
     public async Task<string> GenerateRefreshTokenAsync(
-        Guid userId, 
-        CancellationToken cancellationToken = default)
+        Guid userId,
+        CancellationToken cancellationToken = default,
+        Guid? rotatedTokenId = null,
+        bool revokeAllExisting = true)
     {
+        // A refresh flow rotates only the token it consumed so that other
+        // signed-in devices keep their sessions; a fresh login still revokes
+        // every outstanding token.
         var existing = await context.RefreshTokens
             .Where(x => x.UserId == userId && !x.Revoked)
             .ToListAsync(cancellationToken);
-        
+
         foreach (var token in existing)
-            token.Revoked = true;
+        {
+            if (revokeAllExisting || (rotatedTokenId.HasValue && token.Id == rotatedTokenId.Value))
+                token.Revoked = true;
+        }
         
         var rawToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
 
