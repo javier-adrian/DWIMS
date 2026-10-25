@@ -28,6 +28,14 @@ public interface IProcessService
     Task<Result> DeleteProcessAsync(
         Guid id,
         CancellationToken cancellationToken = default);
+    
+    Task<Result> RetireProcessAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+    
+    Task<Result> RestoreProcessAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
 
     Task<Result<Guid>> AddStepAsync(
         Guid processId,

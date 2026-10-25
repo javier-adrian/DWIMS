@@ -8,4 +8,5 @@ public sealed record ProcessSummaryDto(
     string? Description,
     int StepsCount,
     bool hasTemplate,
-    ProcessKind Kind);
+    ProcessKind Kind,
+    bool IsActive);

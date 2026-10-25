@@ -1,5 +1,6 @@
 ﻿using DWIMS.Data;
 using DWIMS.Service.Common;
+using DWIMS.Service.Logs;
 using DWIMS.Service.Process;
 using DWIMS.Service.Process.Dtos;
 using DWIMS.Service.Process.Requests;
@@ -9,19 +10,25 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DWIMS.Service.Services;
 
-public class ProcessService(AppDbContext context, ICurrentUserService currentUserService, IStorageService storageService, IAcroFormService acroFormService) : IProcessService
+public class ProcessService(
+    AppDbContext context, 
+    ICurrentUserService currentUserService, 
+    IStorageService storageService, 
+    IAcroFormService acroFormService,
+    ILogService logService) : IProcessService
 {
     public async Task<Result<IReadOnlyList<ProcessSummaryDto>>> GetProcessesAsync(CancellationToken cancellationToken = default)
     {
         var processes = await context.Processes
-            .Where(p => !p.IsDeleted)
+            .Where(p => !p.IsDeleted && p.IsActive)
             .Select(p => new ProcessSummaryDto(
                 p.Id,
                 p.Title,
                 null,
                 p.Steps.Count,
                 context.Documents.Any(d => d.ProcessId == p.Id && !d.IsDeleted),
-                p.Kind
+                p.Kind,
+                p.IsActive
             ))
             .ToListAsync(cancellationToken);
 
@@ -38,7 +45,8 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
                 null,
                 p.Steps.Count,
                 context.Documents.Any(d => d.ProcessId == p.Id && !d.IsDeleted),
-                p.Kind
+                p.Kind,
+                p.IsActive
             ))
             .ToListAsync(cancellationToken);
 
@@ -117,13 +125,9 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
             .Include(s => s.Responses)
             .Where(s => s.ProcessId == id && !s.IsDeleted)
             .ToListAsync(cancellationToken);
-
-        foreach (var submission in submissions)
-        {
-            context.Inputs.RemoveRange(submission.Inputs.Where(i => !i.IsDeleted));
-            context.Responses.RemoveRange(submission.Responses.Where(r => !r.IsDeleted));
-            context.Submissions.Remove(submission);
-        }
+        
+        if (submissions.Any())
+            return Result.Failure("PROCESS_HAS_SUBMISSIONS", "Process has submissions, please consider retiring instead.");
 
         var documents = await context.Documents
             .Where(d => d.ProcessId == id && !d.IsDeleted)
@@ -149,6 +153,46 @@ public class ProcessService(AppDbContext context, ICurrentUserService currentUse
         context.Processes.Remove(process);
 
         await context.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
+    }
+
+    public async Task<Result> RetireProcessAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var process = await context.Processes
+            .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+        
+        if (process is null)
+            return Result.Failure("PROCESS_NOT_FOUND", "Process not found.");
+        
+        if (!process.IsActive)
+            return Result.Failure("PROCESS_ALREADY_INACTIVE", "Process is already inactive.");
+        
+        process.IsActive = false;
+
+        await context.SaveChangesAsync(cancellationToken);
+        
+        await logService.LogAsync("Process Retired", "Process", process.Id, cancellationToken: cancellationToken);
+
+        return Result.Success();
+    }
+
+    public async Task<Result> RestoreProcessAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var process = await context.Processes
+            .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+        
+        if (process is null)
+            return Result.Failure("PROCESS_NOT_FOUND", "Process not found.");
+        
+        if (process.IsActive)
+            return Result.Failure("PROCESS_ALREADY_ACTIVE", "Process is already active.");
+        
+        process.IsActive = true;
+
+        await context.SaveChangesAsync(cancellationToken);
+        
+        await logService.LogAsync("Process Restored", "Process", process.Id, cancellationToken: cancellationToken);
 
         return Result.Success();
     }

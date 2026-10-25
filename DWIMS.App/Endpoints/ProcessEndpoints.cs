@@ -34,6 +34,14 @@ public static class ProcessEndpoints
             .WithDisplayName("Delete Process")
             .WithSummary("Delete a process")
             .RequireAuthorization(DwimsPolicies.SuperAdministrator);
+        group.MapPost("/{processId:guid}/retire", RetireProcess)
+            .WithDisplayName("Retire Process")
+            .WithSummary("Deactivate a process")
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
+        group.MapPost("/{processId:guid}/restore", RestoreProcess)
+            .WithDisplayName("Restore Process")
+            .WithSummary("Activate a process")
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
         
         group.MapPost("/{processId:guid}/document", CreateDocument)
             .WithDisplayName("Add Document")
@@ -71,6 +79,26 @@ public static class ProcessEndpoints
         //     .RequireAuthorization(DwimsPolicies.Administrator);
         
         return app;
+    }
+
+    private static async Task<IResult> RestoreProcess(
+        Guid processId, 
+        IProcessService processService, 
+        CancellationToken cancellationToken)
+    {
+        var result = await processService.RestoreProcessAsync(processId, cancellationToken);
+
+        return result.ToOkResult();
+    }
+
+    private static async Task<IResult> RetireProcess(
+        Guid processId, 
+        IProcessService processService, 
+        CancellationToken cancellationToken)
+    {
+        var result = await processService.RetireProcessAsync(processId, cancellationToken);
+        
+        return result.ToOkResult();
     }
 
     private static async Task<IResult> GetDocumentTemplate(

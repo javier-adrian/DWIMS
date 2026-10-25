@@ -393,6 +393,9 @@ public class SubmissionService(
         if (process.Kind == ProcessKind.FreeDocument)
             return Result<Guid>.Failure("WRONG_PROCESS_KIND", "Memorandums and letters must be submitted via the document submission endpoint.");
         
+        if (!process.IsActive)
+            return Result<Guid>.Failure("PROCESS_INACTIVE", "Process is inactive.");
+        
         if (process.Fields.Any(f => !f.IsDeleted && f.Type == InputTypes.Signature) && 
             !await context.Signatures.AnyAsync(s => s.UserId == currentUser.UserId, cancellationToken))
             return Result<Guid>.Failure("SIGNATURE_REQUIRED", "User must register a signature in the settings before submitting.");
@@ -819,6 +822,9 @@ public class SubmissionService(
         
         if (process.Kind != ProcessKind.FreeDocument)
             return Result<Guid>.Failure("INVALID_PROCESS_KIND", "Process kind must be FreeDocument.");
+        
+        if (!process.IsActive)
+            return Result<Guid>.Failure("PROCESS_INACTIVE", "Process is inactive.");
         
         var liveSteps = process.Steps.Where(s => !s.IsDeleted).ToList();
         

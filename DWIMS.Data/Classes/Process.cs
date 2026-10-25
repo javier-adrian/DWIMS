@@ -10,6 +10,7 @@ public class Process : ISoftDeletable
     public ICollection<Step> Steps { get; set; }
     public ICollection<Field> Fields { get; set; }
     public ICollection<Document> Documents { get; set; }
+    public bool IsActive { get; set; } = true;
     
     public bool IsDeleted { get; set; }
     public DateTime? DeletedOn { get; set; }
