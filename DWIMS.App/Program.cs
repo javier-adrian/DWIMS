@@ -14,6 +14,7 @@ using DWIMS.Service.Process;
 using DWIMS.Service.Services;
 using DWIMS.Service.Storage;
 using DWIMS.Service.Logs;
+using DWIMS.Service.Roles;
 using DWIMS.Service.Routing;
 using DWIMS.Service.Submission;
 using DWIMS.Service.User;
@@ -114,6 +115,7 @@ namespace DWIMS
             builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
             builder.Services.AddScoped<IUserAdministrationService, UserAdministrationService>();
             builder.Services.AddScoped<INotificationFeedService, NotificationFeedService>();
+            builder.Services.AddScoped<IRoleService, RoleService>();
             builder.Services.AddSingleton<EmailQueue>();
             builder.Services.AddHostedService<EmailWorker>();
             
