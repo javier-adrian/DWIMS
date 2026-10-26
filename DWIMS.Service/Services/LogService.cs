@@ -37,7 +37,11 @@ public class LogService(AppDbContext context, ICurrentUserService currentUserSer
             .Select(l => new LogDto(
                 l.Id,
                 l.UserId ?? Guid.Empty,
-                l.User != null ? $"{l.User.FirstName} {l.User.MiddleName} {l.User.LastName}" : null,
+                l.User != null ? 
+                    (string.IsNullOrWhiteSpace(l.User.MiddleName) ? 
+                        $"{l.User.FirstName} {l.User.LastName}" :
+                        $"{l.User.FirstName} {l.User.MiddleName} {l.User.LastName}")
+                        : null,
                 l.Action,
                 l.EntityType,
                 l.EntityId,
