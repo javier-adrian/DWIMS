@@ -335,7 +335,8 @@ public class SubmissionService(
             submission.SourceTitle,
             stepResponses,
             fieldValues,
-            attachmentDtos
+            attachmentDtos,
+            submission.VerificationCode
         ));
     }
 
@@ -402,7 +403,8 @@ public class SubmissionService(
             submission.SourceTitle,
             stepResponses,
             fieldValues,
-            attachmentDtos
+            attachmentDtos,
+            submission.VerificationCode
         ));
     }
 
