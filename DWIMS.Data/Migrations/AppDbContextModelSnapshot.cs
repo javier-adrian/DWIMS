@@ -165,6 +165,12 @@ namespace DWIMS.Data.Migrations
                     b.Property<int>("Order")
                         .HasColumnType("int");
 
+                    b.Property<string>("Pattern")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("PatternMessage")
+                        .HasColumnType("longtext");
+
                     b.Property<Guid>("ProcessId")
                         .HasColumnType("char(36)");
 

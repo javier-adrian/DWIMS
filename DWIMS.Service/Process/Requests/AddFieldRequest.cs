@@ -8,4 +8,6 @@ public sealed class AddFieldRequest
     public required string Title { get; set; }
     public required InputTypes InputType { get; set; }
     public bool Required { get; set; } = true;
+    public string? Pattern { get; set; }
+    public string? PatternMessage { get; set; }
 }

@@ -73,6 +73,12 @@ public static class ProcessEndpoints
             .WithDisplayName("Add Field")
             .WithSummary("Add a field to a process")
             .RequireAuthorization(DwimsPolicies.SuperAdministrator);
+        
+        group.MapPut("/{processId:guid}/field/{fieldId:guid}", UpdateField)
+            .WithDisplayName("Update Field")
+            .WithSummary("Set or clear a format pattern of a field")
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
+
         group.MapGet("/{id:guid}/field", GetFields)
             .WithDisplayName("Get Fields")
             .WithSummary("Get all fields of a process");
@@ -280,9 +286,16 @@ public static class ProcessEndpoints
         throw new NotImplementedException();
     }
 
-    private static async Task UpdateField(HttpContext context)
+    private static async Task<IResult> UpdateField(
+        Guid processId,
+        Guid fieldId,
+        UpdateFieldRequest request,
+        IProcessService processService,
+        CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = await processService.UpdateFieldAsync(processId, fieldId, request, cancellationToken);
+        
+        return result.ToOkResult();
     }
 
     private static async Task DeleteField(HttpContext context)

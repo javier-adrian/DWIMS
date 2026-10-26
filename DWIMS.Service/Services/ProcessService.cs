@@ -35,6 +35,28 @@ public class ProcessService(
 
         return Result<string?>.Success(value);
     }
+
+    private static Result<(string? Pattern, string? Message)> NormalizePattern(string? raw, string? rawMessage)
+    {
+        var value = raw?.Trim();
+        
+        if (string.IsNullOrEmpty(value))
+            return Result<(string? Pattern, string? Message)>.Success((null, null));
+        
+        if (value.Length > 256)
+            return Result<(string? Pattern, string? Message)>.Failure("INVALID_PATTERN", "Pattern must be 256 characters or fewer.");
+        
+        var error = FieldPatterns.Validate(value);
+
+        if (error is not null)
+            return Result<(string? Pattern, string? Message)>.Failure("INVALID_PATTERN", $"Invalid regular expression: {error}");
+        
+        var message = string.IsNullOrWhiteSpace(rawMessage) ? null : rawMessage.Trim();
+        if (message?.Length > 200)
+            return Result<(string? Pattern, string? Message)>.Failure("INVALID_PATTERN_MESSAGE", "Pattern message must be 200 characters or fewer.");
+
+        return Result<(string? Pattern, string? Message)>.Success((value, message));
+    }
     
     public async Task<Result<IReadOnlyList<ProcessSummaryDto>>> GetProcessesAsync(CancellationToken cancellationToken = default)
     {
@@ -100,7 +122,9 @@ public class ProcessService(
                     f.Type,
                     f.Required,
                     f.Options,
-                    f.Order)).ToList(),
+                    f.Order,
+                    f.Pattern,
+                    f.PatternMessage)).ToList(),
                 p.ControlNumber,
                 p.Documents.Any(d => !d.IsDeleted && d.Link != "")
             ))
@@ -324,6 +348,11 @@ public class ProcessService(
         
         if (process is null)
             return Result<Guid>.Failure("PROCESS_NOT_FOUND", "Process not found.");
+        
+        var normalized = NormalizePattern(request.Pattern, request.PatternMessage);
+        
+        if (!normalized.IsSuccess)
+            return Result<Guid>.Failure(normalized.Error!, normalized.ErrorDescription!);
 
         var field = new Field
         {
@@ -332,7 +361,9 @@ public class ProcessService(
             Title = request.Title,
             Type = request.InputType,
             Required = request.Required,
-            Order = await context.Fields.Where(f => f.ProcessId == processId).MaxAsync(f => (int?)f.Order) + 1 ?? 1
+            Order = await context.Fields.Where(f => f.ProcessId == processId).MaxAsync(f => (int?)f.Order) + 1 ?? 1,
+            Pattern = normalized.Data.Pattern,
+            PatternMessage = normalized.Data.Message
         };
         
         context.Fields.Add(field);
@@ -340,6 +371,29 @@ public class ProcessService(
         await context.SaveChangesAsync(cancellationToken);
         
         return Result<Guid>.Success(field.Id);
+    }
+
+    public async Task<Result> UpdateFieldAsync(Guid processId, Guid fieldId, UpdateFieldRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var field = await context.Fields
+            .FirstOrDefaultAsync(f => f.Id == fieldId && f.ProcessId == processId && !f.IsDeleted, cancellationToken);
+        
+        if (field is null)
+            return Result.Failure("FIELD_NOT_FOUND", "Field not found.");
+        
+        var normalized = NormalizePattern(request.Pattern, request.PatternMessage);
+        
+        if (!normalized.IsSuccess)
+            return Result.Failure(normalized.Error!, normalized.ErrorDescription!);
+
+        (field.Pattern, field.PatternMessage) = normalized.Data;
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        await logService.LogAsync("Field Updated", "Field", field.Id, cancellationToken: cancellationToken);
+
+        return Result.Success();
     }
 
     public async Task<Result<IReadOnlyList<StepDto>>> GetStepsAsync(Guid processId, CancellationToken cancellationToken = default)
@@ -384,6 +438,10 @@ public class ProcessService(
         
         var oldSteps = process.Steps.ToList();
         var oldFields = process.Fields.ToList();
+        
+        var oldFieldByKey = oldFields
+            .GroupBy(f => f.AcroFormKey)
+            .ToDictionary(g => g.Key, g => g.First());
 
         context.Steps.RemoveRange(process.Steps);
         process.Fields.ToList().ForEach(f => context.Fields.Remove(f));
@@ -474,6 +532,8 @@ public class ProcessService(
             }
             
             var order = int.TryParse(acroField.Name.Split('-')[0].Trim(), out var n) ? n : fallback++;
+            
+            var previous = oldFieldByKey.TryGetValue(acroField.Name, out var old) ? old : null;
 
             var field = new Field
             {
@@ -486,6 +546,8 @@ public class ProcessService(
                 Required = acroField.Type != InputTypes.Checkbox,
                 DocumentId = document.Id,
                 Order = order,
+                Pattern = previous?.Pattern,
+                PatternMessage = previous?.PatternMessage,
             };
 
             context.Fields.Add(field);

@@ -62,6 +62,12 @@ public interface IProcessService
         Guid processId,
         AddFieldRequest request,
         CancellationToken cancellationToken = default);
+    
+    Task<Result> UpdateFieldAsync(
+        Guid processId,
+        Guid fieldId,
+        UpdateFieldRequest request,
+        CancellationToken cancellationToken = default);
 
     Task<Result<IReadOnlyList<StepDto>>> GetStepsAsync(
         Guid processId,

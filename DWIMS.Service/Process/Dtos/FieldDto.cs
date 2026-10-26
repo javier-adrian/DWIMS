@@ -9,4 +9,6 @@ public sealed record FieldDto(
     InputTypes Type,
     bool Required,
     string? Options,
-    int Order);
+    int Order,
+    string? Pattern,
+    string? PatternMessage);

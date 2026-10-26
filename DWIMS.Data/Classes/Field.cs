@@ -12,6 +12,8 @@ public class Field : ISoftDeletable
     public Process Process { get; set; }
     public InputTypes Type { get; set; }
     public string? Options { get; set; }
+    public string? Pattern { get; set; }
+    public string? PatternMessage { get; set; }
     public bool Required { get; set; } = true;
     public Guid? DocumentId { get; set; }
     public Document Document { get; set; }

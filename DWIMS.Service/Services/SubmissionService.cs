@@ -547,6 +547,10 @@ public class SubmissionService(
                     return Result<Guid>.Failure("INVALID_FIELD_VALUE",
                         $"Invalid value for field {fieldInput.FieldId}");
             }
+            
+            if (!FieldPatterns.IsValid(field.Pattern, value))
+                return Result<Guid>.Failure("INVALID_FIELD_VALUE",
+                    field.PatternMessage ?? $"Field '{field.Title}' does not match the required format.");
 
             context.Inputs.Add(new Input
             {
