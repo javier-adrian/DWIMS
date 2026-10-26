@@ -322,6 +322,19 @@ public class SubmissionService(
                 attachment.Type))
             .ToList();
 
+        var route = await context.SubmissionRoutes
+            .Include(r => r.Step)
+            .Include(r => r.Assignee)
+            .Where(r => r.SubmissionId == id)
+            .OrderBy(r => r.Step.Order)
+            .ToListAsync(cancellationToken);
+        
+        var routes = route.Select(r => new SubmissionRouteDto(
+            r.StepId,
+            r.Step.Title,
+            r.Assignee?.Email,
+            r.Assignee is null ? null : $"{r.Assignee.FirstName} {r.Assignee.LastName}"
+        )).ToList();
 
         return Result<SubmissionDetailDto>.Success(new SubmissionDetailDto(
             submission.Id,
@@ -336,6 +349,7 @@ public class SubmissionService(
             stepResponses,
             fieldValues,
             attachmentDtos,
+            routes,
             submission.VerificationCode
         ));
     }
@@ -390,6 +404,20 @@ public class SubmissionService(
                 attachment.Title, 
                 attachment.Type))
             .ToList();
+        
+        var route = await context.SubmissionRoutes
+            .Include(r => r.Step)
+            .Include(r => r.Assignee)
+            .Where(r => r.SubmissionId == id)
+            .OrderBy(r => r.Step.Order)
+            .ToListAsync(cancellationToken);
+        
+        var routes = route.Select(r => new SubmissionRouteDto(
+            r.StepId,
+            r.Step.Title,
+            r.Assignee?.Email,
+            r.Assignee is null ? null : $"{r.Assignee.FirstName} {r.Assignee.LastName}"
+        )).ToList();
 
         return Result<SubmissionDetailDto>.Success(new SubmissionDetailDto(
             submission.Id,
@@ -404,6 +432,7 @@ public class SubmissionService(
             stepResponses,
             fieldValues,
             attachmentDtos,
+            routes,
             submission.VerificationCode
         ));
     }

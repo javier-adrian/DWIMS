@@ -15,5 +15,6 @@ public record SubmissionDetailDto(
     IReadOnlyList<SubmissionStepResponseDto> StepResponses,
     IReadOnlyList<SubmissionFieldValueDto> FieldValues,
     IReadOnlyList<AttachmentDto> Attachments,
+    IReadOnlyList<SubmissionRouteDto> Route,
     string? VerificationCode
     );
