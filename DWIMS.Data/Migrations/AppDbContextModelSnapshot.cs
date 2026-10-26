@@ -334,6 +334,9 @@ namespace DWIMS.Data.Migrations
                     b.Property<DateTime?>("DeletedOn")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("Description")
+                        .HasColumnType("longtext");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)");
 
