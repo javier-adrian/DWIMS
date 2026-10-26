@@ -197,9 +197,14 @@ public static class ProcessEndpoints
         return result.ToOkResult();
     }
 
-    private static async Task UpdateProcess(HttpContext context)
+    private static async Task<IResult> UpdateProcess(
+        Guid processId, 
+        UpdateProcessRequest request, 
+        IProcessService processService, 
+        CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = await processService.UpdateProcessAsync(processId, request, cancellationToken);
+        return result.ToOkResult();
     }
 
     private static async Task<IResult> DeleteProcess(

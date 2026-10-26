@@ -43,7 +43,7 @@ public class ProcessService(
             .Select(p => new ProcessSummaryDto(
                 p.Id,
                 p.Title,
-                null,
+                p.Description,
                 p.Steps.Count,
                 context.Documents.Any(d => d.ProcessId == p.Id && !d.IsDeleted),
                 p.Kind,
@@ -62,7 +62,7 @@ public class ProcessService(
             .Select(p => new ProcessSummaryDto(
                 p.Id,
                 p.Title,
-                null,
+                p.Description,
                 p.Steps.Count,
                 context.Documents.Any(d => d.ProcessId == p.Id && !d.IsDeleted),
                 p.Kind,
@@ -83,7 +83,7 @@ public class ProcessService(
             .Select(p => new ProcessDetailDto(
                 p.Id,
                 p.Title,
-                null,
+                p.Description,
                 p.Kind,
                 p.Steps.Where(s => !s.IsDeleted).Select(s => new StepDto(
                     s.Id,
@@ -120,13 +120,23 @@ public class ProcessService(
         
         if (!control.IsSuccess) 
             return Result<Guid>.Failure(control.Error!, control.ErrorDescription!);
+        
+        if (string.IsNullOrWhiteSpace(request.Title))
+            return Result<Guid>.Failure("INVALID_TITLE", "Title is required.");
+        
+        if (request.Title.Length > 200)
+            return Result<Guid>.Failure("TITLE_TOO_LONG", "Title is too long.");
+        
+        if (request.Description?.Length > 2000)
+            return Result<Guid>.Failure("DESCRIPTION_TOO_LONG", "Description is too long.");
 
         var process = new Data.Process
         {
             Id = Guid.NewGuid(),
-            Title = request.Title,
+            Title = request.Title.Trim(),
             Kind = request.Kind,
             ControlNumber = control.Data,
+            Description = request.Description?.Trim()
         };
         
         context.Processes.Add(process);
@@ -160,7 +170,30 @@ public class ProcessService(
 
     public async Task<Result> UpdateProcessAsync(Guid id, UpdateProcessRequest request, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        var process = await context.Processes.Where(p => p.Id == id).FirstOrDefaultAsync(cancellationToken);
+        
+        if (process is null)
+            return Result.Failure("PROCESS_NOT_FOUND", "Process not found.");
+        
+        if (request.Description?.Length > 2000)
+            return Result.Failure("DESCRIPTION_TOO_LONG", "Description is too long.");
+        
+        if (string.IsNullOrWhiteSpace(request.Title))
+            return Result.Failure("INVALID_TITLE", "Title is required.");
+        
+        if (request.Title.Length > 200)
+            return Result.Failure("TITLE_TOO_LONG", "Title is too long.");
+        
+        process.Description = request.Description?.Trim();
+
+        process.Title = request.Title.Trim();
+        
+
+        await context.SaveChangesAsync(cancellationToken);
+        
+        await logService.LogAsync("Process Updated", "Process", process.Id, cancellationToken: cancellationToken);
+
+        return Result.Success();
     }
 
     public async Task<Result> DeleteProcessAsync(Guid id, CancellationToken cancellationToken = default)
