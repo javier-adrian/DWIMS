@@ -134,6 +134,9 @@ public class SubmissionService(
     {
         if (currentUser.UserId is null)
             return Result<SubmissionsPageDto>.Failure("UNAUTHORIZED", "User is not authenticated.");
+        
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 1, 100);
 
         var query = context.Submissions
             .Where(s => s.SubmitterId == currentUser.UserId.Value);
@@ -150,9 +153,12 @@ public class SubmissionService(
         
         if (processId.HasValue)
             query = query.Where(s => s.ProcessId == processId.Value);
+        
+        var totalCount = await query.CountAsync(cancellationToken);
 
         var submissions = await query
             .OrderByDescending(s => s.SubmittedOn)
+            .ThenBy(s => s.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(s => new SubmissionSummaryDto(
@@ -165,7 +171,7 @@ public class SubmissionService(
             ))
             .ToListAsync(cancellationToken);
 
-        return Result<SubmissionsPageDto>.Success(new SubmissionsPageDto(submissions, categories));
+        return Result<SubmissionsPageDto>.Success(new SubmissionsPageDto(submissions, categories, totalCount, page, pageSize));
     }
 
     public async Task<Result<PagedResult<AdminSubmissionDto>>> GetAllSubmissionsAsync(SubmissionFilterRequest filter, CancellationToken cancellationToken = default)
@@ -177,6 +183,7 @@ public class SubmissionService(
             return Result<PagedResult<AdminSubmissionDto>>.Failure("UNAUTHORIZED", "Only super administrators are authorized to view all submissions.");
         
         var page = Math.Max(filter.Page, 1);
+        var pageSize = Math.Clamp(filter.PageSize, 1, 100);
 
         var query = context.Submissions
             .Where(s => !s.IsDeleted);
@@ -212,8 +219,8 @@ public class SubmissionService(
         var submissions = await query
             .OrderByDescending(s => s.SubmittedOn)
             .ThenBy(s => s.Id)
-            .Skip((page - 1) * filter.PageSize)
-            .Take(filter.PageSize)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(s => new AdminSubmissionDto(
                 s.Id,
                 s.VerificationCode,
@@ -230,13 +237,19 @@ public class SubmissionService(
             ))
             .ToListAsync(cancellationToken);
 
-        return Result<PagedResult<AdminSubmissionDto>>.Success(new PagedResult<AdminSubmissionDto>(submissions, totalCount, page, filter.PageSize));
+        return Result<PagedResult<AdminSubmissionDto>>.Success(new PagedResult<AdminSubmissionDto>(submissions, totalCount, page, pageSize));
     }
 
-    public async Task<Result<IReadOnlyList<PendingReviewDto>>> GetPendingReviewAsync(CancellationToken cancellationToken = default)
+    public async Task<Result<PagedResult<PendingReviewDto>>> GetPendingReviewAsync(
+        int page, 
+        int pageSize, 
+        CancellationToken cancellationToken = default)
     {
         if (currentUser.UserId is null)
-            return Result<IReadOnlyList<PendingReviewDto>>.Failure("UNAUTHORIZED", "User is not authenticated.");
+            return Result<PagedResult<PendingReviewDto>>.Failure("UNAUTHORIZED", "User is not authenticated.");
+        
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 1, 100);
 
         var query = context.Submissions
             .Include(s => s.Step)
@@ -254,8 +267,13 @@ public class SubmissionService(
                         response.StepId == submission.StepId && 
                         response.AssigneeId == currentUser.UserId));
         
+        var totalCount = await query.CountAsync(cancellationToken);
 
         var pending = await query
+            .OrderByDescending(s => s.SubmittedOn)
+            .ThenBy(s => s.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(s => new PendingReviewDto(
                 s.Id,
                 s.Process.Id,
@@ -268,7 +286,7 @@ public class SubmissionService(
             ))
             .ToListAsync(cancellationToken);
 
-        return Result<IReadOnlyList<PendingReviewDto>>.Success(pending);
+        return Result<PagedResult<PendingReviewDto>>.Success(new PagedResult<PendingReviewDto>(pending, totalCount, page, pageSize));
     }
 
     public async Task<Result<SubmissionDetailDto>> GetPendingReviewAsync(Guid id, CancellationToken cancellationToken = default)
@@ -702,6 +720,9 @@ public class SubmissionService(
     {
         if (currentUser.UserId is null)
             return Result<SubmissionsPageDto>.Failure("UNAUTHORIZED", "User is not authenticated.");
+        
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 1, 100);
 
         var query = context.Submissions
             .Include(s => s.Step)
@@ -719,9 +740,12 @@ public class SubmissionService(
         
         if (processId.HasValue)
             query = query.Where(s => s.ProcessId == processId.Value);
+        
+        var totalCount = await query.CountAsync(cancellationToken);
 
         var submissions = await query
             .OrderByDescending(s => s.SubmittedOn)
+            .ThenBy(s => s.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(s => new SubmissionSummaryDto(
@@ -734,7 +758,7 @@ public class SubmissionService(
             ))
             .ToListAsync(cancellationToken);
 
-        return Result<SubmissionsPageDto>.Success( new SubmissionsPageDto(submissions, categories));
+        return Result<SubmissionsPageDto>.Success( new SubmissionsPageDto(submissions, categories, totalCount, page, pageSize));
     }
 
     public async Task<Result> RedirectSubmissionAsync(Guid submissionId, RedirectSubmissionRequest request,

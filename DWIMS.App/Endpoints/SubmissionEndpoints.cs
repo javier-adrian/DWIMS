@@ -325,11 +325,12 @@ public static class SubmissionEndpoints
     }
 
     private static async Task<IResult> GetSubmissionsToReview(
+        [AsParameters] GetPendingReviewQuery query,
         ISubmissionService submissionService,
         CancellationToken cancellationToken
         )
     {
-        var result = await submissionService.GetPendingReviewAsync(cancellationToken);
+        var result = await submissionService.GetPendingReviewAsync(query.Page, query.PageSize, cancellationToken);
         return result.ToOkResult();
     }
 

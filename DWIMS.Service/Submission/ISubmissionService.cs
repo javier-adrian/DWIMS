@@ -19,7 +19,9 @@ public interface ISubmissionService
         SubmissionFilterRequest filter,
         CancellationToken cancellationToken = default);
     
-    Task<Result<IReadOnlyList<PendingReviewDto>>> GetPendingReviewAsync(
+    Task<Result<PagedResult<PendingReviewDto>>> GetPendingReviewAsync(
+        int page,
+        int pageSize,
         CancellationToken cancellationToken = default);
     
     Task<Result<SubmissionDetailDto>> GetPendingReviewAsync(
