@@ -60,6 +60,9 @@ public class AuthService(
                 "INVALID_NAME",
                 "Last name must be at least 2 characters.");
 
+        if (!PhilippineContactNumber.IsValid(request.ContactNumber))
+            return Result<string>.Failure(PhilippineContactNumber.ErrorCode, PhilippineContactNumber.ErrorMessage);
+
         if (request.Password is null || request.Password.Length < 8)
             return Result<string>.Failure(
                 "WEAK_PASSWORD",

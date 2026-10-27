@@ -52,6 +52,9 @@ public class UserService(
         if (lastName.Length < 2)
             return Result.Failure("INVALID_NAME", "Last name must be at least 2 characters.");
 
+        if (!PhilippineContactNumber.IsValid(request.ContactNumber))
+            return Result.Failure(PhilippineContactNumber.ErrorCode, PhilippineContactNumber.ErrorMessage);
+
         var user = await context.Users
             .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
