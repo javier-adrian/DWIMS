@@ -46,6 +46,25 @@ public class AuthService(
         RegisterRequest request,
         CancellationToken cancellationToken = default)
     {
+        var firstName = (request.FirstName ?? "").Trim();
+        var middleName = (request.MiddleName ?? "").Trim();
+        var lastName = (request.LastName ?? "").Trim();
+
+        if (firstName.Length < 2)
+            return Result<string>.Failure(
+                "INVALID_NAME",
+                "First name must be at least 2 characters.");
+
+        if (lastName.Length < 2)
+            return Result<string>.Failure(
+                "INVALID_NAME",
+                "Last name must be at least 2 characters.");
+
+        if (middleName.Length > 0 && middleName.Length < 2)
+            return Result<string>.Failure(
+                "INVALID_NAME",
+                "Middle name must be at least 2 characters.");
+
         if (request.Password is null || request.Password.Length < 8)
             return Result<string>.Failure(
                 "WEAK_PASSWORD",
@@ -59,9 +78,9 @@ public class AuthService(
         var user = new Data.User
         {
             Id = Guid.NewGuid(),
-            FirstName = request.FirstName,
-            MiddleName = request.MiddleName ?? "",
-            LastName = request.LastName,
+            FirstName = firstName,
+            MiddleName = middleName,
+            LastName = lastName,
             Email = request.Email,
             ContactNumber = request.ContactNumber,
             Password = BCrypt.Net.BCrypt.HashPassword(request.Password),

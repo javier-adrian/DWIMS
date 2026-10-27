@@ -41,20 +41,33 @@ public class UserService(
     {
         if (currentUser.UserId is not { } userId)
             return Result.Failure("UNAUTHORIZED", "User is not authenticated.");
-            
+
+        var firstName = (request.FirstName ?? "").Trim();
+        var middleName = (request.MiddleName ?? "").Trim();
+        var lastName = (request.LastName ?? "").Trim();
+
+        if (firstName.Length < 2)
+            return Result.Failure("INVALID_NAME", "First name must be at least 2 characters.");
+
+        if (lastName.Length < 2)
+            return Result.Failure("INVALID_NAME", "Last name must be at least 2 characters.");
+
+        if (middleName.Length > 0 && middleName.Length < 2)
+            return Result.Failure("INVALID_NAME", "Middle name must be at least 2 characters.");
+
         var user = await context.Users
             .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-        
+
         if (user is null)
             return Result.Failure("USER_NOT_FOUND", "User not found.");
-        
+
         if (!string.Equals(user.Email, request.Email, StringComparison.OrdinalIgnoreCase) &&
             await context.Users.IgnoreQueryFilters().AnyAsync(u => u.Email == request.Email && u.Id != userId, cancellationToken))
             return Result.Failure("EMAIL_TAKEN", "An account with this email already exists.");
-        
-        user.FirstName = request.FirstName;
-        user.MiddleName = request.MiddleName ?? "";
-        user.LastName = request.LastName;
+
+        user.FirstName = firstName;
+        user.MiddleName = middleName;
+        user.LastName = lastName;
         user.Email = request.Email;
         user.ContactNumber = request.ContactNumber;
         user.JobTitle = request.JobTitle;
