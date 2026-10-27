@@ -197,7 +197,7 @@ public class UserService(
 
     public async Task<Result<IReadOnlyList<UserSearchResultDto>>> SearchUsersAsync(string query, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(query) || query.Trim().Length < 2)
+        if (string.IsNullOrWhiteSpace(query))
             return Result<IReadOnlyList<UserSearchResultDto>>.Success(Array.Empty<UserSearchResultDto>());
 
         var term = query.Trim();
