@@ -60,11 +60,6 @@ public class AuthService(
                 "INVALID_NAME",
                 "Last name must be at least 2 characters.");
 
-        if (middleName.Length > 0 && middleName.Length < 2)
-            return Result<string>.Failure(
-                "INVALID_NAME",
-                "Middle name must be at least 2 characters.");
-
         if (request.Password is null || request.Password.Length < 8)
             return Result<string>.Failure(
                 "WEAK_PASSWORD",

@@ -52,9 +52,6 @@ public class UserService(
         if (lastName.Length < 2)
             return Result.Failure("INVALID_NAME", "Last name must be at least 2 characters.");
 
-        if (middleName.Length > 0 && middleName.Length < 2)
-            return Result.Failure("INVALID_NAME", "Middle name must be at least 2 characters.");
-
         var user = await context.Users
             .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
