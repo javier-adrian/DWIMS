@@ -9,7 +9,10 @@ public interface IProcessService
     Task<Result<IReadOnlyList<ProcessSummaryDto>>> GetProcessesAsync(
         CancellationToken cancellationToken = default);
 
-    Task<Result<IReadOnlyList<ProcessSummaryDto>>> GetAllProcessesAsync(
+    Task<Result<PagedResult<ProcessSummaryDto>>> GetAllProcessesAsync(
+        int page = 1,
+        int pageSize = 100,
+        string? query = null,
         CancellationToken cancellationToken = default);
 
     Task<Result<ProcessDetailDto>> GetProcessAsync(

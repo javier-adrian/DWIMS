@@ -187,10 +187,11 @@ public static class ProcessEndpoints
     }
 
     private static async Task<IResult> GetAllProcesses(
+        [AsParameters] GetAllProcessesQuery query,
         IProcessService processService,
         CancellationToken cancellationToken)
     {
-        var result = await processService.GetAllProcessesAsync(cancellationToken);
+        var result = await processService.GetAllProcessesAsync(query.Page, query.PageSize, query.Query, cancellationToken);
         return result.ToOkResult();
     }
 

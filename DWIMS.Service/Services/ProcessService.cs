@@ -77,10 +77,34 @@ public class ProcessService(
         return Result<IReadOnlyList<ProcessSummaryDto>>.Success(processes);
     }
 
-    public async Task<Result<IReadOnlyList<ProcessSummaryDto>>> GetAllProcessesAsync(CancellationToken cancellationToken = default)
+    public async Task<Result<PagedResult<ProcessSummaryDto>>> GetAllProcessesAsync(
+        int page = 1,
+        int pageSize = 100,
+        string? query = null,
+        CancellationToken cancellationToken = default)
     {
-        var processes = await context.Processes
-            .Where(p => !p.IsDeleted)
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var term = query?.Trim();
+
+        var baseQuery = context.Processes.Where(p => !p.IsDeleted);
+
+        if (!string.IsNullOrEmpty(term))
+        {
+            baseQuery = baseQuery
+                .Where(p => 
+                    p.Title.Contains(term) || 
+                    (p.Description != null && p.Description.Contains(term)) ||
+                    (p.ControlNumber != null && p.ControlNumber.Contains(term)));
+        }
+        
+        var totalCount = await baseQuery.CountAsync(cancellationToken);
+        
+        var processes = await baseQuery
+            .OrderBy(p => p.Title)
+            .ThenBy(p => p.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(p => new ProcessSummaryDto(
                 p.Id,
                 p.Title,
@@ -93,7 +117,7 @@ public class ProcessService(
             ))
             .ToListAsync(cancellationToken);
 
-        return Result<IReadOnlyList<ProcessSummaryDto>>.Success(processes);
+        return Result<PagedResult<ProcessSummaryDto>>.Success(new PagedResult<ProcessSummaryDto>(processes, totalCount, page, pageSize));
     }
 
     public async Task<Result<ProcessDetailDto>> GetProcessAsync(Guid id, CancellationToken cancellationToken = default)
