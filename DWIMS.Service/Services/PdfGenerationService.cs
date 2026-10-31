@@ -15,6 +15,7 @@ using iText.Layout.Properties;
 using iText.Kernel.Colors;
 using iText.Barcodes;
 using System.Globalization;
+using System.Security.Cryptography;
 using DWIMS.Service.Logs;
 using iText.Forms.Fields;
 using Microsoft.EntityFrameworkCore;
@@ -59,7 +60,20 @@ public sealed class PdfGenerationService(
         if (!string.IsNullOrEmpty(submission.ResultLink))
             try
             {
-                return await storageService.DownloadAsync(submission.ResultLink, cancellationToken);
+                await using var snapshot = await storageService.DownloadAsync(submission.ResultLink, cancellationToken);
+                
+                using var buffer = new MemoryStream();
+                await snapshot.CopyToAsync(buffer, cancellationToken);
+                var bytes = buffer.ToArray();
+
+                if (string.IsNullOrEmpty(submission.ResultHash))
+                {
+                    submission.ResultHash = Convert.ToHexString(SHA256.HashData(bytes));
+                    await context.SaveChangesAsync(cancellationToken);
+                }
+                
+                return new MemoryStream(bytes);
+                // return await storageService.DownloadAsync(submission.ResultLink, cancellationToken);
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {

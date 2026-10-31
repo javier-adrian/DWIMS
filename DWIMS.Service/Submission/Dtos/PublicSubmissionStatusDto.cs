@@ -9,4 +9,5 @@ public sealed record PublicSubmissionStatusDto(
     DateTime SubmittedAt,
     DateTime? CompletedAt,
     string? CurrentStep,
-    IReadOnlyList<PublicStepStatusDto> Steps);
+    IReadOnlyList<PublicStepStatusDto> Steps,
+    string? ResultHash = null);

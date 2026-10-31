@@ -883,7 +883,8 @@ public class SubmissionService(
                 submission.SubmittedOn,
                 submission.CompletedOn,
                 submission.Step.Title,
-                steps));
+                steps,
+                submission.ResultHash));
     }
 
     public async Task<Result<Guid>> CreateDocumentSubmissionAsync(
@@ -1213,9 +1214,13 @@ public class SubmissionService(
         try
         {
             await using var pdf = await pdfGenerationService.GenerateAsync(submission.Id, cancellationToken);
+
+            using var buffer = new MemoryStream();
+            await pdf.CopyToAsync(buffer, cancellationToken);
+            var bytes = buffer.ToArray();
             
             var key = await storageService.UploadAsync(
-                pdf, 
+                new MemoryStream(bytes), 
                 $"{submission.Id:N}/result.pdf", 
                 "application/pdf", 
                 Prefix.Output, 
@@ -1223,6 +1228,7 @@ public class SubmissionService(
             
             submission.ResultLink = key;
             submission.ResultLinkGeneratedOn = DateTime.UtcNow;
+            submission.ResultHash = Convert.ToHexString(SHA256.HashData(bytes));
             await context.SaveChangesAsync(cancellationToken);
         }
         catch (Exception e) when (e is not OperationCanceledException)

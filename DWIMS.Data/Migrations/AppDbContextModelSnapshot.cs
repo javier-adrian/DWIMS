@@ -562,6 +562,9 @@ namespace DWIMS.Data.Migrations
                     b.Property<Guid>("ProcessId")
                         .HasColumnType("char(36)");
 
+                    b.Property<string>("ResultHash")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("ResultLink")
                         .HasColumnType("longtext");
 
@@ -671,6 +674,9 @@ namespace DWIMS.Data.Migrations
                     b.Property<bool>("EmailVerified")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<int>("FailedLoginAttempts")
+                        .HasColumnType("int");
+
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -684,6 +690,9 @@ namespace DWIMS.Data.Migrations
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("LockedUntilUtc")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("MiddleName")
                         .IsRequired()

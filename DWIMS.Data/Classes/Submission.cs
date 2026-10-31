@@ -19,6 +19,7 @@ public class Submission : ISoftDeletable
     public string? SourceLink { get; set; }
     public string? SourceTitle { get; set; }
     public DateTime? ResultLinkGeneratedOn { get; set; }
+    public string? ResultHash { get; set; }
     public ICollection<Input> Inputs { get; set; }
     public ICollection<Response> Responses { get; set; }
     public ICollection<Attachment> Attachments { get; set; }

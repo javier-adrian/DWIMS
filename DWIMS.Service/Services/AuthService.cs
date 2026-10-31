@@ -18,6 +18,8 @@ public class AuthService(
 ) : IAuthService
 {
     private readonly GoogleOptions _googleOptions = googleOptions.Value;
+    private const int MaxFailedLoginAttempts = 5;
+    private const int LockoutDurationMinutes = 15;
     
     private static string GenerateCode() => RandomNumberGenerator.GetInt32(0, 1000000).ToString("D6");
 
@@ -197,14 +199,37 @@ public class AuthService(
                 x => x.Email == request.Email,
                 cancellationToken);
 
-        if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
+        if (user is null || user.Password is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
+        {
+            if (user is not null && user.Password is not null)
+            {
+                user.FailedLoginAttempts++;
+                
+                if (user.FailedLoginAttempts >= MaxFailedLoginAttempts)
+                {
+                    user.LockedUntilUtc = DateTime.UtcNow.AddMinutes(LockoutDurationMinutes);
+                    user.FailedLoginAttempts = 0;
+                }
+                
+                await context.SaveChangesAsync(cancellationToken);
+            }
+            
             return Result<AuthResponse>.Failure(
                 "INVALID_CREDENTIALS",
                 "Invalid email or password.");
+        }
         
         if (user.IsDeleted)
             return Result<AuthResponse>.Failure(
                 "USER_DELETED", "User is deleted.");
+
+        if (user.LockedUntilUtc > DateTime.UtcNow)
+        {
+            var minutesLeft = (int)Math.Ceiling((user.LockedUntilUtc.Value - DateTime.UtcNow).TotalMinutes);
+            return Result<AuthResponse>.Failure(
+                "ACCOUNT_LOCKED",
+                $"Account is temporarily locked after repeated failed login attempts. Please try again in {minutesLeft} minutes.");
+        }
 
         if (!user.EmailVerified)
         {
@@ -212,6 +237,11 @@ public class AuthService(
             return Result<AuthResponse>.Failure(
                 "EMAIL_NOT_VERIFIED", "Please verify your email. A new code has been sent to your email.");
         }
+
+        user.FailedLoginAttempts = 0;
+        user.LockedUntilUtc = null;
+        
+        await context.SaveChangesAsync(cancellationToken);
 
         return Result<AuthResponse>.Success(await BuildAuthResponseAsync(user, cancellationToken));
     }
@@ -277,6 +307,8 @@ public class AuthService(
             return Result.Failure("INVALID_TOKEN", "Reset token is invalid or expired.");
 
         resetToken.User.Password = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        resetToken.User.FailedLoginAttempts = 0;
+        resetToken.User.LockedUntilUtc = null;
         resetToken.Used = true;
         await context.SaveChangesAsync(cancellationToken);
 
@@ -332,20 +364,35 @@ public class AuthService(
                 return Result<AuthResponse>.Failure(
                     "USER_DELETED",
                     "The account has been deleted.");
+            
+            if (user.LockedUntilUtc > DateTime.UtcNow)
+            {
+                var minutesLeft = (int)Math.Ceiling((user.LockedUntilUtc.Value - DateTime.UtcNow).TotalMinutes);
+                return Result<AuthResponse>.Failure(
+                    "ACCOUNT_LOCKED",
+                    $"Account is temporarily locked after repeated failed login attempts. Please try again in {minutesLeft} minutes.");
+            }
 
             await GrantDefaultSubmitterRoleAsync(user.Id, cancellationToken);
         }
         else
         {
-            user = await context.Users
-                       .IgnoreQueryFilters()
-                       .FirstOrDefaultAsync(user =>
-                               user.Email == payload.Email,
-                           cancellationToken)
-                   ?? await CreateOAuthUserAsync(
-                       payload,
-                       payload.Email,
-                       cancellationToken);
+            var existing = await context.Users
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(u => u.Email == payload.Email, cancellationToken);
+            
+            if (existing is not null && existing.LockedUntilUtc > DateTime.UtcNow)
+            {
+                var minutesLeft = (int)Math.Ceiling((existing.LockedUntilUtc.Value - DateTime.UtcNow).TotalMinutes);
+                return Result<AuthResponse>.Failure(
+                    "ACCOUNT_LOCKED",
+                    $"Account is temporarily locked after repeated failed login attempts. Please try again in {minutesLeft} minutes.");
+            }
+            
+            user = existing ?? await CreateOAuthUserAsync(
+                payload,
+                payload.Email,
+                cancellationToken);
             
             user.EmailVerified = true;
 
