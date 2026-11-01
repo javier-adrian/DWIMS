@@ -25,6 +25,7 @@ public class SubmissionService(
     EmailQueue emailQueue,
     IRoutingService routingService,
     IPdfGenerationService pdfGenerationService,
+    IPdfSigningService pdfSigningService,
     IStorageService storageService,
     ILogService logService) 
     : ISubmissionService
@@ -1218,6 +1219,9 @@ public class SubmissionService(
             using var buffer = new MemoryStream();
             await pdf.CopyToAsync(buffer, cancellationToken);
             var bytes = buffer.ToArray();
+
+            var sealedBytes = pdfSigningService.Seal(bytes);
+            if (sealedBytes is not null) bytes = sealedBytes;
             
             var key = await storageService.UploadAsync(
                 new MemoryStream(bytes), 

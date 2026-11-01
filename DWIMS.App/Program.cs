@@ -76,6 +76,10 @@ namespace DWIMS
             builder.Services
                 .AddOptions<GoogleOptions>()
                 .Bind(builder.Configuration.GetSection(GoogleOptions.SectionName));
+            
+            builder.Services
+                .AddOptions<PdfSigningOptions>()
+                .Bind(builder.Configuration.GetSection(PdfSigningOptions.SectionName));
 
 
             builder.Services
@@ -118,6 +122,7 @@ namespace DWIMS
             builder.Services.AddScoped<IRoleService, RoleService>();
             builder.Services.AddSingleton<EmailQueue>();
             builder.Services.AddHostedService<EmailWorker>();
+            builder.Services.AddScoped<IPdfSigningService, PdfSigningService>();
             
             builder.Services.AddDbContext<AppDbContext>(options =>
                 {
