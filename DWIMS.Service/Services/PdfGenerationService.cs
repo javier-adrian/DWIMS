@@ -427,12 +427,15 @@ public sealed class PdfGenerationService(
             .SetTextAlignment(TextAlignment.CENTER));
 
         if (stamp.CompletedOn is { } completedOn)
-            nameCanvas.Add(new Paragraph(completedOn.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture))
+        {
+            var localTime = completedOn.AddHours(8); // GMT +8
+            nameCanvas.Add(new Paragraph(localTime.ToString("MMM d, yyyy h:mm tt", CultureInfo.InvariantCulture))
                 .SetFont(font)
                 .SetFontSize(7)
                 .SetMargin(0)
                 .SetMultipliedLeading(1)
                 .SetTextAlignment(TextAlignment.CENTER));
+        }
         
         nameCanvas.Close();
         
