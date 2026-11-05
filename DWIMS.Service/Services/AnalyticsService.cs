@@ -306,6 +306,9 @@ public class AnalyticsService(
 
         var approved = Count(Status.Approve);
         var total = statusCounts.Sum(status => status.Count);
+        // Approval rate is decided-only: approved / (approved + rejected).
+        // Pending and cancelled say nothing about the outcome mix yet.
+        var decided = approved + Count(Status.Reject);
 
         return new VolumeDto
         {
@@ -314,8 +317,8 @@ public class AnalyticsService(
             RejectedCount = Count(Status.Reject),
             PendingCount = Count(Status.Review) + Count(Status.OnHold),
             CancelledCount = Count(Status.Cancel),
-            ApprovalRate = total > 0 
-                ? Math.Round((double)approved / total, 4) 
+            ApprovalRate = decided > 0
+                ? Math.Round((double)approved / decided, 4)
                 : 0,
             ByProcess = byProcess,
             ByDay = daily
