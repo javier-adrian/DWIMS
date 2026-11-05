@@ -7,4 +7,5 @@ public sealed record AnalyticsSummaryDto
     public required CycleTimeDto CycleTime { get; init; }
     public required IReadOnlyList<ReviewerPerformanceDto> Reviewers { get; init; }
     public required PendingAgingDto PendingAging { get; init; }
+    public required StepFunnelDto StepFunnel { get; init; }
 }

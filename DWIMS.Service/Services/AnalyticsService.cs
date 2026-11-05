@@ -54,6 +54,7 @@ public class AnalyticsService(
         
         var reviewers = await GetReviewerPerformanceAsync(resolvedFilter, cancellationToken);
         var pendingAging = await GetPendingAgingAsync(resolvedFilter, cancellationToken);
+        var stepFunnel = await GetStepFunnelAsync(resolvedFilter, volume, cancellationToken);
         
         return Result<AnalyticsSummaryDto>.Success(new AnalyticsSummaryDto
         {
@@ -61,7 +62,8 @@ public class AnalyticsService(
             CycleTime = cycleTime,
             Volume = volume,
             Reviewers = reviewers,
-            PendingAging = pendingAging
+            PendingAging = pendingAging,
+            StepFunnel = stepFunnel
         });
     }
 
@@ -449,6 +451,51 @@ public class AnalyticsService(
             ],
             Oldest = oldest,
             TotalPending = pending.Count
+        };
+    }
+
+    private async Task<StepFunnelDto> GetStepFunnelAsync(
+        AnalyticsFilterDto filter,
+        VolumeDto volume,
+        CancellationToken cancellationToken)
+    {
+        var topProcess = filter.ProcessId.HasValue ?
+            volume.ByProcess.FirstOrDefault(process => process.ProcessId == filter.ProcessId.Value) :
+            volume.ByProcess.FirstOrDefault();
+        
+        if (topProcess is null)
+            return new StepFunnelDto
+            {
+                ProcessId = Guid.Empty,
+                ProcessName = "",
+                Steps = []
+            };
+        
+        var rows = await BuildResponsesBase(filter)
+            .Where(response => response.Submission.ProcessId == topProcess.ProcessId)
+            .Select(response => new
+            {
+                response.Step.Id,
+                response.Step.Title,
+                response.Step.Order,
+                Minutes = EF.Functions.DateDiffMinute(response.ActivatedOn, response.CompletedOn!.Value)
+            })
+            .ToListAsync(cancellationToken);
+
+        return new StepFunnelDto
+        {
+            ProcessId = topProcess.ProcessId,
+            ProcessName = topProcess.ProcessName,
+            Steps = rows
+                .GroupBy(row => new { row.Id, row.Title, row.Order })
+                .Select(group => new StepFunnelEntryDto(
+                        group.Key.Id,
+                        group.Key.Title,
+                        group.Key.Order,
+                        Math.Round(group.Average(row => row.Minutes), 2),
+                        group.Count()))
+                .OrderBy(step => step.StepOrder)
+                .ToList()
         };
     }
 }
