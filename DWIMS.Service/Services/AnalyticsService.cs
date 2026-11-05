@@ -413,7 +413,8 @@ public class AnalyticsService(
                 response.ActivatedOn,
                 ProcessName = response.Submission.Process.Title,
                 StepName = response.Step.Title,
-                response.AssigneeId
+                response.AssigneeId,
+                response.SubmissionId
             })
             .ToListAsync(cancellationToken);
         
@@ -437,7 +438,8 @@ public class AnalyticsService(
                     ? assignee.Name
                     : "(unassigned)",
                 Math.Round(WaitingHours(p.ActivatedOn), 1),
-                p.Status == Status.OnHold))
+                p.Status == Status.OnHold,
+                p.SubmissionId))
             .ToList();
 
         return new PendingAgingDto

@@ -5,4 +5,5 @@ public sealed record PendingItemDto(
     string StepName, 
     string AssigneeName,
     double WaitingHours,
-    bool OnHold);
+    bool OnHold,
+    Guid SubmissionId);
