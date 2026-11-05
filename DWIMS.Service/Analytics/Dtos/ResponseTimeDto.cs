@@ -6,5 +6,7 @@ public sealed record ResponseTimeDto
     public double AverageResponseTime { get; init; }
     public double MinResponseTime { get; init; }
     public double MaxResponseTime { get; init; }
+    public double MedianResponseTime { get; init; }
+    public double P90ResponseTime { get; init; }
     public required IReadOnlyList<StepResponseTimeDto> ByStep { get; init; }
 }
