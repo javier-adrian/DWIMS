@@ -377,7 +377,7 @@ public class SubmissionService(
     {
         if (currentUser.UserId is null)
             return Result<SubmissionDetailDto>.Failure("UNAUTHORIZED", "You are not authorized to access this submission.");
-        
+
         var submission = await context.Submissions
             .Include(s => s.Process)
             .Include(s => s.Step)
@@ -390,9 +390,14 @@ public class SubmissionService(
 
         if (submission is null)
             return Result<SubmissionDetailDto>.Failure("SUBMISSION_NOT_FOUND", "Submission not found.");
-       
-        if (currentUser.UserId != submission.SubmitterId && 
-            !currentUser.isSuperAdministrator &&
+
+        // Administrators and SuperAdministrators may read any submission — the
+        // analytics "Oldest Pending" links point here. Acting on a step still
+        // requires an assignment (RespondToStepAsync checks that separately).
+        var isAdministratorOrAbove = currentUser.Roles.Values.Any(role =>
+            role == GeneralRole.Administrator || role == GeneralRole.SuperAdministrator);
+        if (currentUser.UserId != submission.SubmitterId &&
+            !isAdministratorOrAbove &&
             !submission.Responses.Any(r => r.Reviewer?.Id == currentUser.UserId || r.AssigneeId == currentUser.UserId))
             return Result<SubmissionDetailDto>.Failure("UNAUTHORIZED", "You are not authorized to access this submission.");
 
