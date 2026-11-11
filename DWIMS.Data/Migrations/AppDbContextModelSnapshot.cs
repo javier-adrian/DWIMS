@@ -62,6 +62,9 @@ namespace DWIMS.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
+                    b.Property<string>("AnalysisJson")
+                        .HasColumnType("longtext");
+
                     b.Property<DateTime?>("DeletedOn")
                         .HasColumnType("datetime(6)");
 
@@ -71,6 +74,9 @@ namespace DWIMS.Data.Migrations
                     b.Property<string>("Link")
                         .IsRequired()
                         .HasColumnType("longtext");
+
+                    b.Property<int>("MappingState")
+                        .HasColumnType("int");
 
                     b.Property<Guid>("ProcessId")
                         .HasColumnType("char(36)");
@@ -147,7 +153,6 @@ namespace DWIMS.Data.Migrations
                         .HasColumnType("char(36)");
 
                     b.Property<string>("AcroFormKey")
-                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<DateTime?>("DeletedOn")
@@ -173,6 +178,21 @@ namespace DWIMS.Data.Migrations
 
                     b.Property<Guid>("ProcessId")
                         .HasColumnType("char(36)");
+
+                    b.Property<double?>("RectHeight")
+                        .HasColumnType("double");
+
+                    b.Property<int?>("RectPage")
+                        .HasColumnType("int");
+
+                    b.Property<double?>("RectWidth")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("RectX")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("RectY")
+                        .HasColumnType("double");
 
                     b.Property<bool>("Required")
                         .HasColumnType("tinyint(1)");
@@ -530,6 +550,21 @@ namespace DWIMS.Data.Migrations
 
                     b.Property<int>("Role")
                         .HasColumnType("int");
+
+                    b.Property<double?>("SignatureHeight")
+                        .HasColumnType("double");
+
+                    b.Property<int?>("SignaturePage")
+                        .HasColumnType("int");
+
+                    b.Property<double?>("SignatureWidth")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("SignatureX")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("SignatureY")
+                        .HasColumnType("double");
 
                     b.Property<string>("Title")
                         .IsRequired()

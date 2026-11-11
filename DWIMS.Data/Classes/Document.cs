@@ -9,6 +9,9 @@ public class Document : ISoftDeletable
     public string Link { get; set; }
     public Guid ProcessId { get; set; }
     public Process Process { get; set; }
+
+    public TemplateMappingState MappingState { get; set; } = TemplateMappingState.NotAnalyzed;
+    public string? AnalysisJson { get; set; }
     
     public bool IsDeleted { get; set; }
     public DateTime? DeletedOn { get; set; }

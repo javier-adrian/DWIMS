@@ -6,7 +6,7 @@ public class Field : ISoftDeletable
 {
     public Guid Id { get; set; }
     public string Title { get; set; }
-    public string AcroFormKey { get; set; }
+    public string? AcroFormKey { get; set; }
     public int Order { get; set; }
     public Guid ProcessId { get; set; }
     public Process Process { get; set; }
@@ -17,6 +17,11 @@ public class Field : ISoftDeletable
     public bool Required { get; set; } = true;
     public Guid? DocumentId { get; set; }
     public Document Document { get; set; }
+    public int? RectPage { get; set; }
+    public double? RectX { get; set; }
+    public double? RectY { get; set; }
+    public double? RectWidth { get; set; }
+    public double? RectHeight { get; set; }
 
     public bool IsDeleted { get; set; }
     public DateTime? DeletedOn { get; set; }

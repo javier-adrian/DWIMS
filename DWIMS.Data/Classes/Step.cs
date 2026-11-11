@@ -13,6 +13,11 @@ public class Step : ISoftDeletable
     public GeneralRole Role { get; set; } = GeneralRole.Reviewer;
     public Field Field { get; set; }
     public Process Process { get; set; }
+    public int? SignaturePage { get; set; }
+    public double? SignatureX { get; set; }
+    public double? SignatureY { get; set; }
+    public double? SignatureWidth { get; set; }
+    public double? SignatureHeight { get; set; }
     
     public bool IsDeleted { get; set; }
     public DateTime? DeletedOn { get; set; }
