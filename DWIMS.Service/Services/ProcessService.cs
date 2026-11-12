@@ -7,6 +7,7 @@ using DWIMS.Service.Process.Dtos;
 using DWIMS.Service.Process.Requests;
 using DWIMS.Service.Storage;
 using DWIMS.Service.User;
+using iText.Kernel.Pdf.Event;
 using Microsoft.EntityFrameworkCore;
 
 namespace DWIMS.Service.Services;
@@ -663,6 +664,266 @@ public class ProcessService(
             return Result<(Stream Content, string FileName)>.Failure("DOCUMENT_NOT_FOUND", "No template for this process.");
         }
     }
+
+    public async Task<Result<TemplateMappingDto>> GetMappingAsync(Guid processId, CancellationToken cancellationToken = default)
+    {
+        var process = await context.Processes
+            .Include(p => p.Steps)
+            .Include(p => p.Fields)
+            .Include(p => p.Documents)
+            .FirstOrDefaultAsync(p => p.Id == processId, cancellationToken);
+        
+        if (process is null) 
+            return Result<TemplateMappingDto>.Failure("PROCESS_NOT_FOUND", "Process not found.");
+        
+        var document = process.Documents.FirstOrDefault(d => !d.IsDeleted);
+        
+        if (document is null || document.MappingState == TemplateMappingState.NotAnalyzed)
+            return Result<TemplateMappingDto>.Failure("MAPPING_NOT_FOUND", "No template analysis for this process.");
+
+        TemplateAnalysis? suggestions = null;
+        IReadOnlyList<FieldDto> fields = [];
+        IReadOnlyList<StepDto> steps = [];
+
+        if (document.MappingState == TemplateMappingState.Analyzed)
+        {
+            suggestions = TemplateAnalysisJson.Deserialize(document.AnalysisJson ?? "") ??
+                          new TemplateAnalysis(0, [], [], []);
+        }
+        else
+        {
+            steps = process.Steps
+                .Where(s => !s.IsDeleted)
+                .OrderBy(s => s.Order)
+                .Select(s => new StepDto(
+                    s.Id,
+                    s.Order,
+                    s.Title,
+                    s.Role,
+                    s.SignaturePage,
+                    s.SignatureX,
+                    s.SignatureY,
+                    s.SignatureWidth,
+                    s.SignatureHeight))
+                .ToList();
+            
+            fields = process.Fields
+                .Where(f => !f.IsDeleted)
+                .OrderBy(f => f.Order)
+                .ThenBy(f => f.Title)
+                .Select(f => new FieldDto(
+                    f.Id,
+                    f.Title,
+                    f.AcroFormKey,
+                    f.Type,
+                    f.Required,
+                    f.Options,
+                    f.Order,
+                    f.Pattern,
+                    f.PatternMessage,
+                    f.RectPage,
+                    f.RectX,
+                    f.RectY,
+                    f.RectWidth,
+                    f.RectHeight))
+                .ToList();
+        }
+
+        return Result<TemplateMappingDto>.Success(
+            new TemplateMappingDto((int)document.MappingState, suggestions, fields, steps));
+    }
+
+    public async Task<Result> ConfirmMappingAsync(Guid processId, ConfirmMappingRequest request, CancellationToken cancellationToken = default)
+    {
+        var process = await context.Processes
+            .Include(p => p.Steps)
+            .Include(p =>  p.Fields)
+            .Include(p => p.Documents)
+            .FirstOrDefaultAsync(p => p.Id == processId, cancellationToken);
+        
+        if (process is null)
+            return Result.Failure("PROCESS_NOT_FOUND", "Process not found.");
+
+        if (process.Kind == ProcessKind.FreeDocument)
+            return Result.Failure("WRONG_PROCESS_KIND", "Memorandums and letters do not use templates.");
+        
+        var document = process.Documents.FirstOrDefault(d => d.ProcessId == processId && !d.IsDeleted);
+
+        if (document is null || document.MappingState == TemplateMappingState.NotAnalyzed)
+            return Result.Failure("MAPPING_NOT_REQUIRED", "This template was not analyzed; nothing to confirm.");
+
+        var hasPending = await context.Submissions
+            .AnyAsync(submission =>
+                submission.ProcessId == processId &&
+                !submission.IsDeleted &&
+                submission.Status != Status.Approve &&
+                submission.Status != Status.Reject &&
+                submission.Status != Status.Cancel, cancellationToken);
+
+        if (hasPending)
+            return Result.Failure("PROCESS_HAS_PENDING_SUBMISSIONS",
+                "Mapping cannot be replaced while submissions are pending.");
+
+        var pageCount = TemplateAnalysisJson.Deserialize(document.AnalysisJson ?? "")?.PageCount ?? 0;
+
+        var fieldPatterns = new List<(string? Pattern, string? Message)>();
+
+        foreach (var item in request.Fields)
+        {
+            var title = item.Title?.Trim() ?? "";
+            
+            if (title.Length is < 1 or > 200)
+                return Result.Failure("INVALID_TITLE", "Every field needs a title of 1-200 characters.");
+
+            if (!Enum.IsDefined((InputTypes)item.Type))
+                return Result.Failure("INVALID_FIELD_TYPE", $"Unknown field type {item.Type}.");
+
+            if (!IsValidPlacement(item.Page, item.X, item.Y, item.Width, item.Height, pageCount))
+                return Result.Failure("INVALID_FIELD_PLACEMENT", $"Field '{title}' has an invalid placement.");
+
+            var normalized = NormalizePattern(item.Pattern, item.PatternMessage);
+
+            if (!normalized.IsSuccess)
+                return Result.Failure(normalized.Error!, normalized.ErrorDescription!);
+            
+            fieldPatterns.Add(normalized.Data);
+        }
+        
+        foreach (var item in request.Steps)
+        {
+            var title = item.Title?.Trim() ?? "";
+            
+            if (title.Length is < 1 or > 200)
+                return Result.Failure("INVALID_TITLE", "Every step needs a title of 1-200 characters.");
+
+            if (!Enum.IsDefined((GeneralRole)item.Role))
+                return Result.Failure("INVALID_ROLE", $"Unknown role {item.Role}.");
+
+            if (!IsValidPlacement(item.Page, item.X, item.Y, item.Width, item.Height, pageCount))
+                return Result.Failure("MAPPING_INCOMPLETE", $"Step '{title}' needs a valid signature slot.");
+        }
+
+        var oldFields = process.Fields.ToList();
+        var oldSteps = process.Steps.ToList();
+        
+        context.Steps.RemoveRange(process.Steps);
+        process.Fields.ToList().ForEach(f => context.Fields.Remove(f));
+
+        var newFields = new List<Field>();
+
+        for (int i = 0; i < request.Fields.Count; i++)
+        {
+            var item = request.Fields[i];
+            
+            newFields.Add(new Field
+            {
+                Id = Guid.NewGuid(),
+                ProcessId = processId,
+                Title = item.Title.Trim(),
+                AcroFormKey = null,
+                Type = (InputTypes) item.Type,
+                Required = item.Required,
+                RectPage = item.Page,
+                RectX = item.X,
+                RectY = item.Y,
+                RectWidth = item.Width,
+                RectHeight = item.Height,
+                Pattern = fieldPatterns[i].Pattern,
+                PatternMessage = fieldPatterns[i].Message,
+                DocumentId = document.Id,
+                Order = i + 1,
+            });
+        }
+        
+        var newSteps = new List<Step>();
+
+        for (int i = 0; i < request.Steps.Count; i++)
+        {
+            var item = request.Steps[i];
+            
+            newSteps.Add(new Step
+            {
+                Id = Guid.NewGuid(),
+                ProcessId = processId,
+                Order = i + 1,
+                Title = item.Title.Trim(),
+                Role = (GeneralRole) item.Role,
+                SignaturePage = item.Page,
+                SignatureX = item.X,
+                SignatureY = item.Y,
+                SignatureWidth = item.Width,
+                SignatureHeight = item.Height
+            });
+        }
+        
+        context.Fields.AddRange(newFields);
+        context.Steps.AddRange(newSteps);
+        
+        document.MappingState = TemplateMappingState.Confirmed;
+
+        await RelinkAndSaveAsync(processId, oldFields, oldSteps, newFields, newSteps, cancellationToken);
+        
+        await logService.LogAsync(
+            "Template Mapping Confirmed",
+            "Process",
+            processId,
+            $"{newFields.Count} fields, {newSteps.Count} steps",
+            cancellationToken: cancellationToken);
+
+        return Result.Success();
+    }
+
+    public async Task<Result> ReanalyzeAsync(Guid processId, CancellationToken cancellationToken = default)
+    {
+        var process = await context.Processes
+            .Include(p => p.Documents)
+            .FirstOrDefaultAsync(p => p.Id == processId, cancellationToken);
+        
+        if (process is null)
+            return Result.Failure("PROCESS_NOT_FOUND", "Process not found.");
+        
+        var document = process.Documents.FirstOrDefault(d => d.ProcessId == processId && !d.IsDeleted);
+
+        if (document is null || document.MappingState == TemplateMappingState.NotAnalyzed)
+            return Result.Failure("MAPPING_NOT_REQUIRED", "This template was not analyzed.");
+
+        if (document.MappingState == TemplateMappingState.Confirmed)
+            return Result.Failure("MAPPING_ALREADY_CONFIRMED", "Re-upload the template to redo a confirmed mapping.");
+
+        Stream template;
+
+        try
+        {
+            template = await storageService.DownloadAsync(document.Link, cancellationToken);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            return Result.Failure("DOCUMENT_NOT_FOUND", "Template file could not be loaded.");
+        }
+
+        var analysisResult = await templateAnalysisEngine.AnalyzeAsync(template, cancellationToken);
+
+        if (!analysisResult.IsSuccess)
+            return Result.Failure(analysisResult.Error!, analysisResult.ErrorDescription!);
+
+        document.AnalysisJson = TemplateAnalysisJson.Serialize(analysisResult.Data!);
+        
+        await context.SaveChangesAsync(cancellationToken);
+
+        await logService.LogAsync(
+            "Template Reanalyzed",
+            "Document",
+            document.Id,
+            $"{analysisResult.Data!.Fields.Count} field and {analysisResult.Data.Steps.Count} step suggestions.",
+            cancellationToken: cancellationToken);
+
+        return Result.Success();
+    }
+
+    private static bool IsValidPlacement(int page, double x, double y, double width, double height, int pageCount) =>
+        page >= 0 && (pageCount == 0 || page < pageCount) &&
+        x is >= 0 and <= 1 && y is >= 0 and <= 1 &&
+        width is > 0 and <= 1 && height is > 0 and <= 1;
 
     private async Task RelinkAndSaveAsync(
         Guid processId,

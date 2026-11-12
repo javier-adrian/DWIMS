@@ -1,5 +1,6 @@
 using DWIMS.Service.Auth;
 using DWIMS.Service.Process;
+using DWIMS.Service.Process.Dtos;
 using DWIMS.Service.Process.Requests;
 using DWIMS.Service.Services;
 
@@ -87,8 +88,53 @@ public static class ProcessEndpoints
         //     .RequireAuthorization(DwimsPolicies.Administrator);
         // group.MapDelete("/{id:guid/field/{id:guid", DeleteField)
         //     .RequireAuthorization(DwimsPolicies.Administrator);
+
+        group.MapGet("/{processId:guid}/mapping", GetMapping)
+            .WithDisplayName("Get Template Mapping")
+            .WithSummary("Mapping state, suggestions, and confirmed fields/steps");
+
+        group.MapPost("/{processId:guid}/mapping/confirm", ConfirmMapping)
+            .WithDisplayName("Confirm Template Mapping")
+            .WithSummary("Persist confirmed fields and steps for an analyzed template")
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
+        
+        group.MapPost("/{processId:guid}/mapping/reanalyze", ReanalyzeTemplate)
+            .WithDisplayName("Reanalyze Template")
+            .WithSummary("Rerun analysis on an unconfirmed template")
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
         
         return app;
+    }
+
+    private static async Task<IResult> ReanalyzeTemplate(
+        Guid processId,
+        IProcessService processService,
+        CancellationToken cancellationToken)
+    {
+        var result = await processService.ReanalyzeAsync(processId, cancellationToken);
+
+        return result.ToOkResult();
+    }
+
+    private static async Task<IResult> ConfirmMapping(
+        Guid processId,
+        ConfirmMappingRequest request,
+        IProcessService processService,
+        CancellationToken cancellationToken)
+    {
+        var result = await processService.ConfirmMappingAsync(processId, request, cancellationToken);
+
+        return result.ToOkResult();
+    }
+
+    private static async Task<IResult> GetMapping(
+        Guid processId,
+        IProcessService processService,
+        CancellationToken cancellationToken)
+    {
+        var result = await processService.GetMappingAsync(processId, cancellationToken);
+
+        return result.ToOkResult();
     }
 
     private static async Task<IResult> SetControlNumber(

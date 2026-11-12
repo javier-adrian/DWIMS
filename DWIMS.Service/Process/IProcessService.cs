@@ -80,8 +80,21 @@ public interface IProcessService
         Guid processId,
         UploadDocumentRequest request,
         CancellationToken cancellationToken = default);
-    
+
     Task<Result<(Stream Content, string FileName)>> DownloadDocumentTemplateAsync(
+        Guid processId,
+        CancellationToken cancellationToken = default);
+    
+    Task<Result<TemplateMappingDto>> GetMappingAsync(
+        Guid processId, 
+        CancellationToken cancellationToken = default);
+    
+    Task<Result> ConfirmMappingAsync(
+        Guid processId, 
+        ConfirmMappingRequest request, 
+        CancellationToken cancellationToken = default);
+    
+    Task<Result> ReanalyzeAsync(
         Guid processId,
         CancellationToken cancellationToken = default);
 }
