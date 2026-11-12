@@ -137,7 +137,12 @@ public class ProcessService(
                     s.Id,
                     s.Order,
                     s.Title,
-                    s.Role)).ToList(),
+                    s.Role,
+                    s.SignaturePage,
+                    s.SignatureX,
+                    s.SignatureY,
+                    s.SignatureWidth,
+                    s.SignatureHeight)).ToList(),
                 p.Fields.Where(f => !f.IsDeleted)
                     .OrderBy(f => f.Order)
                     .ThenBy(f => f.Title)
@@ -150,7 +155,12 @@ public class ProcessService(
                     f.Options,
                     f.Order,
                     f.Pattern,
-                    f.PatternMessage)).ToList(),
+                    f.PatternMessage,
+                    f.RectPage,
+                    f.RectX,
+                    f.RectY,
+                    f.RectWidth,
+                    f.RectHeight)).ToList(),
                 p.ControlNumber,
                 p.Documents.Any(d => !d.IsDeleted && d.Link != "")
             ))

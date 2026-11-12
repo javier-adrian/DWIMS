@@ -6,4 +6,9 @@ public sealed record StepDto(
     Guid Id,
     int Order,
     string Name,
-    GeneralRole Role);
+    GeneralRole Role,
+    int? SignaturePage = null,
+    double? SignatureX = null,
+    double? SignatureY = null,
+    double? SignatureWidth = null,
+    double? SignatureHeight = null);
