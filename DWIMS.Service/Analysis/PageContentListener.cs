@@ -1,5 +1,4 @@
-﻿using System.Reflection.Metadata.Ecma335;
-using iText.Kernel.Geom;
+﻿using iText.Kernel.Geom;
 using iText.Kernel.Pdf.Canvas.Parser;
 using iText.Kernel.Pdf.Canvas.Parser.Data;
 using iText.Kernel.Pdf.Canvas.Parser.Listener;
@@ -12,7 +11,7 @@ public sealed class PageContentListener(double pageWidth, double pageHeight) : I
 
     private readonly List<WordBox> _words = new();
     private readonly List<RuleSegment> _segments = new();
-    private List<Glyph> _pending = new();
+    private readonly List<Glyph> _pending = new();
     
     public IReadOnlyList<WordBox> Words => _words;
     public IReadOnlyList<RuleSegment> Segments => _segments;
@@ -37,8 +36,6 @@ public sealed class PageContentListener(double pageWidth, double pageHeight) : I
 
     private void CollectText(TextRenderInfo text)
     {
-        var glyphs = new List<Glyph>();
-
         foreach (var character in text.GetCharacterRenderInfos())
         {
             var ch = character.GetText();
@@ -51,7 +48,6 @@ public sealed class PageContentListener(double pageWidth, double pageHeight) : I
 
             var xIndex = 0;
             var yIndex = 1;
-            var zIndex = 2;
             
             var left = Math.Min(baseline.GetStartPoint().Get(xIndex),  baseline.GetEndPoint().Get(xIndex));
             var right = Math.Max(baseline.GetStartPoint().Get(xIndex), baseline.GetEndPoint().Get(xIndex));
