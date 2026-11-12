@@ -1,4 +1,5 @@
 ﻿using DWIMS.Data;
+using DWIMS.Service.Analysis;
 using DWIMS.Service.Common;
 using DWIMS.Service.Logs;
 using DWIMS.Service.Process;
@@ -13,6 +14,7 @@ namespace DWIMS.Service.Services;
 public class ProcessService(
     AppDbContext context, 
     ICurrentUserService currentUserService, 
+    ITemplateAnalysisEngine templateAnalysisEngine,
     IStorageService storageService, 
     IAcroFormService acroFormService,
     ILogService logService) : IProcessService
@@ -475,9 +477,24 @@ public class ProcessService(
         ms.Position = 0;
 
         var extractionResult = await acroFormService.ExtractFieldsAsync(ms, cancellationToken);
+        
+        var isFlat = !extractionResult.IsSuccess && extractionResult.Error == "NOT_AN_ACROFORM";
 
-        if (!extractionResult.IsSuccess)
+        if (!extractionResult.IsSuccess && !isFlat)
             return Result<Guid>.Failure(extractionResult.Error!, extractionResult.ErrorDescription!);
+
+        TemplateAnalysis? analysis = null;
+
+        if (isFlat)
+        {
+            ms.Position = 0;
+            var analysisResult = await templateAnalysisEngine.AnalyzeAsync(ms, cancellationToken);
+
+            if (!analysisResult.IsSuccess)
+                return Result<Guid>.Failure(analysisResult.Error!, analysisResult.ErrorDescription!);
+            
+            analysis = analysisResult.Data!;
+        }
 
         ms.Position = 0;
 
@@ -503,12 +520,26 @@ public class ProcessService(
 
         document.Link = storageKey;
 
+        if (analysis is not null)
+        {
+            document.MappingState = TemplateMappingState.Analyzed;
+            document.AnalysisJson = TemplateAnalysisJson.Serialize(analysis);
+        }
+        else
+        {
+            document.MappingState = TemplateMappingState.NotAnalyzed;
+            document.AnalysisJson = null;
+        }
+
         var fallback = 1000;
 
         var newFields = new List<Field>();
         var newSteps = new List<Step>();
 
-        foreach (var acroField in extractionResult.Data!)
+        IReadOnlyList<AcroFormField> acroFields =
+            extractionResult.IsSuccess ? extractionResult.Data! : [];
+
+        foreach (var acroField in acroFields)
         {
             if (acroField.IsSignature)
             {
@@ -628,6 +659,15 @@ public class ProcessService(
                 submission.StepId = newStep.Id;
 
         await context.SaveChangesAsync(cancellationToken);
+
+        if (analysis is not null)
+            await logService.LogAsync(
+                "Template Analyzed",
+                "Document",
+                document.Id,
+                $"{analysis.Fields.Count} field and {analysis.Steps.Count} step suggestions.",
+                cancellationToken: cancellationToken);
+            
         return Result<Guid>.Success(document.Id);
     }
 
