@@ -90,45 +90,6 @@ public sealed class PageContentListener(double pageWidth, double pageHeight) : I
         _pending.Clear();
     }
 
-    private void Tokenize(IReadOnlyList<Glyph> glyphs)
-    {
-        var tokenStart = -1;
-
-        for (int i = 0; i <= glyphs.Count; i++)
-        {
-            if (i == glyphs.Count)
-            {
-                EmitToken(glyphs, tokenStart, i); 
-                break;
-            }
-            
-            var glyph = glyphs[i];
-
-            if (char.IsWhiteSpace(glyph.ch))
-            {
-                EmitToken(glyphs, tokenStart, i); 
-                tokenStart = -1;
-                continue;
-            }
-            
-            if (tokenStart == -1)
-            {
-                tokenStart = i;
-                continue;
-            }
-            
-            var prev = glyphs[i - 1];
-            
-            var width = Math.Max(glyph.Right - glyph.Left, 1);
-            
-            if (glyph.Left - prev.Right > 1.5 * width || prev.ch == ':')
-            {
-                EmitToken(glyphs, tokenStart, i);
-                tokenStart = i;
-            }
-        }
-    }
-
     private void EmitToken(IReadOnlyList<Glyph> glyphs, int start, int end)
     {
         if (start < 0 || end <= start) return;
