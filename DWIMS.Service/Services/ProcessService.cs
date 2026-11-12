@@ -608,57 +608,8 @@ public class ProcessService(
             context.Fields.Add(field);
             newFields.Add(field);
         }
-        
-        var oldFieldKeys = oldFields
-            .ToDictionary(
-            f => f.Id, 
-            f => f.AcroFormKey);
-        
-        var newFieldByKey = newFields
-            .GroupBy(
-                f => 
-                    f.AcroFormKey)
-            .ToDictionary(
-                g => g.Key, 
-                g => g.First());
-        
-        var oldStepKey = oldSteps
-            .ToDictionary(
-                s => s.Id, 
-                s => (s.Order, s.Title));
-        
-        var newStepByKey = newSteps
-                .GroupBy(
-                    s => (s.Order, s.Title))
-                .ToDictionary(
-                    g => g.Key, 
-                    g => g.First());
-        
-        var inputs = await context.Inputs
-            .Where(i => i.Submission.ProcessId == processId)
-            .ToListAsync(cancellationToken);
-        
-        foreach (var input in inputs.Where(i => oldFieldKeys.ContainsKey(i.FieldId)))
-            if (newFieldByKey.TryGetValue(oldFieldKeys[input.FieldId], out var newField))
-                input.FieldId = newField.Id;
-        
-        var responses = await context.Responses
-            .Where(i => i.Submission.ProcessId == processId)
-            .ToListAsync(cancellationToken);
 
-        foreach (var response in responses.Where(r => oldStepKey.ContainsKey(r.StepId)))
-            if (newStepByKey.TryGetValue(oldStepKey[response.StepId], out var newStep))
-                response.StepId = newStep.Id;
-        
-        var submissions = await context.Submissions
-            .Where(s => s.ProcessId == processId)
-            .ToListAsync(cancellationToken);
-        
-        foreach (var submission in submissions.Where(s => oldStepKey.ContainsKey(s.StepId)))
-            if (newStepByKey.TryGetValue(oldStepKey[submission.StepId], out var newStep))
-                submission.StepId = newStep.Id;
-
-        await context.SaveChangesAsync(cancellationToken);
+        await RelinkAndSaveAsync(processId, oldFields, oldSteps, newFields, newSteps, cancellationToken);
 
         if (analysis is not null)
             await logService.LogAsync(
@@ -702,4 +653,67 @@ public class ProcessService(
             return Result<(Stream Content, string FileName)>.Failure("DOCUMENT_NOT_FOUND", "No template for this process.");
         }
     }
+
+    private async Task RelinkAndSaveAsync(
+        Guid processId,
+        IReadOnlyList<Field> oldFields,
+        IReadOnlyList<Step> oldSteps,
+        IReadOnlyList<Field> newFields,
+        IReadOnlyList<Step> newSteps,
+        CancellationToken cancellationToken)
+    {
+        var oldFieldKeys = oldFields
+            .ToDictionary(
+            f => f.Id, 
+            f => FieldMatchKey(f));
+        
+        var newFieldByKey = newFields
+            .GroupBy(FieldMatchKey)
+            .ToDictionary(
+                g => g.Key, 
+                g => g.First());
+        
+        var oldStepKey = oldSteps
+            .ToDictionary(
+                s => s.Id, 
+                s => (s.Order, s.Title));
+        
+        var newStepByKey = newSteps
+                .GroupBy(
+                    s => (s.Order, s.Title))
+                .ToDictionary(
+                    g => g.Key, 
+                    g => g.First());
+        
+        var inputs = await context.Inputs
+            .Where(i => i.Submission.ProcessId == processId)
+            .ToListAsync(cancellationToken);
+        
+        foreach (var input in inputs.Where(i => oldFieldKeys.ContainsKey(i.FieldId)))
+            if (newFieldByKey.TryGetValue(oldFieldKeys[input.FieldId], out var newField))
+                input.FieldId = newField.Id;
+        
+        var responses = await context.Responses
+            .Where(i => i.Submission.ProcessId == processId)
+            .ToListAsync(cancellationToken);
+
+        foreach (var response in responses.Where(r => oldStepKey.ContainsKey(r.StepId)))
+            if (newStepByKey.TryGetValue(oldStepKey[response.StepId], out var newStep))
+                response.StepId = newStep.Id;
+        
+        var submissions = await context.Submissions
+            .Where(s => s.ProcessId == processId)
+            .ToListAsync(cancellationToken);
+        
+        foreach (var submission in submissions.Where(s => oldStepKey.ContainsKey(s.StepId)))
+            if (newStepByKey.TryGetValue(oldStepKey[submission.StepId], out var newStep))
+                submission.StepId = newStep.Id;
+        
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    private static string FieldMatchKey(Field field) =>
+        field.AcroFormKey is { } key ? $"acro:{key}"
+        : field.RectPage is { } page ? $"rect:{field.Title}|{page}|{field.RectX:F3}|{field.RectY:F3}"
+        : $"manual:{field.Title}|{field.Order}";
 }
