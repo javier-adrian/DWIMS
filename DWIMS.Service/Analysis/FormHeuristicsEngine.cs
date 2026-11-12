@@ -546,6 +546,8 @@ public sealed class FormHeuristicsEngine : IFormHeuristicsEngine
                 }
             
                 if (!found) continue;
+                
+                if (width < MinBlankWidth || underlineY <= 0) continue;
             
                 var top = Math.Max(0, underlineY - 2.5 * line.Height);
                 var rect = new Rect(x, top, width, underlineY - top + 2);
@@ -586,7 +588,7 @@ public sealed class FormHeuristicsEngine : IFormHeuristicsEngine
 
         for (int i = 1; i < leaders.Count; i++)
         {
-            if (leaders[i].X - (leaders[i - 1].X + leaders[i - 1].Width) >= MinBlankWidth)
+            if (leaders[i].X - (leaders[i - 1].X + leaders[i - 1].Width) >= MinBlankWidth / 2)
                 runs.Add(new());
             runs[^1].Add(leaders[i]);
         }
