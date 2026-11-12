@@ -23,7 +23,7 @@ public sealed class FormHeuristicsEngine : IFormHeuristicsEngine
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
     
     private static readonly Regex RoleTitlePattern = new(
-        @"\b(signed|signature|adviser|advisor|president|director|dean|registrar|chairman|chairperson|coordinator|treasurer|secretary|auditor|lead)\b",
+        @"\b(student|affiant|signed|signature|adviser|advisor|president|director|dean|registrar|chairman|chairperson|coordinator|treasurer|secretary|auditor|lead)\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
     
     private static readonly Regex DatePattern = new(
@@ -482,7 +482,7 @@ public sealed class FormHeuristicsEngine : IFormHeuristicsEngine
 
                 if (text.Length is < 1 or > MaxLabelChars || group.Count > 8) continue;
                 
-                // if (!RoleTitlePattern.IsMatch(text)) continue;
+                if (!RoleTitlePattern.IsMatch(text)) continue;
 
                 var groupLeft = group[0].X;
                 var groupRight = group[^1].X + group[^1].Width;
