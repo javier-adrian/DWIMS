@@ -1,5 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 using DWIMS.Data;
+using iText.Layout.Properties;
+using MimeKit.Text;
 
 namespace DWIMS.Service.Analysis;
 
@@ -54,6 +56,7 @@ public sealed class FormHeuristicsEngine : IFormHeuristicsEngine
         var proposals = new List<Proposal>();
         ProposeFromLines(lines, page, proposals);
         ProposeFromCells(grid, proposals);
+        ProposeFromUnderlines(lines, page, proposals);
         
         ApplyPenalties(proposals, page);
         proposals = Deduplicate(proposals);
@@ -450,5 +453,86 @@ public sealed class FormHeuristicsEngine : IFormHeuristicsEngine
         var nx = Math.Max(0, x + width / 2 - MinSignatureSlotWidth / 2);
         if (nx + MinSignatureSlotWidth > pageWidth) nx = pageWidth - MinSignatureSlotWidth;
         return (nx, MinSignatureSlotWidth);
+    }
+
+    private void ProposeFromUnderlines(IReadOnlyList<TextLine> lines, PageContent page, List<Proposal> proposals)
+    {
+        var rules = page.Segments
+            .Where(s => s.Horizontal)
+            .Select(s => (Y: s.Position, Start: s.Start, End: s.End))
+            .ToList();
+
+        foreach (var line in lines)
+        {
+            var text = CleanTitle(string.Join(" ", line.Words.Select(w => w.Text)));
+
+            if (text.Length is < 1 or > MaxLabelChars || line.Words.Count > 8) continue;
+
+            var (type, vocabHit) = GuessType(text);
+            if (!vocabHit) continue;
+
+            var lineLeft = line.Words[0].X;
+            var lineRight = line.Words[^1].X + line.Words[^1].Width;
+
+            double x = 0, width = 0, underlineY = 0;
+            var found = false;
+            var evidence = "";
+
+            var above = lines.LastOrDefault(l => l.Top < line.Top - line.Height * 0.2);
+
+            if (above is { } && line.Top - (above.Top + above.Height) < line.Height * 0.8)
+            {
+                var leaders = above.Words.Where(IsLeaderWord).ToList();
+
+                if (leaders.Count > 0 && above.Words.Count == leaders.Count)
+                {
+                    x = leaders.Min(w  => w.X);
+                    width = leaders.Max(w => w.X + w.Width) - x;
+                    underlineY = above.Top;
+                    found = true;
+                    evidence = "leader line above label";
+                }
+            }
+
+            if (!found)
+            {
+                var rule = rules.Where(u =>
+                        u.Y >= line.Top - line.Height * 1.4 &&
+                        u.Y <= line.Top - 2 &&
+                        u.End - u.Start >= Math.Max(MinBlankWidth, lineRight - lineLeft) * 0.6 &&
+                        u.Start <= lineRight &&
+                        u.End >= lineLeft)
+                    .Cast<(double Y, double Start, double End)>()
+                    .FirstOrDefault();
+
+                if (rule is { } u)
+                {
+                    x = u.Start;
+                    width = u.End - u.Start;
+                    underlineY = u.Y;
+                    found = true;
+                    evidence = "drawn rule above label";
+                }
+            }
+            
+            if (!found) continue;
+            
+            var top = Math.Max(0, underlineY - 2.5 * line.Height);
+            var rect = new Rect(x, top, width, underlineY - top + 2);
+            
+            if (page.Words.Any(w => !IsLeaderWord(w) &&
+                                    w.X + w.Width / 2 >= x &&
+                                    w.X + w.Width / 2 <= x + width &&
+                                    w.Y + w.Height / 2 >= top &&
+                                    w.Y + w.Height / 2 <= underlineY))
+                continue;
+            
+            proposals.Add(new Proposal(
+                text,
+                type,
+                rect,
+                Math.Clamp(0.5 + 0.1 + 0.1, 0, 1),
+                $"{evidence}, vocabulary"));
+        }
     }
 }
