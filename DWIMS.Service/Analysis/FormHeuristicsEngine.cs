@@ -312,15 +312,17 @@ public sealed class FormHeuristicsEngine : IFormHeuristicsEngine
                 }
                 else
                 {
-                    var last = run.LabelWords[^1];
-                    var gapStart = last.X + last.Width;
-                    var gapEnd = run.NextWord?.X ?? page.Width - RightMargin;
-                    var minBlank = Math.Max(MinBlankWidth, BlankPerLabelHeight * line.Height);
+                    // var last = run.LabelWords[^1];
+                    // var gapStart = last.X + last.Width;
+                    // var gapEnd = run.NextWord?.X ?? page.Width - RightMargin;
+                    // var minBlank = Math.Max(MinBlankWidth, BlankPerLabelHeight * line.Height);
+                    //
+                    // if (gapEnd - gapStart < minBlank) continue;
+                    //
+                    // blank = new Rect(gapStart, line.Top - 1, gapEnd - gapStart, line.Height + 2);
+                    // evidence.Add("same-line gap");
                     
-                    if (gapEnd - gapStart < minBlank) continue;
-                    
-                    blank = new Rect(gapStart, line.Top - 1, gapEnd - gapStart, line.Height + 2);
-                    evidence.Add("same-line gap");
+                    continue;
                 }
 
                 var (type, vocabHit) = GuessType(title);
@@ -553,7 +555,7 @@ public sealed class FormHeuristicsEngine : IFormHeuristicsEngine
                 }
             
                 if (!found) continue;
-                
+
                 if (width < MinBlankWidth || underlineY <= 0) continue;
             
                 var top = Math.Max(0, underlineY - 2.5 * line.Height);
