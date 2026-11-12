@@ -218,6 +218,7 @@ public sealed class PdfGenerationService(
 
         if (document is null)
         {
+            RenderFlatPdf(result, fields, signatures, submitterStamp, submitterSignatureFields);
             result.Close();
             output.Position = 0;
             return output;
@@ -238,6 +239,88 @@ public sealed class PdfGenerationService(
         output.Position = 0;
         
         return output;
+    }
+
+    private static void RenderFlatPdf(
+        PdfDocument result,
+        IReadOnlyList<(Field field, string Value)> fields,
+        IReadOnlyList<SignaturePlacement> signatures,
+        SignatureStamp? submitterStamp,
+        IEnumerable<Field> submitterSignatureFields)
+    {
+        foreach (var (field, value) in fields.Where(x => x.field.RectPage is not null))
+        {
+            var page = result.GetPage(field.RectPage!.Value + 1);
+            StampText(
+                page, 
+                ToRect(
+                    page, 
+                    field.RectX!.Value, 
+                    field.RectY!.Value, 
+                    field.RectWidth!.Value, 
+                    field.RectHeight!.Value), value);
+        }
+
+        foreach (var placement in signatures)
+        {
+            var step = placement.Response.Step;
+            if (step.SignaturePage is not { } pageNo ||
+                step.SignatureX is null ||
+                step.SignatureY is null ||
+                step.SignatureWidth is null ||
+                step.SignatureHeight is null)
+                continue;
+
+            var page = result.GetPage(pageNo + 1);
+            StampSignature(
+                page, 
+                ToRect(
+                    page, 
+                    step.SignatureX.Value, 
+                    step.SignatureY.Value, 
+                    step.SignatureWidth.Value, 
+                    step.SignatureHeight.Value), placement.Stamp);
+        }
+        
+        if (submitterStamp is not null)
+            foreach (var field in submitterSignatureFields.Where(f => f.RectPage is not null))
+            {
+                var page = result.GetPage(field.RectPage!.Value + 1);
+                StampSignature(
+                    page,
+                    ToRect(
+                        page,
+                        field.RectX!.Value,
+                        field.RectY!.Value,
+                        field.RectWidth!.Value,
+                        field.RectHeight!.Value), submitterStamp);
+            }
+    }
+
+    private static Rectangle ToRect(PdfPage page, double x, double y, double width, double height)
+    {
+        var size = page.GetPageSize();
+        
+        return new Rectangle(
+            (float)(x * size.GetWidth()),
+            (float)((1 - y - height) * size.GetHeight()),
+            (float)(width * size.GetWidth()),
+            (float)(height * size.GetHeight()));
+    }
+
+    private static void StampText(PdfPage page, Rectangle rect, string value)
+    {
+        var canvas = new PdfCanvas(page);
+        var text = new iText.Layout.Canvas(canvas, rect);
+        text.Add(new Paragraph(value)
+            .SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA))
+            .SetFontSize(Math.Min(9f, rect.GetHeight() * 0.7f))
+            .SetMargin(0)
+            .SetMultipliedLeading(1)
+            .SetTextAlignment(TextAlignment.CENTER));
+        
+        text.Close();
+        canvas.Release();
     }
     
     private static MemoryStream RenderDocumentPdf(
@@ -367,7 +450,8 @@ public sealed class PdfGenerationService(
         PdfAcroForm form,
         IReadOnlyList<(Field Field, string Value)> fields)
     {
-        foreach (var (key, value) in fields.Where(x => x.Field.Type != InputTypes.Signature))
+        foreach (var (key, value) in fields.Where(x => x.Field.Type != InputTypes.Signature &&
+                                                       x.Field.AcroFormKey is not null))
         {
             var field = form.GetField(key.AcroFormKey);
 
