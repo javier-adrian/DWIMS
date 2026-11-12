@@ -6,6 +6,7 @@ using DWIMS.Controllers;
 using DWIMS.Data;
 using DWIMS.Service;
 using DWIMS.Service.Admin;
+using DWIMS.Service.Analysis;
 using DWIMS.Service.Analytics;
 using DWIMS.Service.Auth;
 using DWIMS.Service.Common;
@@ -123,6 +124,9 @@ namespace DWIMS
             builder.Services.AddSingleton<EmailQueue>();
             builder.Services.AddHostedService<EmailWorker>();
             builder.Services.AddScoped<IPdfSigningService, PdfSigningService>();
+            builder.Services.AddScoped<PdfTextLayerExtractor>();
+            builder.Services.AddScoped<IFormHeuristicsEngine, FormHeuristicsEngine>();
+            builder.Services.AddScoped<ITemplateAnalysisEngine, TemplateAnalysisEngine>();
             
             builder.Services.AddDbContext<AppDbContext>(options =>
                 {
