@@ -276,7 +276,9 @@ public sealed class FormHeuristicsEngine : IFormHeuristicsEngine
         return text.Length >= LeaderMinRun && text.All(IsLeaderChar);
     }
 
-    private static bool IsLeaderChar(char c) => c is '_' or '.' or '·' or '…';
+    private static bool IsLeaderChar(char c) => 
+        // c is '_' or '.' or '·' or '…';
+        c is '_';
 
     private void ProposeFromLines(IReadOnlyList<TextLine> lines, PageContent page, List<Proposal> proposals)
     {
