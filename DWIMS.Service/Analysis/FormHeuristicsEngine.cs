@@ -391,7 +391,14 @@ public sealed class FormHeuristicsEngine : IFormHeuristicsEngine
     }
 
     private static string CleanTitle(string raw) =>
-        Regex.Replace(raw, @"\s+", " ").Trim().TrimEnd(':').Trim();
+        Regex.Replace(
+            Regex.Replace(
+                raw, 
+                @"\s+", 
+                " ").Trim(), 
+            @"_{3,}", 
+            " ").TrimEnd(':').Trim();
+        
 
     private static void ApplyPenalties(List<Proposal> proposals, PageContent page)
     {
