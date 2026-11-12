@@ -163,7 +163,10 @@ public class ProcessService(
                     f.RectWidth,
                     f.RectHeight)).ToList(),
                 p.ControlNumber,
-                p.Documents.Any(d => !d.IsDeleted && d.Link != "")
+                p.Documents.Any(d => !d.IsDeleted && d.Link != ""),
+                p.Documents.Where(d => !d.IsDeleted)
+                    .Select(d => d.MappingState)
+                    .FirstOrDefault()
             ))
             .FirstOrDefaultAsync(cancellationToken);
 
