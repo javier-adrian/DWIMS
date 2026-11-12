@@ -22,6 +22,10 @@ public sealed class FormHeuristicsEngine : IFormHeuristicsEngine
         "signature|signed|approved by|noted by|received by|conforme|certified by", 
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
     
+    private static readonly Regex RoleTitlePattern = new(
+        @"\b(signed|signature|adviser|advisor|president|director|dean|registrar|chairman|chairperson|coordinator|treasurer|secretary|auditor|lead)\b",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    
     private static readonly Regex DatePattern = new(
         @"\bdate\b",  
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -465,76 +469,128 @@ public sealed class FormHeuristicsEngine : IFormHeuristicsEngine
             .ToList();
 
         foreach (var line in lines)
+            foreach (var group in SplitIntoGroups(line.Words))
+            {
+                var text = CleanTitle(string.Join(" ", group.Select(w => w.Text)));
+
+                if (text.Length is < 1 or > MaxLabelChars || group.Count > 8) continue;
+                
+                // if (!RoleTitlePattern.IsMatch(text)) continue;
+
+                var groupLeft = group[0].X;
+                var groupRight = group[^1].X + group[^1].Width;
+                var center = (groupLeft + groupRight) / 2;
+
+                // var (type, vocabHit) = GuessType(text);
+                // if (!vocabHit) continue;
+
+                // var lineLeft = line.Words[0].X;
+                // var lineRight = line.Words[^1].X + line.Words[^1].Width;
+
+                double x = 0, width = 0, underlineY = 0;
+                var found = false;
+                var evidence = "";
+
+                var above = lines.LastOrDefault(l => l.Top < line.Top - line.Height * 0.2);
+
+                if (above is { } && line.Top - (above.Top + above.Height) < line.Height * 0.8)
+                {
+                    var leaders = above.Words.Where(IsLeaderWord).ToList();
+
+                    if (leaders.Count > 0 && above.Words.Count == leaders.Count)
+                    {
+                        foreach (var run in SplitIntoRuns(leaders))
+                        {
+                            var runLeft = run.Min(w => w.X);
+                            var runRight = run.Max(w => w.X + w.Width);
+
+                            if (center < runLeft || center > runRight) continue;
+                            
+                            x = runLeft;
+                            width = runRight - runLeft;
+                            underlineY = above.Top;
+                            found = true;
+                            evidence = "leader line above label";
+                            break;
+                        }
+                        // x = leaders.Min(w  => w.X);
+                        // width = leaders.Max(w => w.X + w.Width) - x;
+                        // underlineY = above.Top;
+                        // found = true;
+                        // evidence = "leader line above label";
+                    }
+                }
+
+                if (!found)
+                {
+                    var rule = rules.Where(u =>
+                            u.Y >= line.Top - line.Height * 1.4 &&
+                            u.Y <= line.Top - 2 &&
+                            // u.End - u.Start >= Math.Max(MinBlankWidth, lineRight - lineLeft) * 0.6 &&
+                            u.End - u.Start >= Math.Max(MinBlankWidth, groupRight - groupLeft) * 0.6 &&
+                            // u.Start <= lineRight &&
+                            u.Start <= groupRight &&
+                            // u.End >= lineLeft)
+                            u.End >= groupLeft)
+                        .Cast<(double Y, double Start, double End)>()
+                        .FirstOrDefault();
+
+                    if (rule is { } u)
+                    {
+                        x = u.Start;
+                        width = u.End - u.Start;
+                        underlineY = u.Y;
+                        found = true;
+                        evidence = "drawn rule above label";
+                    }
+                }
+            
+                if (!found) continue;
+            
+                var top = Math.Max(0, underlineY - 2.5 * line.Height);
+                var rect = new Rect(x, top, width, underlineY - top + 2);
+            
+                if (page.Words.Any(w => !IsLeaderWord(w) &&
+                                        w.X + w.Width / 2 >= x &&
+                                        w.X + w.Width / 2 <= x + width &&
+                                        w.Y + w.Height / 2 >= top &&
+                                        w.Y + w.Height / 2 <= underlineY))
+                    continue;
+            
+                proposals.Add(new Proposal(
+                    text,
+                    InputTypes.Signature,
+                    rect,
+                    Math.Clamp(0.5 + 0.1 + 0.1, 0, 1),
+                    $"{evidence}, vocabulary"));
+            }
+    }
+
+    private static List<List<WordBox>> SplitIntoGroups(IReadOnlyList<WordBox> words)
+    {
+        var groups = new List<List<WordBox>> { new() { words[0] } };
+
+        for (int i = 1; i < words.Count; i++)
         {
-            var text = CleanTitle(string.Join(" ", line.Words.Select(w => w.Text)));
-
-            if (text.Length is < 1 or > MaxLabelChars || line.Words.Count > 8) continue;
-
-            var (type, vocabHit) = GuessType(text);
-            if (!vocabHit) continue;
-
-            var lineLeft = line.Words[0].X;
-            var lineRight = line.Words[^1].X + line.Words[^1].Width;
-
-            double x = 0, width = 0, underlineY = 0;
-            var found = false;
-            var evidence = "";
-
-            var above = lines.LastOrDefault(l => l.Top < line.Top - line.Height * 0.2);
-
-            if (above is { } && line.Top - (above.Top + above.Height) < line.Height * 0.8)
-            {
-                var leaders = above.Words.Where(IsLeaderWord).ToList();
-
-                if (leaders.Count > 0 && above.Words.Count == leaders.Count)
-                {
-                    x = leaders.Min(w  => w.X);
-                    width = leaders.Max(w => w.X + w.Width) - x;
-                    underlineY = above.Top;
-                    found = true;
-                    evidence = "leader line above label";
-                }
-            }
-
-            if (!found)
-            {
-                var rule = rules.Where(u =>
-                        u.Y >= line.Top - line.Height * 1.4 &&
-                        u.Y <= line.Top - 2 &&
-                        u.End - u.Start >= Math.Max(MinBlankWidth, lineRight - lineLeft) * 0.6 &&
-                        u.Start <= lineRight &&
-                        u.End >= lineLeft)
-                    .Cast<(double Y, double Start, double End)>()
-                    .FirstOrDefault();
-
-                if (rule is { } u)
-                {
-                    x = u.Start;
-                    width = u.End - u.Start;
-                    underlineY = u.Y;
-                    found = true;
-                    evidence = "drawn rule above label";
-                }
-            }
-            
-            if (!found) continue;
-            
-            var top = Math.Max(0, underlineY - 2.5 * line.Height);
-            var rect = new Rect(x, top, width, underlineY - top + 2);
-            
-            if (page.Words.Any(w => !IsLeaderWord(w) &&
-                                    w.X + w.Width / 2 >= x &&
-                                    w.X + w.Width / 2 <= x + width &&
-                                    w.Y + w.Height / 2 >= top &&
-                                    w.Y + w.Height / 2 <= underlineY))
-                continue;
-            
-            proposals.Add(new Proposal(
-                text,
-                type,
-                rect,
-                Math.Clamp(0.5 + 0.1 + 0.1, 0, 1),
-                $"{evidence}, vocabulary"));
+            if (words[i].X - (words[i - 1].X + words[i - 1].Width) >= MinBlankWidth)
+                groups.Add(new());
+            groups[^1].Add(words[i]);
         }
+
+        return groups;
+    }
+
+    private static List<List<WordBox>> SplitIntoRuns(IReadOnlyList<WordBox> leaders)
+    {
+        var runs = new List<List<WordBox>> { new() { leaders[0] } };
+
+        for (int i = 1; i < leaders.Count; i++)
+        {
+            if (leaders[i].X - (leaders[i - 1].X + leaders[i - 1].Width) >= MinBlankWidth)
+                runs.Add(new());
+            runs[^1].Add(leaders[i]);
+        }
+
+        return runs;
     }
 }
