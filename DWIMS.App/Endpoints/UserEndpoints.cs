@@ -47,11 +47,13 @@ public static class UserEndpoints
         
         group.MapPut("/me/oic", SetOic)
             .WithDisplayName("Set an OIC")
-            .WithSummary("Assign an OIC for the current user.");
+            .WithSummary("Assign an OIC for the current user.")
+            .RequireAuthorization(DwimsPolicies.Reviewer);
         
         group.MapDelete("/me/oic", RemoveOic)
             .WithDisplayName("Remove an OIC")
-            .WithSummary("Remove the OIC for the current user.");
+            .WithSummary("Remove the OIC for the current user.")
+            .RequireAuthorization(DwimsPolicies.Reviewer);
         
         group.MapGet("", GetUsers)
             .WithDisplayName("Get Users")

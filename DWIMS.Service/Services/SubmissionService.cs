@@ -42,6 +42,13 @@ public class SubmissionService(
     {
         if (principalId is not { } pid || oicId is not { } aid || principalId == oicId)
             return false;
+        
+        var oic = await context.Users
+            .Include(user => user.Roles)
+            .FirstOrDefaultAsync(user => user.Id == oicId);
+        
+        if (!oic.Roles.Any(r => r is { IsDeleted: false, GeneralRole: >= GeneralRole.Reviewer }))
+            return false;
 
         var principal = await context.Users.SingleOrDefaultAsync(u => u.Id == pid);
 

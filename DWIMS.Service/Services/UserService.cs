@@ -242,6 +242,7 @@ public class UserService(
     public async Task<Result> SetMyOicAsync(SetOicRequest request, CancellationToken cancellationToken = default)
     {
         var oic = await context.Users
+            .Include(user => user.Roles)
             .Where(user => user.Email == request.OicEmail)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -250,6 +251,9 @@ public class UserService(
         
         if (oic.Id == currentUser.UserId)
             return Result.Failure("OIC_CANNOT_BE_SELF", "You cannot set yourself as your own OIC.");
+        
+        if (!oic.Roles.Any(r => r is { IsDeleted: false, GeneralRole: >= GeneralRole.Reviewer }))
+            return Result.Failure("OIC_INVALID", "OIC must have an active reviewer role.");
         
         if (request.Active && request.ActiveUntilUtc is { } until && until <= DateTime.UtcNow)
             return Result.Failure("INVALID_OIC_UNTIL", $"OIC activation end must be in the future.");
