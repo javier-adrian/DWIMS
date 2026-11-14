@@ -7,6 +7,7 @@ public sealed record VolumeDto
     public int RejectedCount { get; init; }
     public int PendingCount { get; init; }
     public int CancelledCount { get; init; }
+    public int DecidedCount { get; init; }
     
     public double ApprovalRate { get; init; }
     

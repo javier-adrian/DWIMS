@@ -5,4 +5,5 @@ public sealed record ProcessVolumeDto(
     string ProcessName,
     int Total,
     int Approved,
-    int Rejected);
+    int Rejected,
+    double MedianApprovalMinutes);

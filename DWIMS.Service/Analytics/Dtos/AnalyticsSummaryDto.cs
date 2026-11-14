@@ -8,4 +8,5 @@ public sealed record AnalyticsSummaryDto
     public required IReadOnlyList<ReviewerPerformanceDto> Reviewers { get; init; }
     public required PendingAgingDto PendingAging { get; init; }
     public required StepFunnelDto StepFunnel { get; init; }
+    public required ApprovalSpeedDto ApprovalSpeed { get; init; }
 }

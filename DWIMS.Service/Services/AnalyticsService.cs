@@ -55,6 +55,8 @@ public class AnalyticsService(
         var reviewers = await GetReviewerPerformanceAsync(resolvedFilter, cancellationToken);
         var pendingAging = await GetPendingAgingAsync(resolvedFilter, cancellationToken);
         var stepFunnel = await GetStepFunnelAsync(resolvedFilter, volume, cancellationToken);
+
+        var approvalSpeed = await GetApprovalSpeedAsync(resolvedFilter, submissions, cancellationToken);
         
         return Result<AnalyticsSummaryDto>.Success(new AnalyticsSummaryDto
         {
@@ -63,7 +65,8 @@ public class AnalyticsService(
             Volume = volume,
             Reviewers = reviewers,
             PendingAging = pendingAging,
-            StepFunnel = stepFunnel
+            StepFunnel = stepFunnel,
+            ApprovalSpeed = approvalSpeed
         });
     }
 
@@ -280,6 +283,24 @@ public class AnalyticsService(
                 Count = x.Count()
             })
             .ToListAsync(cancellationToken);
+        
+        var approvalMinutes = await submissions
+            .Where(submission => submission.Status == Status.Approve && submission.CompletedOn.HasValue)
+            .Select(submission => new
+            {
+                submission.ProcessId,
+                Minutes = EF.Functions.DateDiffMinute(
+                    submission.SubmittedOn,
+                    submission.CompletedOn!.Value)
+            })
+            .ToListAsync(cancellationToken);
+        
+        var medianByProcess = approvalMinutes
+            .GroupBy(x => x.ProcessId)
+            .ToDictionary(
+                group => group.Key,
+                group => Percentile(
+                    group.Select(x => (double)x.Minutes).OrderBy(m => m).ToList(), 50));
 
         var byProcess = (await submissions
             .Select(submission => new { submission.ProcessId, submission.Process.Title, submission.Status })
@@ -290,7 +311,8 @@ public class AnalyticsService(
                 g.Key.Title,
                 Total: g.Count(),
                 Approved: g.Count(y => y.Status == Status.Approve),
-                Rejected: g.Count(y => y.Status == Status.Reject)
+                Rejected: g.Count(y => y.Status == Status.Reject),
+                MedianApprovalMinutes: medianByProcess.GetValueOrDefault(g.Key.ProcessId)
             ))
             .OrderByDescending(z => z.Total)
             .ToList();
@@ -307,10 +329,11 @@ public class AnalyticsService(
             submission.Status == status)?.Count ?? 0;
 
         var approved = Count(Status.Approve);
+        var rejected = Count(Status.Reject);
         var total = statusCounts.Sum(status => status.Count);
         // Approval rate is decided-only: approved / (approved + rejected).
         // Pending and cancelled say nothing about the outcome mix yet.
-        var decided = approved + Count(Status.Reject);
+        var decided = approved + rejected;
 
         return new VolumeDto
         {
@@ -323,7 +346,65 @@ public class AnalyticsService(
                 ? Math.Round((double)approved / decided, 4)
                 : 0,
             ByProcess = byProcess,
+            DecidedCount = decided,
             ByDay = daily
+        };
+    }
+
+    private async Task<ApprovalSpeedDto> GetApprovalSpeedAsync(
+        AnalyticsFilterDto filter,
+        IQueryable<Data.Submission> submissions,
+        CancellationToken cancellationToken = default)
+    {
+        var approvalTimes = await submissions
+            .Where(submission => submission.Status == Status.Approve &&  submission.CompletedOn.HasValue)
+            .Select(submission => EF.Functions.DateDiffMinute(submission.SubmittedOn, submission.CompletedOn!.Value))
+            .ToListAsync(cancellationToken);
+
+        var sorted = approvalTimes
+            .Select(minutes => (double)minutes)
+            .OrderBy(minutes => minutes)
+            .ToList();
+
+        double Share(double limitDays) => sorted.Count > 0
+            ? Math.Round(sorted.Count(minutes => minutes <= limitDays * 1440.0) / (double)sorted.Count, 4)
+            : 0;
+        
+        var responseMinutes = await BuildResponsesBase(filter)
+            .Select(response => new
+            {
+                response.Result,
+                Minutes = EF.Functions.DateDiffMinute(response.ActivatedOn, response.CompletedOn!.Value)
+            })
+            .ToListAsync(cancellationToken);
+        
+        var approveList = responseMinutes
+            .Where(x => x.Result == Status.Approve)
+            .Select(x => (double)x.Minutes)
+            .OrderBy(minutes => minutes)
+            .ToList();
+        
+        var rejectList = responseMinutes
+            .Where(x => x.Result == Status.Reject)
+            .Select(x => (double)x.Minutes)
+            .OrderBy(minutes => minutes)
+            .ToList();
+
+        return new ApprovalSpeedDto
+        {
+            Windows =
+            [
+                new ApprovalWindowDto("<= 24h", Share(1)),
+                new ApprovalWindowDto("<= 3 days", Share(3)),
+                new ApprovalWindowDto("<= 7 days", Share(7)),
+            ],
+            ApprovedCount = sorted.Count,
+            MedianMinutes = Percentile(sorted, 50),
+            P90Minutes = Percentile(sorted, 90),
+            ApproveResponses = approveList.Count,
+            ApproveMedianMinutes = Percentile(approveList, 50),
+            RejectResponses = rejectList.Count,
+            RejectMedianMinutes = Percentile(rejectList, 50),
         };
     }
     
