@@ -127,6 +127,15 @@ public class UserAdministrationService(
         if (hasOpenAssignments)
             return Result<Guid>
                 .Failure("HAS_OPEN_ASSIGNMENTS", "Cannot deactivate user with open assignments.");
+
+        var dependents = await context.Users.Where(u => u.OicId == id).ToListAsync(cancellationToken);
+
+        foreach (var dependent in dependents)
+        {
+            dependent.OicId = null;
+            dependent.OicActive = false;
+            dependent.OicActiveUntilUtc = null;
+        }
         
         var refreshTokens = await context.RefreshTokens
             .Where(t => t.UserId == id && !t.Revoked)
@@ -140,7 +149,7 @@ public class UserAdministrationService(
 
         await context.SaveChangesAsync(cancellationToken);
         
-        await logService.LogAsync("USER_DEACTIVATED", "User", user.Id, cancellationToken: cancellationToken);
+        await logService.LogAsync("USER_DEACTIVATED", "User", user.Id, dependents.Count > 0 ? $"cleared OIC designation on {dependents.Count} user(s)" : null, cancellationToken: cancellationToken);
 
         return Result<Guid>
             .Success(id);

@@ -132,6 +132,16 @@ public class NotificationService(
         var recipients = await context.Users
             .Where(u => reviewerIds.Concat(assigneeIds).Contains(u.Id) && !u.IsDeleted)
             .ToListAsync(cancellationToken);
+
+        var principal = pending?.Assignee;
+
+        if (principal?.OicId is { } oicId && Data.User.IsOicActiveFor(principal, oicId, DateTime.UtcNow))
+        {
+            var oic = await context.Users.SingleOrDefaultAsync(u => u.Id == oicId, cancellationToken);
+            
+            if (oic is not null && recipients.All(r => r.Id != oic.Id)) 
+                recipients.Add(oic);
+        }
         
         if (submission.Submitter is { IsDeleted: false} && submission.SubmitterId != responderId)
             recipients.Add(submission.Submitter);

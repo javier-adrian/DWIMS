@@ -10,5 +10,6 @@ public sealed record PendingReviewDto(
     string SubmitterName,
     Status Status,
     DateTime SubmittedAt,
-    DateTime? StepActivatedAt
+    DateTime? StepActivatedAt,
+    string? AssigneeName
     );

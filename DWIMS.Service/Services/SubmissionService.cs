@@ -37,6 +37,16 @@ public class SubmissionService(
     private record CheckBoxOptions(string On);
 
     private record FieldOptions(string Value, string Label);
+
+    private async Task<bool> CanActAsOicAsync(Guid? principalId, Guid? oicId)
+    {
+        if (principalId is not { } pid || oicId is not { } aid || principalId == oicId)
+            return false;
+
+        var principal = await context.Users.SingleOrDefaultAsync(u => u.Id == pid);
+
+        return Data.User.IsOicActiveFor(principal, oicId, DateTime.UtcNow);
+    }
     
     public static string GenerateVerificationCode(int length = 8)
     {
@@ -266,10 +276,17 @@ public class SubmissionService(
                 submission.Responses.Any(
                     response => 
                         response.StepId == submission.StepId && 
-                        response.AssigneeId == currentUser.UserId));
+                        response.AssigneeId == currentUser.UserId) ||
+                submission.Responses.Any(
+                    response => 
+                        response.StepId == submission.StepId && 
+                        response.Assignee != null &&
+                        response.Assignee.OicId == currentUser.UserId &&
+                        response.Assignee.OicActive &&
+                        (response.Assignee.OicActiveUntilUtc == null || response.Assignee.OicActiveUntilUtc > DateTime.UtcNow)));
         
         var totalCount = await query.CountAsync(cancellationToken);
-
+        
         var pending = await query
             .OrderByDescending(s => s.SubmittedOn)
             .ThenBy(s => s.Id)
@@ -283,7 +300,11 @@ public class SubmissionService(
                 $"{s.Submitter.FirstName} {s.Submitter.LastName}",
                 s.Status,
                 s.SubmittedOn,
-                s.CompletedOn
+                s.CompletedOn,
+                s.Responses
+                    .Where(r => r.StepId == s.StepId && r.CompletedOn == null)
+                    .Select(r => $"{r.Assignee.FirstName} {r.Assignee.LastName}")
+                    .FirstOrDefault()
             ))
             .ToListAsync(cancellationToken);
 
@@ -302,6 +323,7 @@ public class SubmissionService(
             .Include(s => s.Inputs).ThenInclude(i => i.Field)
             .Include(s => s.Responses).ThenInclude(r => r.Reviewer)
             .Include(s => s.Responses).ThenInclude(r => r.Step)
+            .Include(s => s.Responses).ThenInclude(r => r.Assignee)
             .Include(s => s.Attachments)
             .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
 
@@ -310,7 +332,14 @@ public class SubmissionService(
        
         if (currentUser.UserId != submission.SubmitterId && 
             !currentUser.isSuperAdministrator &&
-            !submission.Responses.Any(r => r.Reviewer?.Id == currentUser.UserId || r.AssigneeId == currentUser.UserId))
+            !submission.Responses.Any(r => r.Reviewer?.Id == currentUser.UserId || r.AssigneeId == currentUser.UserId) &&
+            !submission.Responses.Any(
+                response => 
+                    response.StepId == submission.StepId && 
+                    response.Assignee != null &&
+                    response.Assignee.OicId == currentUser.UserId &&
+                    response.Assignee.OicActive &&
+                    (response.Assignee.OicActiveUntilUtc == null || response.Assignee.OicActiveUntilUtc > DateTime.UtcNow)))
             return Result<SubmissionDetailDto>.Failure("UNAUTHORIZED", "You are not authorized to access this submission.");
 
         var stepResponses = submission.Responses.Select(r => new SubmissionStepResponseDto(
@@ -626,8 +655,10 @@ public class SubmissionService(
         
         if (response is null)
             return Result.Failure("RESPONSE_NOT_FOUND", "No active response found for this step.");
+
+        var isOic = await CanActAsOicAsync(response.AssigneeId, currentUser.UserId);
         
-        if (response.AssigneeId != currentUser.UserId && !currentUser.isSuperAdministrator)
+        if (response.AssigneeId != currentUser.UserId && !currentUser.isSuperAdministrator && !isOic)
             return Result.Failure("FORBIDDEN", "User is not authorized to respond to this submission.");
 
         if (request.Outcome is Status.Approve)
@@ -789,7 +820,9 @@ public class SubmissionService(
         if (response is null)
             return Result.Failure("RESPONSE_NOT_FOUND", "Response not found.");
 
-        if (response.AssigneeId != currentUser.UserId && !currentUser.isSuperAdministrator)
+        var isOic = await CanActAsOicAsync(response.AssigneeId, currentUser.UserId);
+
+        if (response.AssigneeId != currentUser.UserId && !currentUser.isSuperAdministrator && !isOic)
             return Result.Failure("FORBIDDEN", "User is not authorized to perform this action.");
         
         var reviewer = await context.Users

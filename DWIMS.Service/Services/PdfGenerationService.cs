@@ -46,6 +46,8 @@ public sealed class PdfGenerationService(
             .Include(s => s.Responses)
                 .ThenInclude(r => r.Step)
             .Include(s => s.Responses)
+                .ThenInclude(r => r.Assignee)
+            .Include(s => s.Responses)
                 .ThenInclude(r => r.Reviewer)
             .Include(s => s.Submitter)
             .FirstOrDefaultAsync(s => s.Id == submissionId, cancellationToken)
@@ -176,6 +178,18 @@ public sealed class PdfGenerationService(
             
             if (signature is null)
                 continue;
+
+            var actorName = $"{response.Reviewer?.FirstName} {response.Reviewer?.LastName}".Trim();
+
+            string displayName = actorName;
+
+            if (response.ReviewerId is { } rid && rid != response.AssigneeId && response.Assignee is { } principal)
+            {
+                var principalName = $"{principal.FirstName} {principal.LastName}".Trim();
+
+                if (principalName.Length > 0)
+                    displayName = $"{actorName} for {principalName}";
+            }
             
             result.Add(
                 new SignaturePlacement(
@@ -183,7 +197,7 @@ public sealed class PdfGenerationService(
                     new SignatureStamp(
                         signature.EncryptedBlob, 
                         signature.MimeType, 
-                        $"{response.Reviewer?.FirstName} {response.Reviewer?.LastName}".Trim(), 
+                        displayName, 
                         response.CompletedOn)
                     )
                 );
@@ -502,10 +516,16 @@ public sealed class PdfGenerationService(
             bandHeight);
         
         var nameCanvas = new iText.Layout.Canvas(canvas, nameRect);
+
+        var nameSize = 8f;
+        var nameWidth = font.GetWidth(stamp.Name, nameSize);
+        
+        if (nameWidth > rectangle.GetWidth())
+            nameSize = Math.Max(5.5f, 8f * rectangle.GetWidth() / nameWidth);
         
         nameCanvas.Add(new Paragraph(stamp.Name)
             .SetFont(font)
-            .SetFontSize(8)
+            .SetFontSize(nameSize)
             .SetMargin(0)
             .SetMultipliedLeading(1)
             .SetTextAlignment(TextAlignment.CENTER));
@@ -515,7 +535,7 @@ public sealed class PdfGenerationService(
             var localTime = completedOn.AddHours(8); // GMT +8
             nameCanvas.Add(new Paragraph(localTime.ToString("MMM d, yyyy h:mm tt", CultureInfo.InvariantCulture))
                 .SetFont(font)
-                .SetFontSize(7)
+                .SetFontSize(Math.Min(7f, nameSize))
                 .SetMargin(0)
                 .SetMultipliedLeading(1)
                 .SetTextAlignment(TextAlignment.CENTER));

@@ -7,6 +7,7 @@ using DWIMS.Service.CurrentUser.Requests;
 using DWIMS.Service.Roles;
 using DWIMS.Service.Roles.Requests;
 using DWIMS.Service.Services;
+using DWIMS.Service.User;
 
 namespace DWIMS.Controllers;
 
@@ -44,6 +45,14 @@ public static class UserEndpoints
             .WithDisplayName("Upload Signature")
             .WithSummary("Upload a signature for the current user");
         
+        group.MapPut("/me/oic", SetOic)
+            .WithDisplayName("Set an OIC")
+            .WithSummary("Assign an OIC for the current user.");
+        
+        group.MapDelete("/me/oic", RemoveOic)
+            .WithDisplayName("Remove an OIC")
+            .WithSummary("Remove the OIC for the current user.");
+        
         group.MapGet("", GetUsers)
             .WithDisplayName("Get Users")
             .WithSummary("Get a list of users")
@@ -76,6 +85,25 @@ public static class UserEndpoints
             .WithSummary("Assign a Super Administrator role to a user");
 
         return app;
+    }
+
+    private static async Task<IResult> RemoveOic(
+        IUserService userService,
+        CancellationToken cancellationToken)
+    {
+        var result = await userService.RemoveMyOicAsync(cancellationToken);
+        
+        return result.ToOkResult();
+    }
+
+    private static async Task<IResult> SetOic(
+        SetOicRequest request,
+        IUserService userService,
+        CancellationToken cancellationToken)
+    {
+        var result = await userService.SetMyOicAsync(request, cancellationToken);
+        
+        return result.ToOkResult();
     }
 
     private static async Task<IResult> SearchUsers(

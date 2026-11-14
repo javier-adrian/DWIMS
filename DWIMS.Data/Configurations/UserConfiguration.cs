@@ -15,6 +15,12 @@ internal sealed class UserConfiguration: IEntityTypeConfiguration<User>
         builder.HasOne(x => x.Signature)
             .WithOne(y => y.User)
             .HasForeignKey<Signature>(y => y.UserId);
+        
+        builder.HasOne(x => x.Oic)
+            .WithMany()
+            .HasForeignKey(x => x.OicId)
+            .OnDelete(DeleteBehavior.NoAction);
 
+        builder.HasIndex(x => x.OicId);
     }
 }

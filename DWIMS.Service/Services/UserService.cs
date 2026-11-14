@@ -3,6 +3,7 @@ using DWIMS.Service.Common;
 using DWIMS.Service.CurrentUser;
 using DWIMS.Service.CurrentUser.Dtos;
 using DWIMS.Service.CurrentUser.Requests;
+using DWIMS.Service.Logs;
 using DWIMS.Service.User;
 using Microsoft.EntityFrameworkCore;
 using SkiaSharp;
@@ -11,7 +12,8 @@ namespace DWIMS.Service.Services;
 
 public class UserService(
     AppDbContext context, 
-    ICurrentUserService currentUser) : IUserService
+    ICurrentUserService currentUser,
+    ILogService logService) : IUserService
 {
     public async Task<Result<UserProfileDto>> GetCurrentUserAsync(CancellationToken cancellationToken = default)
     {
@@ -28,7 +30,12 @@ public class UserService(
                 x.ContactNumber,
                 x.JobTitle,
                 x.Department,
-                context.Signatures.Any(y => y.UserId == id)))
+                context.Signatures.Any(y => y.UserId == id),
+                x.OicId,
+                $"{x.Oic.FirstName}{(x.Oic.MiddleName == "" ? "" : $" {x.Oic.MiddleName}")} {x.Oic.LastName}",
+                x.Oic.Email,
+                x.OicActive,
+                x.OicActiveUntilUtc))
             .FirstOrDefaultAsync(cancellationToken);
         
         if (user is null)
@@ -230,5 +237,64 @@ public class UserService(
             .ToListAsync(cancellationToken);
 
         return Result<IReadOnlyList<UserSearchResultDto>>.Success(users);
+    }
+
+    public async Task<Result> SetMyOicAsync(SetOicRequest request, CancellationToken cancellationToken = default)
+    {
+        var oic = await context.Users
+            .Where(user => user.Email == request.OicEmail)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (oic is null)
+            return Result.Failure("OIC_NOT_FOUND", $"OIC with email {request.OicEmail} does not exist.");
+        
+        if (oic.Id == currentUser.UserId)
+            return Result.Failure("OIC_CANNOT_BE_SELF", "You cannot set yourself as your own OIC.");
+        
+        if (request.Active && request.ActiveUntilUtc is { } until && until <= DateTime.UtcNow)
+            return Result.Failure("INVALID_OIC_UNTIL", $"OIC activation end must be in the future.");
+        
+        var principal = await context.Users
+            .SingleOrDefaultAsync(user => user.Id == currentUser.UserId, cancellationToken);
+
+        if (principal is null)
+            return Result.Failure("UNAUTHORIZED", "Current user no longer exists.");
+        
+        principal.OicId = oic.Id;
+        principal.OicActive = request.Active;
+        principal.OicActiveUntilUtc = request.Active ? request.ActiveUntilUtc : null;
+        
+        await context.SaveChangesAsync(cancellationToken);
+
+        await logService.LogAsync(
+            "OIC Designated", 
+            "User", 
+            currentUser.UserId, 
+            $"{principal.Email} designated {oic.Email} as OIC (active: {request.Active}) {(request.Active && request.ActiveUntilUtc is not null ? $"until {request.ActiveUntilUtc:u}" : "")}", cancellationToken);
+        
+        return Result.Success();
+    }
+    
+    public async Task<Result> RemoveMyOicAsync(CancellationToken cancellationToken = default)
+    {
+        var principal = await context.Users
+            .SingleOrDefaultAsync(user => user.Id == currentUser.UserId, cancellationToken);
+
+        if (principal is null)
+            return Result.Failure("UNAUTHORIZED", "Current user no longer exists.");
+        
+        principal.OicId = null;
+        principal.OicActive = false;
+        principal.OicActiveUntilUtc = null;
+        
+        await context.SaveChangesAsync(cancellationToken);
+
+        await logService.LogAsync(
+            "OIC Removed", 
+            "User", 
+            currentUser.UserId, 
+            $"{principal.Email} removed their OIC", cancellationToken);
+        
+        return Result.Success();
     }
 }

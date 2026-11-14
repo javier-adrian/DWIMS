@@ -19,4 +19,11 @@ public interface IUserService
     Task<Result<IReadOnlyList<UserSearchResultDto>>> SearchUsersAsync(
         string query, 
         CancellationToken cancellationToken = default);
+    
+    Task<Result> SetMyOicAsync(
+        SetOicRequest request, 
+        CancellationToken cancellationToken = default);
+    
+    Task<Result> RemoveMyOicAsync(
+        CancellationToken cancellationToken = default);
 }

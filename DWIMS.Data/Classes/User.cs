@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using DWIMS.Data.Interfaces;
 
 namespace DWIMS.Data;
@@ -15,6 +16,10 @@ public class User : ISoftDeletable
     public string? ContactNumber { get; set; }
     public string? JobTitle { get; set; }
     public string? Department { get; set; }
+    public Guid? OicId { get; set; }
+    public bool OicActive { get; set; }
+    public DateTime? OicActiveUntilUtc { get; set; }
+    public User? Oic { get; set; }
     
     public string? Password { get; set; }
 
@@ -29,4 +34,10 @@ public class User : ISoftDeletable
     
     public bool IsDeleted { get; set; }
     public DateTime? DeletedOn { get; set; }
+    
+    public static bool IsOicActiveFor(User? principal, Guid? oicUserId, DateTime utcNow) =>
+        principal is not null && 
+        principal.OicId is { } oicId && oicId == oicUserId &&
+        principal.OicActive &&
+        (principal.OicActiveUntilUtc is null || principal.OicActiveUntilUtc > utcNow);
 }

@@ -733,6 +733,15 @@ namespace DWIMS.Data.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<bool>("OicActive")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime?>("OicActiveUntilUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid?>("OicId")
+                        .HasColumnType("char(36)");
+
                     b.Property<string>("Password")
                         .HasColumnType("longtext");
 
@@ -740,6 +749,8 @@ namespace DWIMS.Data.Migrations
 
                     b.HasIndex("Email")
                         .IsUnique();
+
+                    b.HasIndex("OicId");
 
                     b.ToTable("users");
                 });
@@ -975,6 +986,16 @@ namespace DWIMS.Data.Migrations
                     b.Navigation("Step");
 
                     b.Navigation("Submission");
+                });
+
+            modelBuilder.Entity("DWIMS.Data.User", b =>
+                {
+                    b.HasOne("DWIMS.Data.User", "Oic")
+                        .WithMany()
+                        .HasForeignKey("OicId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("Oic");
                 });
 
             modelBuilder.Entity("DWIMS.Data.Process", b =>

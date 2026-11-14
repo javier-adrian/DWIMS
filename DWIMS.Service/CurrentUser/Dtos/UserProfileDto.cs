@@ -9,4 +9,9 @@ public sealed record UserProfileDto(
     string? ContactNumber, 
     string? JobTitle,
     string? Department,
-    bool hasSignature);
+    bool hasSignature,
+    Guid? OicId,
+    string? OicName,
+    string? OicEmail,
+    bool OicActive,
+    DateTime? OicActiveUntilUtc);
