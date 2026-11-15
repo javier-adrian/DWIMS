@@ -194,8 +194,13 @@ public class ProcessService(
                 p.Documents.Any(d => !d.IsDeleted && d.Link != ""),
                 p.Documents.Where(d => !d.IsDeleted)
                     .Select(d => d.MappingState)
-                    .FirstOrDefault()
-            ))
+                    .FirstOrDefault(),
+                p.AttachmentRequirements
+                    .Where(r => !r.IsDeleted)
+                    .OrderBy(r => r.Order)
+                    .Select(r => new AttachmentRequirementDto(r.Id, r.Title, r.Order))
+                    .ToList()
+                ))
             .FirstOrDefaultAsync(cancellationToken);
 
         if (process is null)
@@ -973,6 +978,88 @@ public class ProcessService(
             $"{analysisResult.Data!.Fields.Count} field and {analysisResult.Data.Steps.Count} step suggestions.",
             cancellationToken: cancellationToken);
 
+        return Result.Success();
+    }
+
+    public async Task<Result> AddAttachmentRequirementAsync(Guid processId, AddAttachmentRequirementRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var process = await context.Processes
+            .Include(p => p.AttachmentRequirements)
+            .FirstOrDefaultAsync(x => x.Id == processId, cancellationToken);
+        
+        if (process is null)
+            return Result.Failure("PROCESS_NOT_FOUND", "Process not found.");
+        
+        if (string.IsNullOrWhiteSpace(request.Title))
+            return Result.Failure("INVALID_TITLE", "The requirement needs to have a title.");
+
+
+        var attachmentRequirement = new AttachmentRequirement
+        {
+            Id = Guid.NewGuid(),
+            ProcessId = processId,
+            Title = request.Title.Trim(),
+            Order = process.AttachmentRequirements.Max(ar => (int?)ar.Order) + 1 ?? 1
+        };
+        
+        context.AttachmentRequirements.Add(attachmentRequirement);
+        
+        await context.SaveChangesAsync(cancellationToken);
+        await logService.LogAsync("Attachment Requirement Added", "Process", processId, cancellationToken: cancellationToken);
+        
+        return Result.Success();
+    }
+
+    public async Task<Result> UpdateAttachmentRequirementAsync(Guid processId, Guid requirementId, UpdateAttachmentRequirementRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var process = await context.Processes
+            .Include(p => p.AttachmentRequirements)
+            .FirstOrDefaultAsync(x => x.Id == processId, cancellationToken);
+        
+        if (process is null)
+            return Result.Failure("PROCESS_NOT_FOUND", "Process not found.");
+
+        var requirement = process.AttachmentRequirements.FirstOrDefault(ar => ar.Id == requirementId);
+        
+        if (requirement is null)
+            return Result.Failure("ATTACHMENT_REQUIREMENT_NOT_FOUND", "Attachment requirement not found.");
+        
+        if (string.IsNullOrWhiteSpace(request.Title))
+            return Result.Failure("INVALID_TITLE", "The requirement needs to have a title.");
+        
+        var oldTitle = requirement.Title;
+        var oldOrder = requirement.Order;
+        
+        requirement.Title = request.Title.Trim();
+        requirement.Order = request.Order;
+        
+        await context.SaveChangesAsync(cancellationToken);
+        await logService.LogAsync("Attachment Requirement Updated", "Process", processId, $"Updated from {oldTitle} at order {oldOrder} to {requirement.Title} at order {requirement.Order}", cancellationToken: cancellationToken);
+        
+        return Result.Success();
+    }
+
+    public async Task<Result> DeleteAttachmentRequirementAsync(Guid processId, Guid requirementId, CancellationToken cancellationToken = default)
+    {
+        var process = await context.Processes
+            .Include(p => p.AttachmentRequirements)
+            .FirstOrDefaultAsync(x => x.Id == processId, cancellationToken);
+        
+        if (process is null)
+            return Result.Failure("PROCESS_NOT_FOUND", "Process not found.");
+
+        var requirement = process.AttachmentRequirements.FirstOrDefault(ar => ar.Id == requirementId);
+        
+        if (requirement is null)
+            return Result.Failure("ATTACHMENT_REQUIREMENT_NOT_FOUND", "Attachment requirement not found.");
+        
+        context.AttachmentRequirements.Remove(requirement);
+        
+        await context.SaveChangesAsync(cancellationToken);
+        await logService.LogAsync("Attachment Requirement Removed", "Process", processId, $"Removed {requirement.Title}", cancellationToken: cancellationToken);
+        
         return Result.Success();
     }
 

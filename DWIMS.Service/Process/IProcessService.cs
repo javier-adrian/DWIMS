@@ -97,4 +97,20 @@ public interface IProcessService
     Task<Result> ReanalyzeAsync(
         Guid processId,
         CancellationToken cancellationToken = default);
+    
+    Task<Result> AddAttachmentRequirementAsync(
+        Guid processId,
+        AddAttachmentRequirementRequest request,
+        CancellationToken cancellationToken = default);
+    
+    Task<Result> UpdateAttachmentRequirementAsync(
+        Guid processId,
+        Guid requirementId,
+        UpdateAttachmentRequirementRequest request,
+        CancellationToken cancellationToken = default);
+    
+    Task<Result> DeleteAttachmentRequirementAsync(
+        Guid processId,
+        Guid requirementId,
+        CancellationToken cancellationToken = default);
 }

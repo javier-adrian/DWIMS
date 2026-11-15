@@ -103,7 +103,57 @@ public static class ProcessEndpoints
             .WithSummary("Rerun analysis on an unconfirmed template")
             .RequireAuthorization(DwimsPolicies.SuperAdministrator);
         
+        group.MapPost("/{processId:guid}/attachment-requirement", CreateAttachmentRequirement)
+            .WithDisplayName("Add Attachment Requirement")
+            .WithSummary("Add a required attachment to a process")
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
+       
+        group.MapPut("/{processId:guid}/attachment-requirement/{requirementId:guid}", UpdateAttachmentRequirement)
+            .WithDisplayName("Update Attachment Requirement")
+            .WithSummary("Update a required attachment of a process")
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
+       
+        group.MapDelete("/{processId:guid}/attachment-requirement/{requirementId:guid}", DeleteAttachmentRequirement)
+            .WithDisplayName("Delete Attachment Requirement")
+            .WithSummary("Remove a required attachment of a process")
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
+        
         return app;
+    }
+
+    private static async Task<IResult> DeleteAttachmentRequirement(
+        Guid processId,
+        Guid requirementId,
+        IProcessService processService,
+        CancellationToken cancellationToken)
+    {
+        var result = await processService.DeleteAttachmentRequirementAsync(processId, requirementId, cancellationToken);
+
+        return result.ToOkResult();
+    }
+
+    private static async Task<IResult> UpdateAttachmentRequirement(
+        Guid processId,
+        Guid requirementId,
+        UpdateAttachmentRequirementRequest request,
+        IProcessService processService,
+        CancellationToken cancellationToken)
+    {
+        var result =
+            await processService.UpdateAttachmentRequirementAsync(processId, requirementId, request, cancellationToken);
+
+        return result.ToOkResult();
+    }
+
+    private static async Task<IResult> CreateAttachmentRequirement(
+        Guid processId,
+        AddAttachmentRequirementRequest request,
+        IProcessService processService,
+        CancellationToken cancellationToken)
+    {
+        var result = await processService.AddAttachmentRequirementAsync(processId, request, cancellationToken);
+
+        return result.ToOkResult();
     }
 
     private static async Task<IResult> ReanalyzeTemplate(

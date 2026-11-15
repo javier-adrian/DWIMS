@@ -54,6 +54,14 @@ public class SubmissionService(
 
         return Data.User.IsOicActiveFor(principal, oicId, DateTime.UtcNow);
     }
+
+    private static List<string> MissingAttachmentTitles(Data.Submission s) =>
+        s.Process.AttachmentRequirements
+            .Where(r => !r.IsDeleted)
+            .Where(r => !s.Attachments
+                .Any(a => !a.IsDeleted && a.RequirementId == r.Id))
+            .Select(r => r.Title)
+            .ToList();
     
     public static string GenerateVerificationCode(int length = 8)
     {
@@ -325,6 +333,7 @@ public class SubmissionService(
 
         var submission = await context.Submissions
             .Include(s => s.Process)
+            .Include(s => s.Process).ThenInclude(p => p.AttachmentRequirements)
             .Include(s => s.Step)
             .Include(s => s.Submitter)
             .Include(s => s.Inputs).ThenInclude(i => i.Field)
@@ -405,6 +414,7 @@ public class SubmissionService(
             fieldValues,
             attachmentDtos,
             routes,
+            MissingAttachmentTitles(submission),
             submission.VerificationCode
         ));
     }
@@ -416,6 +426,7 @@ public class SubmissionService(
 
         var submission = await context.Submissions
             .Include(s => s.Process)
+            .Include(s => s.Process).ThenInclude(p => p.AttachmentRequirements)
             .Include(s => s.Step)
             .Include(s => s.Submitter)
             .Include(s => s.Inputs).ThenInclude(i => i.Field)
@@ -493,6 +504,7 @@ public class SubmissionService(
             fieldValues,
             attachmentDtos,
             routes,
+            MissingAttachmentTitles(submission),
             submission.VerificationCode
         ));
     }
@@ -648,6 +660,9 @@ public class SubmissionService(
         var submission = await context.Submissions
             .Include(s => s.Process)
             .ThenInclude(p => p.Steps.OrderBy(st => st.Order))
+            .Include(s => s.Attachments)
+            .Include(s => s.Process)
+            .ThenInclude(p => p.AttachmentRequirements)
             .Include(s => s.Responses)
             .FirstOrDefaultAsync(s => s.Id == submissionId, cancellationToken);
 
@@ -676,6 +691,12 @@ public class SubmissionService(
             var hasSignature = await context.Signatures.AnyAsync(s => s.UserId == currentUser.UserId, cancellationToken: cancellationToken);
             if (!hasSignature)
                 return Result.Failure("SIGNATURE_REQUIRED", "You must register a signature in the settings before approving.");
+
+            var missing = MissingAttachmentTitles(submission);
+
+            if (missing.Count > 0)
+                return Result.Failure("ATTACHMENTS_REQUIRED",
+                    $"The submitter has not uploaded required attachment(s): {string.Join(", ", missing)}");
         }
 
         if (request.Outcome is Status.OnHold)
@@ -1131,6 +1152,17 @@ public class SubmissionService(
             return Result<List<Attachment>>.Failure("FORBIDDEN", "You can only upload attachments to your own submissions.");
         
         var results = new List<Attachment>();
+        
+        var requirementIds = attachments.Select(a => a.RequirementId).Where(id => id != null).Distinct().ToList();
+
+        foreach (var id in requirementIds)
+        {
+            var valid = await context.AttachmentRequirements
+                .AnyAsync(ar => ar.Id == id && !ar.IsDeleted && submission.ProcessId == ar.ProcessId, cancellationToken);
+                
+            if (!valid)
+                return Result<List<Attachment>>.Failure("REQUIREMENT_NOT_FOUND", "Requirement not found.");
+        }
 
         foreach (var file in attachments)
         {
@@ -1148,7 +1180,8 @@ public class SubmissionService(
                 SubmissionId = submissionId,
                 Title = file.FileName,
                 Type = file.ContentType,
-                Link = key
+                Link = key,
+                RequirementId = file.RequirementId
             });
         }
         

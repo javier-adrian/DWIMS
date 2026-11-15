@@ -12,4 +12,5 @@ public sealed record ProcessDetailDto(
     string? ControlNumber,
     string? Tags,
     bool HasDocument,
-    TemplateMappingState MappingState = TemplateMappingState.NotAnalyzed);
+    TemplateMappingState MappingState = TemplateMappingState.NotAnalyzed,
+    IReadOnlyList<AttachmentRequirementDto>? RequiredAttachments = null);

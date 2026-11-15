@@ -12,6 +12,7 @@ public class Process : ISoftDeletable
     public int LastIssuedSerial { get; set; }
     public ProcessKind Kind { get; set; }
     public ICollection<Step> Steps { get; set; }
+    public ICollection<AttachmentRequirement> AttachmentRequirements { get; set; } = [];
     public ICollection<Field> Fields { get; set; }
     public ICollection<Document> Documents { get; set; }
     public bool IsActive { get; set; } = true;

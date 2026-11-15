@@ -38,6 +38,9 @@ namespace DWIMS.Data.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<Guid?>("RequirementId")
+                        .HasColumnType("char(36)");
+
                     b.Property<Guid>("SubmissionId")
                         .HasColumnType("char(36)");
 
@@ -51,9 +54,40 @@ namespace DWIMS.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("RequirementId");
+
                     b.HasIndex("SubmissionId");
 
                     b.ToTable("attachments");
+                });
+
+            modelBuilder.Entity("DWIMS.Data.AttachmentRequirement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("DeletedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("ProcessId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProcessId");
+
+                    b.ToTable("attachmentrequirements");
                 });
 
             modelBuilder.Entity("DWIMS.Data.Document", b =>
@@ -763,13 +797,30 @@ namespace DWIMS.Data.Migrations
 
             modelBuilder.Entity("DWIMS.Data.Attachment", b =>
                 {
+                    b.HasOne("DWIMS.Data.AttachmentRequirement", "Requirement")
+                        .WithMany()
+                        .HasForeignKey("RequirementId");
+
                     b.HasOne("DWIMS.Data.Submission", "Submission")
                         .WithMany("Attachments")
                         .HasForeignKey("SubmissionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Requirement");
+
                     b.Navigation("Submission");
+                });
+
+            modelBuilder.Entity("DWIMS.Data.AttachmentRequirement", b =>
+                {
+                    b.HasOne("DWIMS.Data.Process", "Process")
+                        .WithMany("AttachmentRequirements")
+                        .HasForeignKey("ProcessId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Process");
                 });
 
             modelBuilder.Entity("DWIMS.Data.Document", b =>
@@ -1006,6 +1057,8 @@ namespace DWIMS.Data.Migrations
 
             modelBuilder.Entity("DWIMS.Data.Process", b =>
                 {
+                    b.Navigation("AttachmentRequirements");
+
                     b.Navigation("Documents");
 
                     b.Navigation("Fields");

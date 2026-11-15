@@ -3,4 +3,5 @@
 public sealed record AttachmentUploadDto(
     Stream Content,
     string FileName,
-    string ContentType);
+    string ContentType,
+    Guid? RequirementId = null);

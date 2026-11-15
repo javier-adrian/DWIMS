@@ -222,14 +222,21 @@ public static class SubmissionEndpoints
 
     private static async Task<IResult> UploadAttachment(
         Guid id, 
-        IFormFileCollection files, 
+        IFormFileCollection files,
+        IFormCollection form,
         ISubmissionService submissionService, 
         CancellationToken cancellationToken)
     {
         List<AttachmentUploadDto> attachments = [];
+        
         foreach (var file in files)
         {
-            var dto = new AttachmentUploadDto(file.OpenReadStream(), file.FileName, file.ContentType);
+            var dto = new AttachmentUploadDto(
+                file.OpenReadStream(), 
+                file.FileName, 
+                file.ContentType,
+                Guid.TryParse(form["requirementId"], out var rid) ? rid : null);
+            
             attachments.Add(dto);
         }
         
