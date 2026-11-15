@@ -69,6 +69,11 @@ public static class UserEndpoints
             .WithSummary("Get a user by ID")
             .RequireAuthorization(DwimsPolicies.SuperAdministrator);
 
+        group.MapPut("/{userId:guid}/tags", SetUserTags)
+            .WithDisplayName("Set User Tags")
+            .WithSummary("Set or clear the visibility tags of a user.")
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
+
         var roleGroup = app.MapGroup("roles")
             .WithTags("Roles")
             .RequireAuthorization(DwimsPolicies.SuperAdministrator);
@@ -87,6 +92,17 @@ public static class UserEndpoints
             .WithSummary("Assign a Super Administrator role to a user");
 
         return app;
+    }
+
+    private static async Task<IResult> SetUserTags(
+        Guid userId,
+        UpdateUserTagsRequest request,
+        IUserAdministrationService userAdministrationService,
+        CancellationToken cancellationToken)
+    {
+        var result = await userAdministrationService.SetUserTagsAsync(userId, request, cancellationToken);
+
+        return result.ToOkResult();
     }
 
     private static async Task<IResult> RemoveOic(

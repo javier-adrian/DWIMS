@@ -375,6 +375,9 @@ namespace DWIMS.Data.Migrations
                     b.Property<int>("LastIssuedSerial")
                         .HasColumnType("int");
 
+                    b.Property<string>("Tags")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -743,6 +746,9 @@ namespace DWIMS.Data.Migrations
                         .HasColumnType("char(36)");
 
                     b.Property<string>("Password")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Tags")
                         .HasColumnType("longtext");
 
                     b.HasKey("Id");

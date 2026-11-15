@@ -7,4 +7,5 @@ public interface ICurrentUserService
     Guid? UserId { get; }
     IReadOnlyDictionary<Guid, GeneralRole> Roles { get; }
     bool isSuperAdministrator { get; }
+    bool isAdministratorOrAbove { get; }
 }

@@ -60,9 +60,26 @@ public class ProcessService(
 
         return Result<(string? Pattern, string? Message)>.Success((value, message));
     }
+
+    private async Task<IReadOnlyList<string>> GetUserTagsAsync(CancellationToken cancellationToken)
+    {
+        if (currentUserService.UserId is null)
+            return [];
+
+        var stored = await context.Users
+            .AsNoTracking()
+            .Where(u => u.Id == currentUserService.UserId)
+            .Select(u => u.Tags)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return Tags.Parse(stored);
+    }
     
     public async Task<Result<IReadOnlyList<ProcessSummaryDto>>> GetProcessesAsync(CancellationToken cancellationToken = default)
     {
+        var bypass = currentUserService.isAdministratorOrAbove;
+        var userTags = bypass ? [] : await GetUserTagsAsync(cancellationToken);
+        
         var processes = await context.Processes
             .Where(p => !p.IsDeleted && p.IsActive)
             .Select(p => new ProcessSummaryDto(
@@ -73,9 +90,13 @@ public class ProcessService(
                 context.Documents.Any(d => d.ProcessId == p.Id && !d.IsDeleted),
                 p.Kind,
                 p.IsActive,
-                p.ControlNumber
+                p.ControlNumber,
+                p.Tags
             ))
             .ToListAsync(cancellationToken);
+
+        if (!bypass)
+            processes = processes.Where(p => Tags.IsVisible(p.Tags, userTags)).ToList();
 
         return Result<IReadOnlyList<ProcessSummaryDto>>.Success(processes);
     }
@@ -101,13 +122,9 @@ public class ProcessService(
                     (p.ControlNumber != null && p.ControlNumber.Contains(term)));
         }
         
-        var totalCount = await baseQuery.CountAsync(cancellationToken);
-        
         var processes = await baseQuery
             .OrderBy(p => p.Title)
             .ThenBy(p => p.Id)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
             .Select(p => new ProcessSummaryDto(
                 p.Id,
                 p.Title,
@@ -116,11 +133,21 @@ public class ProcessService(
                 context.Documents.Any(d => d.ProcessId == p.Id && !d.IsDeleted),
                 p.Kind,
                 p.IsActive,
-                p.ControlNumber
+                p.ControlNumber,
+                p.Tags
             ))
             .ToListAsync(cancellationToken);
 
-        return Result<PagedResult<ProcessSummaryDto>>.Success(new PagedResult<ProcessSummaryDto>(processes, totalCount, page, pageSize));
+        if (!currentUserService.isAdministratorOrAbove)
+        {
+            var userTags = await GetUserTagsAsync(cancellationToken);
+            processes = processes.Where(p => Tags.IsVisible(p.Tags, userTags)).ToList();
+        }
+        
+        var totalCount = processes.Count;
+        var pageItems = processes.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+        return Result<PagedResult<ProcessSummaryDto>>.Success(new PagedResult<ProcessSummaryDto>(pageItems, totalCount, page, pageSize));
     }
 
     public async Task<Result<ProcessDetailDto>> GetProcessAsync(Guid id, CancellationToken cancellationToken = default)
@@ -163,6 +190,7 @@ public class ProcessService(
                     f.RectWidth,
                     f.RectHeight)).ToList(),
                 p.ControlNumber,
+                p.Tags,
                 p.Documents.Any(d => !d.IsDeleted && d.Link != ""),
                 p.Documents.Where(d => !d.IsDeleted)
                     .Select(d => d.MappingState)
@@ -173,6 +201,13 @@ public class ProcessService(
         if (process is null)
             return Result<ProcessDetailDto>.Failure("PROCESS_NOT_FOUND", "Process not found.");
 
+        if (!currentUserService.isAdministratorOrAbove)
+        {
+            var userTags = await GetUserTagsAsync(cancellationToken);
+            if (!Tags.IsVisible(process.Tags, userTags))
+                return Result<ProcessDetailDto>.Failure("PROCESS_NOT_FOUND", "Process not found.");
+        }
+
         return Result<ProcessDetailDto>.Success(process);
     }
 
@@ -181,7 +216,11 @@ public class ProcessService(
         if (!Enum.IsDefined(request.Kind)) return Result<Guid>.Failure("INVALID_PROCESS_KIND", "Invalid process kind.");
         
         var control = NormalizeControlNumber(request.ControlNumber);
+        var normalizedTags = Tags.Normalize(request.Tags);
         
+        if (!normalizedTags.IsSuccess)
+            return Result<Guid>.Failure(normalizedTags.Error!, normalizedTags.ErrorDescription!);
+
         if (!control.IsSuccess) 
             return Result<Guid>.Failure(control.Error!, control.ErrorDescription!);
         
@@ -200,7 +239,8 @@ public class ProcessService(
             Title = request.Title.Trim(),
             Kind = request.Kind,
             ControlNumber = control.Data,
-            Description = request.Description?.Trim()
+            Tags = normalizedTags.Data,
+            Description = request.Description?.Trim(),
         };
         
         context.Processes.Add(process);
@@ -248,10 +288,16 @@ public class ProcessService(
         if (request.Title.Length > 200)
             return Result.Failure("TITLE_TOO_LONG", "Title is too long.");
         
+        var normalizedTags = Tags.Normalize(request.Tags);
+        
+        if (!normalizedTags.IsSuccess)
+            return Result.Failure(normalizedTags.Error!, normalizedTags.ErrorDescription!);
+        
         process.Description = request.Description?.Trim();
 
         process.Title = request.Title.Trim();
         
+        process.Tags = normalizedTags.Data;
 
         await context.SaveChangesAsync(cancellationToken);
         
@@ -650,6 +696,13 @@ public class ProcessService(
 
         if (process is null)
             return Result<(Stream Content, string FileName)>.Failure("PROCESS_NOT_FOUND", "Process not found.");
+
+        if (!currentUserService.isAdministratorOrAbove)
+        {
+            var userTags = await GetUserTagsAsync(cancellationToken);
+            if (!Tags.IsVisible(process.Tags, userTags))
+                return Result<(Stream Content, string FileName)>.Failure("PROCESS_NOT_FOUND", "Process not found.");
+        }
         
         var document = process.Documents.FirstOrDefault(d => !d.IsDeleted);
         

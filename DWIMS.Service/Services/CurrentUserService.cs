@@ -55,4 +55,7 @@ public sealed class CurrentUserService (IHttpContextAccessor httpContextAccessor
     
     public bool isSuperAdministrator =>
         Roles.Values.Any(x => x == GeneralRole.SuperAdministrator);
+
+    public bool isAdministratorOrAbove => 
+        Roles.Values.Any(x => x >= GeneralRole.Administrator);
 }

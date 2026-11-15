@@ -16,6 +16,7 @@ public class User : ISoftDeletable
     public string? ContactNumber { get; set; }
     public string? JobTitle { get; set; }
     public string? Department { get; set; }
+    public string? Tags { get; set; }
     public Guid? OicId { get; set; }
     public bool OicActive { get; set; }
     public DateTime? OicActiveUntilUtc { get; set; }

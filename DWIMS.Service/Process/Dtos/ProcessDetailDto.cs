@@ -10,5 +10,6 @@ public sealed record ProcessDetailDto(
     IReadOnlyList<StepDto> Steps,
     IReadOnlyList<FieldDto> Fields,
     string? ControlNumber,
+    string? Tags,
     bool HasDocument,
     TemplateMappingState MappingState = TemplateMappingState.NotAnalyzed);

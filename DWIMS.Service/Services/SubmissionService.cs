@@ -516,6 +516,9 @@ public class SubmissionService(
         if (!process.IsActive)
             return Result<Guid>.Failure("PROCESS_INACTIVE", "Process is inactive.");
         
+        if (!await Tags.CallerCanSeeAsync(context, currentUser, process, cancellationToken))
+            return Result<Guid>.Failure("PROCESS_NOT_FOUND", "Process not found.");
+        
         if (process.Fields.Any(f => !f.IsDeleted && f.Type == InputTypes.Signature) && 
             !await context.Signatures.AnyAsync(s => s.UserId == currentUser.UserId, cancellationToken))
             return Result<Guid>.Failure("SIGNATURE_REQUIRED", "User must register a signature in the settings before submitting.");
@@ -957,6 +960,9 @@ public class SubmissionService(
         
         if (!process.IsActive)
             return Result<Guid>.Failure("PROCESS_INACTIVE", "Process is inactive.");
+        
+        if (!await Tags.CallerCanSeeAsync(context, currentUser, process, cancellationToken))
+            return Result<Guid>.Failure("PROCESS_NOT_FOUND", "Process not found.");
         
         var liveSteps = process.Steps.Where(s => !s.IsDeleted).ToList();
         

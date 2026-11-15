@@ -8,6 +8,7 @@ public class Process : ISoftDeletable
     public string Title { get; set; }
     public string? ControlNumber { get; set; }
     public string? Description { get; set; }
+    public string? Tags { get; set; }
     public int LastIssuedSerial { get; set; }
     public ProcessKind Kind { get; set; }
     public ICollection<Step> Steps { get; set; }

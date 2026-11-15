@@ -10,4 +10,5 @@ public sealed record ProcessSummaryDto(
     bool hasTemplate,
     ProcessKind Kind,
     bool IsActive,
-    string? ControlNumber);
+    string? ControlNumber,
+    string? Tags);

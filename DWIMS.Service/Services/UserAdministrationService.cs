@@ -186,6 +186,36 @@ public class UserAdministrationService(
             .Success(id);
     }
 
+    public async Task<Result<Guid>> SetUserTagsAsync(Guid id, UpdateUserTagsRequest request, CancellationToken cancellationToken)
+    {
+        if (currentUser.UserId == null) 
+            return Result<Guid>
+                .Failure("UNAUTHORIZED", "User is not authenticated.");
+        
+        if (!currentUser.isSuperAdministrator)
+            return Result<Guid>
+                .Failure("UNAUTHORIZED", "User is not authorized.");
+        
+        var user = await context.Users.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Id == id, cancellationToken: cancellationToken);
+        
+        if (user == null)
+            return Result<Guid>
+                .Failure("USER_NOT_FOUND", "User not found.");
+        
+        var normalizedTags = Tags.Normalize(request.Tags);
+        
+        if (!normalizedTags.IsSuccess)
+            return Result<Guid>.Failure(normalizedTags.Error!, normalizedTags.ErrorDescription!);
+        
+        user.Tags = normalizedTags.Data;
+        
+        await context.SaveChangesAsync(cancellationToken);
+        await logService.LogAsync("User Tags Updated", "User", user.Id, cancellationToken: cancellationToken);
+        
+        return Result<Guid>.Success(id);
+    }
+
     private IQueryable<UserDirectoryDto> Project(IQueryable<Data.User> users) =>
         users.Select(u => new UserDirectoryDto(
             u.FirstName,
@@ -202,6 +232,7 @@ public class UserAdministrationService(
                     r.Id,
                     r.Title,
                     r.GeneralRole)),
-            context.Responses.Count(r => r.AssigneeId == u.Id && r.CompletedOn == null)
+            context.Responses.Count(r => r.AssigneeId == u.Id && r.CompletedOn == null),
+            u.Tags
         ));
 }

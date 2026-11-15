@@ -10,4 +10,5 @@ public interface IUserAdministrationService
     Task<Result<UserDirectoryDto>> GetUserAsync(Guid id, CancellationToken cancellationToken);
     Task<Result<Guid>> DeleteUserAsync(Guid id, CancellationToken cancellationToken);
     Task<Result<Guid>> ReactivateUserAsync(Guid id, CancellationToken cancellationToken);
+    Task<Result<Guid>> SetUserTagsAsync(Guid id, UpdateUserTagsRequest request, CancellationToken cancellationToken);
 }

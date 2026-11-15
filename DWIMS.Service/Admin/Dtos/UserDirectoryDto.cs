@@ -13,4 +13,5 @@ public sealed record UserDirectoryDto(
     bool HasSignature,
     bool Active,
     IEnumerable<RoleDto> Roles,
-    int Assignments);
+    int Assignments,
+    string? Tags);
