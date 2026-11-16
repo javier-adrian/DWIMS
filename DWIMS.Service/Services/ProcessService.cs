@@ -842,9 +842,30 @@ public class ProcessService(
 
         var pageCount = TemplateAnalysisJson.Deserialize(document.AnalysisJson ?? "")?.PageCount ?? 0;
 
-        var fieldPatterns = new List<(string? Pattern, string? Message)>();
+        // §8.6 twin guard: a Signature field whose placement overlaps a step slot is the
+        // reviewer's line — the step owns the stamp, so the field twin is dropped here
+        // instead of double-stamping at generation
+        var stepSlots = request.Steps.Select(s => (s.Page, s.X, s.Y, s.Width, s.Height)).ToList();
+        var droppedTwins = new List<string>();
+        var confirmedFields = new List<ConfirmFieldItem>();
 
         foreach (var item in request.Fields)
+        {
+            if (item.Type == (int) InputTypes.Signature &&
+                stepSlots.Any(s => s.Page == item.Page && OverlapsMoreThanHalf(
+                    item.X, item.Y, item.Width, item.Height,
+                    s.X, s.Y, s.Width, s.Height)))
+            {
+                droppedTwins.Add(item.Title?.Trim() ?? "?");
+                continue;
+            }
+
+            confirmedFields.Add(item);
+        }
+
+        var fieldPatterns = new List<(string? Pattern, string? Message)>();
+
+        foreach (var item in confirmedFields)
         {
             var title = item.Title?.Trim() ?? "";
             
@@ -887,9 +908,9 @@ public class ProcessService(
 
         var newFields = new List<Field>();
 
-        for (int i = 0; i < request.Fields.Count; i++)
+        for (int i = 0; i < confirmedFields.Count; i++)
         {
-            var item = request.Fields[i];
+            var item = confirmedFields[i];
             
             newFields.Add(new Field
             {
@@ -943,10 +964,25 @@ public class ProcessService(
             "Template Mapping Confirmed",
             "Process",
             processId,
-            $"{newFields.Count} fields, {newSteps.Count} steps",
+            $"{newFields.Count} fields, {newSteps.Count} steps" +
+            (droppedTwins.Count > 0
+                ? $"; dropped {droppedTwins.Count} signature twins ({string.Join(", ", droppedTwins)})"
+                : ""),
             cancellationToken: cancellationToken);
 
         return Result.Success();
+    }
+
+    private static bool OverlapsMoreThanHalf(
+        double ax, double ay, double aw, double ah,
+        double bx, double by, double bw, double bh)
+    {
+        var w = Math.Min(ax + aw, bx + bw) - Math.Max(ax, bx);
+        var h = Math.Min(ay + ah, by + bh) - Math.Max(ay, by);
+
+        if (w <= 0 || h <= 0) return false;
+
+        return w * h > 0.5 * Math.Min(aw * ah, bw * bh);
     }
 
     public async Task<Result> ReanalyzeAsync(Guid processId, CancellationToken cancellationToken = default)
