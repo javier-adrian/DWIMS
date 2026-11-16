@@ -7,10 +7,21 @@ namespace DWIMS.Service.Services;
 
 public class RoutingService(AppDbContext context) : IRoutingService
 {
-    public async Task<Result<Guid>> StartRoute(Data.Submission submission, Data.Process process, SubmissionRoute route)
+    public async Task<Result<Guid>> StartRoute(
+        Data.Submission submission, 
+        Data.Process process, 
+        SubmissionRoute route,
+        IReadOnlyDictionary<Guid, string>? fieldValues = null)
     {
-        var firstStep = process.Steps.OrderBy(step => step.Order).FirstOrDefault(step => !step.IsDeleted) 
-                    ?? throw new InvalidOperationException("Process has no steps");
+        var values = fieldValues ?? await context.Inputs
+            .Where(input => input.SubmissionId == submission.Id && !input.IsDeleted)
+            .ToDictionaryAsync(input => input.FieldId, input => input.Value);
+        
+        var firstStep = process.Steps
+                            .Where(step => !step.IsDeleted)
+                            .OrderBy(step => step.Order)
+                            .FirstOrDefault(step => RoutingRules.ShouldInclude(step, values)) 
+                    ?? throw new InvalidOperationException("Process has no steps for this submission.");
         
         var reviewer = await context.Users
             .FirstOrDefaultAsync(reviewer => reviewer.Id == route.AssigneeId);
@@ -50,12 +61,30 @@ public class RoutingService(AppDbContext context) : IRoutingService
             ));
         }
         
-        var nextStep = currentStep.Process.Steps.FirstOrDefault(step => step.Order > currentStep.Order && !step.IsDeleted);
+        var values = await context.Inputs
+            .Where(input => input.SubmissionId == submission.Id && !input.IsDeleted)
+            .ToDictionaryAsync(input => input.FieldId, input => input.Value);
+
+        var candidates = currentStep.Process.Steps
+            .Where(step => step.Order > currentStep.Order && !step.IsDeleted)
+            .OrderBy(step => step.Order)
+            .ToList();
+
+        var skipped = candidates
+            .Where(step => !RoutingRules.ShouldInclude(step, values))
+            .ToList();
+        
+        var nextStep = candidates.FirstOrDefault(step => !skipped.Contains(step));
 
         if (nextStep is null)
         {
             submission.Status = Status.Approve;
-            return Result<RouteResult>.Success(new RouteResult(RouteOutcome.Completed, null));
+            return Result<RouteResult>
+                .Success(
+                    new RouteResult(
+                        RouteOutcome.Completed, 
+                        null,
+                        await DescribeSkipsAsync(skipped, values)));
         }
         
         var nextRoute = await context.SubmissionRoutes.FirstOrDefaultAsync(route => route.SubmissionId == submission.Id && route.StepId == nextStep.Id);
@@ -88,6 +117,23 @@ public class RoutingService(AppDbContext context) : IRoutingService
             Assignee = reviewer
         });
         
-        return Result<RouteResult>.Success(new RouteResult(RouteOutcome.Advanced, nextStep));
+        return Result<RouteResult>.Success(new RouteResult(RouteOutcome.Advanced, nextStep, await DescribeSkipsAsync(skipped, values)));
+    }
+
+    private async Task<List<string>> DescribeSkipsAsync(
+        List<Step> skipped,
+        IReadOnlyDictionary<Guid, string> values)
+    {
+        if (skipped.Count == 0) return [];
+
+        var titles = await context.Fields
+            .Where(f => skipped.Select(s => s.ConditionFieldId!.Value).Contains(f.Id))
+            .ToDictionaryAsync(f => f.Id, f => f.Title);
+
+        return skipped
+            .Select(step => RoutingRules.Describe(step,
+                titles.GetValueOrDefault(step.ConditionFieldId!.Value),
+                values.GetValueOrDefault(step.ConditionFieldId!.Value)))
+            .ToList();
     }
 }

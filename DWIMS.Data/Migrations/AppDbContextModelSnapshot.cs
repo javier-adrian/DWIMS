@@ -570,6 +570,15 @@ namespace DWIMS.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid?>("ConditionFieldId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<int>("ConditionOperator")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ConditionValue")
+                        .HasColumnType("longtext");
+
                     b.Property<DateTime?>("DeletedOn")
                         .HasColumnType("datetime(6)");
 

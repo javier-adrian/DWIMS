@@ -11,4 +11,7 @@ public sealed record StepDto(
     double? SignatureX = null,
     double? SignatureY = null,
     double? SignatureWidth = null,
-    double? SignatureHeight = null);
+    double? SignatureHeight = null,
+    Guid? ConditionFieldId = null,
+    ConditionOperator? ConditionOperator = null,
+    string? ConditionValue = null);

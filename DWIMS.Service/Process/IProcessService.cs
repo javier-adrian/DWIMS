@@ -113,4 +113,10 @@ public interface IProcessService
         Guid processId,
         Guid requirementId,
         CancellationToken cancellationToken = default);
+
+    Task<Result> SetStepConditionAsync(
+        Guid processId,
+        Guid stepId,
+        SetStepConditionRequest request,
+        CancellationToken cancellationToken = default);
 }

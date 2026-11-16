@@ -7,6 +7,9 @@ public class Step : ISoftDeletable
     public Guid Id { get; set; }
     public Guid? FieldId { get; set; }
     public Guid? ProcessId { get; set; }
+    public Guid? ConditionFieldId { get; set; }
+    public ConditionOperator ConditionOperator { get; set; } = ConditionOperator.Equals;
+    public string? ConditionValue { get; set; }
     public int Order { get; set; }
     public string Title { get; set; }
 

@@ -5,6 +5,7 @@ using DWIMS.Service.Logs;
 using DWIMS.Service.Process;
 using DWIMS.Service.Process.Dtos;
 using DWIMS.Service.Process.Requests;
+using DWIMS.Service.Routing;
 using DWIMS.Service.Storage;
 using DWIMS.Service.User;
 using iText.Kernel.Pdf.Event;
@@ -170,7 +171,10 @@ public class ProcessService(
                     s.SignatureX,
                     s.SignatureY,
                     s.SignatureWidth,
-                    s.SignatureHeight)).ToList(),
+                    s.SignatureHeight,
+                    s.ConditionFieldId,
+                    s.ConditionOperator,
+                    s.ConditionValue)).ToList(),
                 p.Fields.Where(f => !f.IsDeleted)
                     .OrderBy(f => f.Order)
                     .ThenBy(f => f.Title)
@@ -496,7 +500,15 @@ public class ProcessService(
                 s.Id,
                 s.Order,
                 s.Title,
-                s.Role))
+                s.Role,
+                null,
+                null,
+                null,
+                null,
+                null,
+                s.ConditionFieldId,
+                s.ConditionOperator,
+                s.ConditionValue))
             .ToListAsync(cancellationToken);
 
         return Result<IReadOnlyList<StepDto>>.Success(steps);
@@ -765,7 +777,10 @@ public class ProcessService(
                     s.SignatureX,
                     s.SignatureY,
                     s.SignatureWidth,
-                    s.SignatureHeight))
+                    s.SignatureHeight,
+                    s.ConditionFieldId,
+                    s.ConditionOperator,
+                    s.ConditionValue))
                 .ToList();
             
             fields = process.Fields
@@ -1059,6 +1074,58 @@ public class ProcessService(
         
         await context.SaveChangesAsync(cancellationToken);
         await logService.LogAsync("Attachment Requirement Removed", "Process", processId, $"Removed {requirement.Title}", cancellationToken: cancellationToken);
+        
+        return Result.Success();
+    }
+
+    public async Task<Result> SetStepConditionAsync(Guid processId, Guid stepId, SetStepConditionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var step = await context.Steps.FirstOrDefaultAsync(x => x.Id == stepId && x.ProcessId == processId && !x.IsDeleted, cancellationToken);
+        
+        if (step is null)
+            return Result.Failure("STEP_NOT_FOUND", "Step not found.");
+
+        var submissions = await context.Submissions.AnyAsync(s =>
+            s.ProcessId == processId &&
+            !s.IsDeleted &&
+            (s.Status == Status.OnHold || s.Status == Status.Review));
+        
+        if (submissions)
+            return Result.Failure("PROCESS_HAS_PENDING_SUBMISSIONS", "Finish or cancel pending submissions before changing routing rules.");
+
+        if (request.ConditionFieldId is null)
+        {
+            step.ConditionFieldId = null;
+            step.ConditionOperator = default;
+            step.ConditionValue = null;
+
+            await context.SaveChangesAsync(cancellationToken);
+            
+            await logService.LogAsync("Step Condition Cleared", "Step", stepId, cancellationToken: cancellationToken);
+            
+            return Result.Success();
+        }
+        
+        var field = await context.Fields.FirstOrDefaultAsync(f => f.Id == request.ConditionFieldId && f.ProcessId == processId && !f.IsDeleted, cancellationToken);
+        
+        if (field is null)
+            return Result.Failure("INVALID_CONDITION_FIELD", "This field does not allow conditions.");
+        
+        if (field.Type == InputTypes.Signature)
+            return Result.Failure("INVALID_CONDITION_FIELD", "This field does not allow conditions.");
+        
+        if ((request.ConditionValue ?? "").Length > 64)
+            return Result.Failure("INVALID_CONDITION_VALUE", "Condition value must be 64 characters in length or fewer.");
+        
+        step.ConditionFieldId = request.ConditionFieldId;
+        step.ConditionOperator = request.ConditionOperator ?? ConditionOperator.Equals;
+        step.ConditionValue = request.ConditionValue;
+        
+        await context.SaveChangesAsync(cancellationToken);
+
+        await logService.LogAsync("Step Condition Updated", "Step", stepId,
+            RoutingRules.Describe(step, field.Title, (request.ConditionValue ?? "").Trim()), cancellationToken: cancellationToken);
         
         return Result.Success();
     }

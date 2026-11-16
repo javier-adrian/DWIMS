@@ -5,7 +5,13 @@ namespace DWIMS.Service.Routing;
 
 public interface IRoutingService
 {
-    Task<Result<Guid>> StartRoute(Data.Submission submission, Data.Process process, SubmissionRoute route);
+    Task<Result<Guid>> StartRoute(
+        Data.Submission submission, 
+        Data.Process process, 
+        SubmissionRoute route,
+        IReadOnlyDictionary<Guid, string>? fieldValues = null);
     
-    Task<Result<RouteResult>> Advance(Data.Submission submission, Step currentStep, Status outcome);
+    Task<Result<RouteResult>> Advance(
+        Data.Submission submission, 
+        Step currentStep, Status outcome);
 }

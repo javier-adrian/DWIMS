@@ -118,7 +118,24 @@ public static class ProcessEndpoints
             .WithSummary("Remove a required attachment of a process")
             .RequireAuthorization(DwimsPolicies.SuperAdministrator);
         
+        group.MapPut("/{processId:guid}/step/{stepId:guid}/condition", SetStepCondition)
+            .WithDisplayName("Set Step Condition")
+            .WithSummary("Set or clear the include-if condition of a step")
+            .RequireAuthorization(DwimsPolicies.SuperAdministrator);
+        
         return app;
+    }
+
+    private static async Task<IResult> SetStepCondition(
+        Guid processId,
+        Guid stepId,
+        SetStepConditionRequest request,
+        IProcessService processService,
+        CancellationToken cancellationToken)
+    {
+        var result = await processService.SetStepConditionAsync(processId, stepId, request, cancellationToken);
+        
+        return result.ToOkResult();
     }
 
     private static async Task<IResult> DeleteAttachmentRequirement(

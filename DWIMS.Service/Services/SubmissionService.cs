@@ -583,8 +583,19 @@ public class SubmissionService(
         if (!processSteps.Any())
             return Result<Guid>.Failure("INVALID_PROCESS", "Process has no steps.");
 
-        var firstStep = process.Steps.First(s => !s.IsDeleted);
-        var start = await routingService.StartRoute(submission, process, routes.First(r => r.StepId == firstStep.Id));
+        var valueMap = request.Fields.ToDictionary(f => f.FieldId, f => f.FieldValue ?? "");
+
+        var firstStep = process.Steps
+            .Where(s => !s.IsDeleted)
+            .OrderBy(s => s.Order)
+            .FirstOrDefault(s => RoutingRules.ShouldInclude(s, valueMap));
+        
+        if (firstStep is null)
+            return Result<Guid>.Failure(
+                "ALL_STEPS_SKIPPED", 
+                "No approval step is active for the submitted field values. Adjust the values or contact an administrator.");
+        
+        var start = await routingService.StartRoute(submission, process, routes.First(r => r.StepId == firstStep.Id), valueMap);
         
         if (!start.IsSuccess)
             return Result<Guid>.Failure(start.Error!, start.ErrorDescription!);
@@ -639,6 +650,25 @@ public class SubmissionService(
         await context.SaveChangesAsync(cancellationToken);
 
         await logService.LogAsync("Submission Created", "Submission", submission.Id);
+
+        var leadingSkips = process.Steps
+            .Where(s => !s.IsDeleted)
+            .OrderBy(s => s.Order)
+            .TakeWhile(s => s.Id != firstStep!.Id && !RoutingRules.ShouldInclude(s, valueMap))
+            .Where(s => !RoutingRules.ShouldInclude(s, valueMap))
+            .ToList();
+
+        foreach (var skippedStep in leadingSkips)
+        {
+            await logService.LogAsync(
+                "Step Skipped by Rule",
+                "Submission",
+                submission.Id,
+                RoutingRules.Describe(
+                    skippedStep,
+                    process.Fields.FirstOrDefault(f => f.Id == skippedStep.ConditionFieldId)?.Title,
+                    valueMap.GetValueOrDefault(skippedStep.ConditionFieldId!.Value)));
+        }
         
         emailQueue.Enqueue(new EmailJob(EmailNotificationKind.SubmissionReceived, SubmissionId: submission.Id));
         
@@ -740,6 +770,9 @@ public class SubmissionService(
         }
 
         await logService.LogAsync("Submission Responded", "Submission", submissionId, cancellationToken: cancellationToken);
+
+        foreach (var evidence in route.Data.skippedSteps ?? [])
+            await logService.LogAsync("Step Skipped by Rule", "Submission", submissionId, evidence, cancellationToken: cancellationToken);
         
         return Result.Success();
     }
@@ -1061,7 +1094,12 @@ public class SubmissionService(
             VerificationCode = verificationCode
         };
         
-        var start = await routingService.StartRoute(submission, process,  validated.Data.FirstOrDefault(r => r.StepId == firstStep.Id));
+        var start = await routingService
+            .StartRoute(
+                submission, 
+                process,  
+                validated.Data.FirstOrDefault(r => r.StepId == firstStep.Id),
+                new Dictionary<Guid, string>());
         
         if (!start.IsSuccess)
             return Result<Guid>.Failure(start.Error!, start.ErrorDescription!);
